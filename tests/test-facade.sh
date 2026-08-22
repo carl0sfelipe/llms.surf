@@ -16,6 +16,22 @@ pas=0; falhas=0
 ok()  { pas=$((pas + 1)); echo "PASS: $1"; }
 not() { falhas=$((falhas + 1)); echo "FAIL: $1"; }
 
+# TESTE 4: sem args → wizard da jornada básica (HA, owner '1a') — menu
+# renderiza, lê stdin, EOF/0 sai limpo (testável por pipe, zero dependência).
+W=$(printf '0\n' | "$FACADE" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && echo "$W" | grep -q "New task" && echo "$W" | grep -q "Today.s spend" \
+  && ok "sem args abre o wizard e 0 sai limpo (rc=0)" || not "wizard sem args: rc=$rc"
+
+M=$(printf '3\n0\n' | "$FACADE" 2>&1)
+echo "$M" | grep -q "normal" \
+  && ok "wizard lista modos (opção 3)" || not "wizard não listou modos"
+
+G=$(printf '2\n0\n' | "$FACADE" 2>&1)
+echo "$G" | grep -q "Today.s spend" \
+  && ok "wizard mostra seção de gasto (opção 2)" || not "wizard sem seção de gasto"
+
+# TESTE 3: exit code de erro É propagado (subcomando desconhecido → exit 2).
+
 [ -x "$FACADE" ] && ok "fachada existe e é executável" || not "faltando ou não executável: $FACADE"
 
 out=$("$FACADE" --help 2>&1); rc=$?

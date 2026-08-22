@@ -1121,7 +1121,7 @@
     {
       "id": "claude-sonnet-5",
       "provider": "anthropic",
-      "tier": "pago",
+      "tier": "paid",
       "accuracy": null,
       "latency_ms": null,
       "context_window": null,
@@ -1406,7 +1406,7 @@
     {
       "id": "cursor-sonnet-4-thinking",
       "provider": "cursor",
-      "tier": "pago",
+      "tier": "paid",
       "accuracy": null,
       "latency_ms": null,
       "context_window": null,
@@ -1432,7 +1432,7 @@
     {
       "id": "cursor-gpt-5",
       "provider": "cursor",
-      "tier": "pago",
+      "tier": "paid",
       "accuracy": null,
       "latency_ms": null,
       "context_window": null,

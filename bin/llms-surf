@@ -1,8 +1,32 @@
 #!/usr/bin/env bash
-# llms-surf — fachada pública do llms.surf (antes Oracfit).
+# llms-surf — public facade of llms.surf (formerly Oracfit).
 #
-# Rename mínimo (docs/RENAME-MINIMO-DESIGN.md, owner 2026-08-22: identificador
-# llms-surf, site llms.surf): TUDO interno continua oracfit/* — um caminho só,
-# zero implementação paralela. Se um rename completo valer a pena um dia, esta
-# fachada é o ponto único de troca.
-exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/oracfit" "$@"
+# Minimal rename (docs/RENAME-MINIMO-DESIGN.md, owner 2026-08-22: identifier
+# llms-surf, site llms.surf): everything internal stays oracfit/* — one path,
+# zero parallel implementations. If a full rename is ever worth it, this
+# facade is the single swap point.
+#
+# No args → basic-journey wizard (§3.1; HA, owner '1a'). With args → pure
+# passthrough to oracfit (the wizard never intercepts commands). Resolves
+# symlinks so ~/.local/bin/llms-surf → installed tree works.
+_self_dir() {
+  local dir src tgt
+  dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [ -x "$dir/oracfit" ]; then
+    printf '%s' "$dir"; return 0
+  fi
+  src="${BASH_SOURCE[0]}"
+  while [ -L "$src" ]; do
+    tgt="$(readlink "$src")"
+    case "$tgt" in
+      /*) src="$tgt" ;;
+      *) src="$(cd "$(dirname "$src")" && pwd)/$tgt" ;;
+    esac
+  done
+  printf '%s' "$(cd "$(dirname "$src")" && pwd)"
+}
+DIR="$(_self_dir)"
+if [ "$#" -eq 0 ]; then
+  exec "$DIR/llms-surf-tui.sh"
+fi
+exec "$DIR/oracfit" "$@"

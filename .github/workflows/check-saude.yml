@@ -8,7 +8,7 @@ jobs:
   check-saude:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: check-saude (bateria rápida)
         run: bash bin/check-saude.sh
 
@@ -18,7 +18,7 @@ jobs:
   suites:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: todas as suítes de teste (28)
         run: |
           falhas=0

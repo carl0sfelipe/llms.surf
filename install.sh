@@ -15,7 +15,7 @@ Usage: install.sh --host <claude|opencode|cursor|hermes|zcode|all> [--live] [--d
 
 Install Oracfit core and thin skill for the specified host.
 Use --host all to install every supported host skill.
-Use --live to symlink ~/.oracfit/current → this checkout (no copy).
+Use --live to symlink ~/.llms-surf/current → this checkout (no copy).
 
 Oracfit — Carlos Felipe
 EOF
@@ -71,13 +71,17 @@ esac
 [ "$HOST" = "all" ] && ALL_HOSTS=1
 
 VERSION="dev"
-INSTALL_DIR="$HOME/.oracfit/$VERSION"
-CURRENT_LINK="$HOME/.oracfit/current"
+# Canonical base is ~/.llms-surf (owner '10b', 2026-08-22). Legacy installs
+# under ~/.oracfit keep working untouched — we never migrate or delete them.
+BASE_DIR="$HOME/.llms-surf"
+INSTALL_DIR="$BASE_DIR/$VERSION"
+CURRENT_LINK="$BASE_DIR/current"
+LEGACY_BASE="$HOME/.oracfit"
 
 install_core() {
   if [ "$LIVE" = "1" ]; then
     echo "Live install: linking $CURRENT_LINK → $REPO_ROOT"
-    mkdir -p "$HOME/.oracfit"
+    mkdir -p "$BASE_DIR"
     rm -f "$CURRENT_LINK"
     ln -sfn "$REPO_ROOT" "$CURRENT_LINK"
     INSTALL_DIR="$REPO_ROOT"
@@ -85,7 +89,10 @@ install_core() {
     return 0
   fi
 
-  echo "Installing Oracfit core to $INSTALL_DIR ..."
+  echo "Installing llms.surf core to $INSTALL_DIR ..."
+  if [ -e "$LEGACY_BASE/current" ] && [ ! -e "$CURRENT_LINK" ]; then
+    echo "  note: legacy install found at $LEGACY_BASE (left untouched and working)"
+  fi
   echo "Note: local usage telemetry may be written under <workdir>/.dispatch/usage/ (see docs/TELEMETRY.md)."
   echo "Opt-out: ORACFIT_TELEMETRY=0 or DISPATCH_USAGE_FEEDBACK=0. Remote POST only if ORACFIT_TELEMETRY_URL is set."
   mkdir -p "$INSTALL_DIR"
@@ -164,17 +171,22 @@ else
 fi
 
 # Convenience: ORACFIT_ROOT in a file Hermes/cron can source
-echo "$INSTALL_DIR" > "$HOME/.oracfit/ORACFIT_ROOT"
+echo "$INSTALL_DIR" > "$BASE_DIR/ORACFIT_ROOT"
 # Profile snippet
-PROFILE_SNIPPET="$HOME/.oracfit/env.sh"
+PROFILE_SNIPPET="$BASE_DIR/env.sh"
 cat > "$PROFILE_SNIPPET" <<EOF
-# Oracfit — sourced by Hermes / shells
-export ORACFIT_ROOT="\$HOME/.oracfit/current"
+# llms.surf — sourced by Hermes / shells (env names stay ORACFIT_* by design)
+export ORACFIT_ROOT="\$HOME/.llms-surf/current"
 export DISPATCH_ROOT="\$ORACFIT_ROOT"
 export PATH="\$HOME/.local/bin:\$PATH"
 EOF
 echo "  wrote $PROFILE_SNIPPET"
 
-echo "Done. Oracfit installed at $INSTALL_DIR"
-echo "Default: export ORACFIT_ROOT=\$HOME/.oracfit/current"
-echo "Oracfit — Carlos Felipe"
+# Single command on PATH (owner '10b': the public command is llms-surf)
+mkdir -p "$HOME/.local/bin"
+ln -sf "$INSTALL_DIR/bin/llms-surf" "$HOME/.local/bin/llms-surf"
+echo "  command: $HOME/.local/bin/llms-surf → $INSTALL_DIR/bin/llms-surf (menu: run 'llms-surf' with no args)"
+
+echo "Done. llms.surf installed at $INSTALL_DIR"
+echo "Default: export ORACFIT_ROOT=\$HOME/.llms-surf/current"
+echo "llms.surf — Carlos Felipe"
