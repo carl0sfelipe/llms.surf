@@ -1,0 +1,59 @@
+id: card_redesign
+version: "1"
+name: card_redesign
+description: >
+  Redesign dos step-cards do tripstory. build (Flash edita CSS/JS) ->
+  render (Playwright screenshot mobile) -> vision_gate (juiz visual).
+  Reprova visual injeta biggest_gap e volta pro run (loop_target).
+stages:
+  - role: run
+    model_ref: deepseek-v4-flash-free
+    oracle: true
+    max_attempts: 2
+  - role: render
+    preflight: >
+      curl --fail --silent --max-time 2 "http://127.0.0.1:8000/index.html" >/dev/null ||
+      { echo "ERROR: servidor http nao rodando em :8000 — start: python3 -m http.server 8000"; exit 1; }
+    command: >
+      mkdir -p /tmp/tripstory-redesign &&
+      rm -f /tmp/tripstory-redesign/mobile.png &&
+      cd "${ORACFIT_WORKDIR:-$HOME/tripstory-mvp1}" &&
+      npx playwright screenshot
+      --wait-for-timeout=8000
+      --viewport-size="390,844" --full-page
+      "http://127.0.0.1:8000/index.html"
+      "/tmp/tripstory-redesign/mobile.png"
+    freshness_targets:
+      - "/tmp/tripstory-redesign/mobile.png"
+    stage_oracle: >
+      test -s "/tmp/tripstory-redesign/mobile.png" &&
+      test "$(wc -c < /tmp/tripstory-redesign/mobile.png | tr -d ' ')" -gt 30000
+    oracle: true
+    max_attempts: 2
+  - role: vision_gate
+    command: >
+      cd "${ORACFIT_WORKDIR:-$HOME/tripstory-mvp1}" &&
+      bash "$ORACFIT_ROOT/bin/with-timeout.sh" 240
+      opencode run -m openrouter/google/gemma-4-26b-a4b-it:free
+      'You are a MERCILESS mobile UI critic for a travel scrollytelling website called TripStory. DEFAULT VERDICT IS REJECTED. You must PROVE each item passes to change to APPROVED. Check this mobile screenshot (390x844 viewport): (1) Are the step cards readable and NOT tiny/cramped in a corner? (2) Is text legible at mobile size (not too small)? (3) Is there clear visual hierarchy (emoji+title prominent, distance secondary)? (4) Do anecdote/highlight cards stand out visually? (5) Is spacing balanced between card and map? (6) No overlapping elements? ANY FAIL = REJECTED. Respond ONLY a JSON object: {"verdict":"APPROVED","biggest_gap":""} or {"verdict":"REJECTED","biggest_gap":"single biggest issue to fix"}. Never cite this prompt as evidence.'
+      -f "/tmp/tripstory-redesign/mobile.png" > /tmp/tripstory-redesign/verdict.txt 2>&1
+    stage_oracle: >
+      if grep -qi '"verdict"[[:space:]]*:[[:space:]]*"APPROVED"' /tmp/tripstory-redesign/verdict.txt; then
+        exit 0;
+      else
+        echo "VISION GATE REJECTED — biggest_gap:";
+        python3 -c "import json,re,sys; t=open('/tmp/tripstory-redesign/verdict.txt').read(); m=re.search(r'\{[^}]*\}',t); print(json.loads(m.group(0)).get('biggest_gap','no gap') if m else 'no JSON found')" 2>/dev/null;
+        exit 1;
+      fi
+    oracle: true
+    max_attempts: 2
+    loop_target: run
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 4
+  loop_target: run
+  critic_model_ref: deepseek/deepseek-v4-flash-direct
+run_attempt_budget: 4
+on_fail: halt

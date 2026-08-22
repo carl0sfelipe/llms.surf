@@ -1,0 +1,17 @@
+id: deepseek_direct_flash
+version: "1"
+name: deepseek_direct_flash
+description: >
+  Modo custom oficial pra stories mecanicas do EPIC-2 - DeepSeek V4 Flash via
+  provider direto (api.deepseek.com, nao OpenRouter), desconto de cache hit nativo.
+stages:
+  - role: run
+    model_ref: deepseek/deepseek-v4-flash-direct
+    oracle: true
+    max_attempts: 3
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+on_fail: halt

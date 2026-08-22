@@ -1,0 +1,128 @@
+```yaml
+approval_gate:
+  asset: "T4-content-bundle"
+  brand: "Orbe.live"
+  reference_date: "2025-11-15"
+  decision: "APPROVED"
+  decision_summary: >-
+    The visible content clears the ROI gate. Persuasion is anchored in price transparency,
+    monitored-offer authority, and buyer protection; clarity is excellent for a mobile-first
+    decision page; SEO structure is strong; brand voice is trust-forward; conversion
+    mechanics are direct and low-friction. No rejection is triggered. The approval is
+    conditional on completing the pre-publish requirements and on passing the not-yet-visible
+    bundle assets through the same gate before campaign-wide go-live.
+
+scores:
+  persuasion_strength:
+    score: 8.5
+    rating: "STRONG"
+    rationale: >-
+      The copy uses price anchoring, seasonal urgency, and editorial authority without
+      manipulation. The contrast between official R$4.499,90 and monitored R$3.960 creates
+      a tangible reason to act now. The phrase “você não deveria pagar o valor cheio antes
+      de comparar” frames the page as a consumer-protection tool, which is persuasive and
+      ethical.
+    evidence:
+      - "Subheading creates urgency: Black Friday + monitored offers + don't pay full price."
+      - "Quick-answer block immediately gives the price range and best offer."
+      - "Offer selection criteria build authority: CNPJ, nota fiscal, reputation, national shipping."
+      - "Affiliate disclosure reduces skepticism before the reader hits a CTA."
+
+  clarity:
+    score: 9.0
+    rating: "EXCELLENT"
+    rationale: >-
+      The user can answer four core questions without scrolling: How much? Where?
+      Is it safe? Is it worth it? The table and FAQ are scannable. The language is
+      plain Brazilian Portuguese, appropriate for a high-ticket electronics decision.
+      The only minor risk is table density on narrow mobile screens, which must be
+      handled with horizontal scrolling or stacked cards.
+    evidence:
+      - "H1 states price, safety, and value in one line."
+      - "Resposta rápida gives price, store, and product with zero funnel games."
+      - "FAQ anticipates price drops, safe sellers, and console comparison."
+      - "CTA labels are explicit: VER PREÇOS ATUALIZADOS / Ver oferta."
+
+  seo_integration:
+    score: 8.5
+    rating: "STRONG"
+    rationale: >-
+      Title, meta, URL, and schema are aligned with commercial search intent. The page
+      targets “Nintendo Switch 2 preço Brasil”, a high-value Black Friday keyword.
+      FAQPage and Product schema can produce rich results if correctly validated.
+      The main technical risk is incomplete Product offer structured data, not copy.
+    evidence:
+      - "URL: /nintendo-switch-2/preco-brasil/ is clean and keyword-rich."
+      - "Title includes product, price intent, location, and season."
+      - "Meta description includes price, safety, and Black Friday."
+      - "Schema types: Article, FAQPage, Product."
+
+  brand_voice:
+    score: 9.0
+    rating: "EXCELLENT"
+    rationale: >-
+      Orbe speaks like a protective consumer advisor, not an affiliate link spammer.
+      The repeated “monitorado pela Orbe” language creates a named process. The warning
+      against social media sellers and WhatsApp groups reinforces editorial independence.
+      The affiliate disclosure is clear and placed before conversion pressure, which
+      increases trust and long-term brand equity.
+    evidence:
+      - "Nossa régua: objective, measurable standards."
+      - "Aviso de afiliado: transparent, non-defensive, no fine print."
+      - "Security guidance: avoid off-platform payments, distrust prices below R$3.500."
+
+  conversion_mechanics:
+    score: 8.5
+    rating: "STRONG"
+    rationale: >-
+      The page gives serious buyers exactly what they need: current prices, store names,
+      freight, and a direct offer link. Each table row has its own CTA, reducing friction
+      between consideration and click. The timestamp adds freshness and legitimacy.
+      There is no unnecessary email wall or pop-up, which keeps the page intent-focused.
+    evidence:
+      - "Primary CTA appears above the fold."
+      - "Four offer-level CTAs in the table."
+      - "FAQ closes with a comparison nudge instead of a dead end."
+      - "Affiliate disclosure is visible before shopping links."
+
+overall_roi_forecast:
+  weighted_roi_score: "8.7 / 10"
+  projected_success: "HIGH"
+  reasons:
+    - "Captures high-intent Black Friday traffic for a widely anticipated console."
+    - "Price transparency differentiates Orbe from generic deal sites."
+    - "Trust-driven copy should increase affiliate click-through and reduce bounce."
+    - "Schema support can improve SERP visibility and CTR."
+  risk_level: "LOW_TO_MODERATE"
+  main_risks:
+    - "Prices can change quickly; the table may become stale without an automated refresh."
+    - "Unseen blog, email, and ad assets could weaken bundle coherence if they do not match this landing page's voice and transparency."
+
+pre_publish_requirements:
+  - "Validate all affiliate links with rel='sponsored nofollow' and UTM tracking."
+  - "Run the page through Google Rich Results Test and ensure Product offers include priceCurrency BRL, availability, price, and seller info."
+  - "Automate price refresh or set a process to update the table at least daily; never leave the 'Atualizado em' timestamp static."
+  - "Ensure the offers table is horizontally scrollable on mobile with minimum 44px tap targets."
+  - "Add descriptive alt text to every image."
+  - "Link the FAQ answer 'Nintendo Switch 2 vale a pena?' to the most relevant blog article."
+  - "Check that no listed store or seller is actually a third-party redirect without a valid marketplace offer."
+
+asset_inventory_status:
+  landing_page: "REVIEWED"
+  blog_article_1: "NOT_FULLY_VISIBLE_IN_INPUT"
+  blog_article_2: "NOT_FULLY_VISIBLE_IN_INPUT"
+  email_sequence: "NOT_FULLY_VISIBLE_IN_INPUT"
+  ad_variations: "NOT_FULLY_VISIBLE_IN_INPUT"
+  note: >-
+    This approval formally covers the visible landing page asset. The remaining assets
+    must pass the same criteria before the full content bundle is released. If any unseen
+    asset fails, a full feedback loop will be opened for that specific asset.
+
+feedback_loop:
+  should_trigger_full_feedback_loop: false
+  reason: "The visible content does not require rejection. Remaining items are pre-publish technical and consistency checks."
+  automatic_reopen_conditions:
+    - "Any unseen asset fails the same five criteria."
+    - "A listed store or offer cannot be verified with nota fiscal and active CNPJ."
+    - "Structured data does not validate before publication."
+```

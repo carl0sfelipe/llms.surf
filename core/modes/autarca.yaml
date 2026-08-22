@@ -1,0 +1,82 @@
+id: autarca
+version: "1"
+name: autarca
+description: >
+  MODO AUTARCA (experimento v3.5→v4, filho do ouroboros): god mode em
+  CADEIA CONTÍNUA. Herda do ouroboros que todos os papéis por anel — spec,
+  execução, judge, critic, refino, auditoria — são o PRÓPRIO frontier model
+  em contextos frescos (Task subagents do host); acrescenta que o
+  PLANEJAMENTO também é: fechado um anel, o próprio frontier escolhe a
+  próxima tarefa do backlog do workdir (epics/stories) e abre o anel
+  seguinte SEM pedir permissão. Autarca = governa a si mesmo. O humano não
+  participa do loop: audita depois, por CHECKPOINTS.md (um bloco por anel,
+  escrito ANTES de abrir o próximo). Oráculo mecânico continua soberano —
+  vitória é oracle_exit=0 (2x) + critic sem 🔴, nunca opinião do executor.
+  Nasce com as licoes dos dois incidents de 2026-08-12 dos irmãos
+  (ouroboros aprovou-4-ciclos-dono-deu-3.72; 6-aneis-toda-protecao-era-
+  protocolo) convertidas em cláusulas: ver `chain` e `hardening`.
+chain:
+  planner: frontier-host          # quem escolhe a próxima story é o frontier
+  backlog: workdir                # fonte: epics/roadmap versionados no repo alvo
+  next_without_ask: true
+  order_hint: valor de venda primeiro; risco de colisão com sessões paralelas por último
+  stop_when:
+    - humano_intervem             # qualquer mensagem do dono pausa a cadeia
+    - colisao_com_sessao_paralela # working tree sujo por outro agente no alvo do anel
+    - oracle_vermelho_apos_budget # esgotou run_attempt_budget: checkpoint e PARA (não pula)
+  skip_when:
+    - decisao_de_dono_pendente    # registra a pendência no checkpoint e vai à próxima story
+hardening:  # cada linha veio de um incident real de 2026-08-12
+  preflight_diario: >
+    Antes do anel 1: consultar incidents/ do oracfit filtrando pelos
+    mecanismos que a cadeia usa (db, servidores, subagents, git) e citar no
+    primeiro checkpoint quais regras se aplicam. Regra promovida de manhã
+    não pode ser redescoberta à tarde.
+  preflight_anel: >
+    Antes de CADA anel: git log/status (sessão paralela), saúde de serviços
+    externos (ex.: pg_isready no db do compose — ele morreu no meio de um
+    loop hoje). Serviço de longa duração NUNCA em terminal de sessão:
+    launchd/nohup com pidfile (regra 49).
+  ledger_host_mode: >
+    Host-mode não é invisível: abrir/fechar anel grava linha JSON em
+    ledger/ledger.jsonl do oracfit (ring id, story, oracle_exit real,
+    veredito do critic, commit hash). A contabilidade deixa de ser
+    manuscrita mesmo sem dispatch.
+  oraculo_monotonico: >
+    Oráculo semi-congelado: ADICIONAR check é livre; remover ou relaxar
+    exige bloco DECLARACAO no checkpoint do mesmo anel. Trave que só
+    aperta.
+  biggest_gap_fail_closed: >
+    Veredito do critic sem biggest_gap não-vazio = estágio falho, conta no
+    teto. APPROVED vazio não fecha anel.
+  claims_check: >
+    Todo número citado no checkpoint aponta o artefato de onde saiu
+    (arquivo de teste, saída de comando, commit). Critic reconta por
+    amostragem; divergência = anel não fecha.
+  commit_cirurgico: >
+    git add sempre com pathspec explícito; -A/-u proibidos (commit de hoje
+    varreu arquivos de outro agente na mesma árvore).
+  calibracao_nota_dono: >
+    Cada checkpoint registra a previsão do critic para a nota do dono
+    (0-10). Avaliação real do dono, quando vier, entra como evento; |delta|
+    > 2 rebaixa o juiz-em-sessão a triagem (lição do 3.72 vs APPROVED).
+  gate_de_classe_visual: >
+    Anel com artefato VISUAL: antes de refinar parâmetros, o critic julga
+    CLASSE contra referência externa nomeada ("alcança a nota_alvo com
+    refino, ou troca de classe?"). Refino de classe insuficiente é
+    proibido.
+stages:
+  - role: run
+    model_ref: frontier-host
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+  loop_target: run
+  critic_model_ref: frontier-host
+  critic_profile: ouroboros-nobel
+run_attempt_budget: 5
+on_fail: checkpoint_then_halt

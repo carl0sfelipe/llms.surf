@@ -1,0 +1,34 @@
+name: check-saude
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check-saude:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: check-saude (bateria rápida)
+        run: bash bin/check-saude.sh
+
+  # HT1 (owner 2026-08-22, '2a'): CI roda TUDO — a bateria cobre só 4 das 28
+  # suítes e a cegueira já escondeu bug de nascença (/api/gui/todo, incidente
+  # 2026-08-22-gui-todo-vermelho-desde-o-nascimento). Corrida completa: ~4 min.
+  suites:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: todas as suítes de teste (28)
+        run: |
+          falhas=0
+          for t in tests/test-*.sh; do
+            echo "::group::$t"
+            if ! bash "$t"; then
+              falhas=$((falhas+1))
+              echo "::error file=$t::$t falhou"
+            fi
+            echo "::endgroup::"
+          done
+          echo "suítes falhando: $falhas"
+          [ "$falhas" -eq 0 ]

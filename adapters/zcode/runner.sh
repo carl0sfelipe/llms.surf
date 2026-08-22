@@ -1,0 +1,182 @@
+#!/bin/bash
+# runner.sh — implementação zcode do contrato core/runner-contract.md
+# Uso: runner.sh <model_id> <spec_file> [--session ID] [--fork]
+#
+# Traduz para: zcode --prompt "$(cat spec)" --mode yolo [--resume ID] [--json] [--cwd DIR]
+# Modelo via ~/.zcode/cli/config.json (cli_hints.zcode = "providerId/modelId").
+# Sintaxe: adapters/zcode/DISCOVERY.md (2026-08-04).
+#
+# Exit codes (RNF-04): 0=ok, 1=erro, 2=rate-limit, 3=erro de uso, 4=quota
+
+set -uo pipefail
+
+MODEL_ID="${1:?Uso: runner.sh <model_id> <spec_file> [--session ID] [--fork]}"
+SPEC_FILE="${2:?Uso: runner.sh <model_id> <spec_file> [--session ID] [--fork]}"
+shift 2
+
+SESSION_ID=""
+FORK=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --session)
+      SESSION_ID="${2:?--session requer ID}"
+      shift 2
+      ;;
+    --fork)
+      FORK=1
+      shift
+      ;;
+    *)
+      echo "runner.sh (zcode): flag desconhecida: $1" >&2
+      exit 3
+      ;;
+  esac
+done
+
+if [ "$FORK" = "1" ]; then
+  echo "runner.sh (zcode): zcode não suporta --fork no CLI (só /fork na TUI; FORK=0)" >&2
+  exit 3
+fi
+
+if [ ! -f "$SPEC_FILE" ]; then
+  echo "runner.sh (zcode): spec_file não encontrado: $SPEC_FILE" >&2
+  exit 1
+fi
+
+ZCODE_BIN="${ZCODE_BIN:-zcode}"
+if ! command -v "$ZCODE_BIN" >/dev/null 2>&1; then
+  ZCODE_APP="/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs"
+  if [ -f "$ZCODE_APP" ]; then
+    mkdir -p "$HOME/.local/bin"
+    ln -sfn "$ZCODE_APP" "$HOME/.local/bin/zcode"
+    ZCODE_BIN="$HOME/.local/bin/zcode"
+  else
+    echo "runner.sh (zcode): CLI zcode não encontrada (instale ZCode.app)" >&2
+    exit 3
+  fi
+fi
+
+ADAPTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$ADAPTER_DIR/../.." && pwd)"
+MODEL_REGISTRY="${MODEL_REGISTRY:-$REPO_ROOT/model-registry.json}"
+
+RESOLVED=$(MODEL_ID="$MODEL_ID" REGISTRY="$MODEL_REGISTRY" python3 -c '
+import json, os, sys
+mid = os.environ["MODEL_ID"]
+try:
+    models = json.load(open(os.environ["REGISTRY"]))["models"]
+except Exception as e:
+    print("registry ilegível: %s" % e, file=sys.stderr); sys.exit(3)
+for m in models:
+    hint = m.get("cli_hints", {}).get("zcode")
+    if mid in (m["id"], hint) and hint:
+        print(hint); sys.exit(0)
+    if mid == m["id"]:
+        print("modelo %s não tem cli_hint para zcode (ver model-registry.json)" % mid, file=sys.stderr); sys.exit(3)
+print("modelo %s ausente do model-registry.json" % mid, file=sys.stderr); sys.exit(3)
+') || exit 3
+
+# Atualiza model.main no cli config sem apagar provider/auth existentes.
+ZCODE_CLI_CONFIG="${ZCODE_CLI_CONFIG:-$HOME/.zcode/cli/config.json}"
+MODEL_HINT="$RESOLVED" CONFIG_PATH="$ZCODE_CLI_CONFIG" python3 -c '
+import json, os, pathlib
+hint = os.environ["MODEL_HINT"]
+path = pathlib.Path(os.environ["CONFIG_PATH"])
+path.parent.mkdir(parents=True, exist_ok=True)
+cfg = {}
+if path.is_file():
+    try:
+        cfg = json.loads(path.read_text())
+    except Exception:
+        cfg = {}
+if not isinstance(cfg, dict):
+    cfg = {}
+# model.main deve ser string provider/model (DISCOVERY)
+if isinstance(cfg.get("model"), str):
+    cfg["model"] = hint
+else:
+    model = cfg.get("model") if isinstance(cfg.get("model"), dict) else {}
+    model["main"] = hint
+    # remove chaves inválidas no bloco strict {main,lite}
+    cfg["model"] = {k: model[k] for k in ("main", "lite") if k in model and model[k]}
+# Garante bloco provider mínimo se ausente (kind+baseURL do hint conhecido z.ai)
+prov_id, _, _model = hint.partition("/")
+provider = cfg.get("provider") if isinstance(cfg.get("provider"), dict) else {}
+if prov_id and prov_id not in provider:
+    if prov_id.startswith("builtin:zai"):
+        provider[prov_id] = {
+            "kind": "anthropic",
+            "options": {"baseURL": "https://api.z.ai/api/anthropic"},
+        }
+    elif prov_id.startswith("custom:llamacpp"):
+        provider[prov_id] = {
+            "kind": "openai-compatible",
+            "options": {"baseURL": "http://127.0.0.1:8082/v1", "apiKey": "local"},
+        }
+    else:
+        # provider desconhecido: não inventa baseURL — só registra kind openai-compatible
+        # (runner falhará com mensagem do zcode se faltar apiKey/baseURL)
+        provider[prov_id] = {"kind": "openai-compatible", "options": {}}
+    cfg["provider"] = provider
+elif prov_id and isinstance(provider.get(prov_id), dict):
+    # preserva apiKey/options existentes; só garante kind
+    entry = provider[prov_id]
+    entry.setdefault("kind", "anthropic" if "zai" in prov_id else "openai-compatible")
+    entry.setdefault("options", {})
+    if "zai" in prov_id:
+        entry["options"].setdefault("baseURL", "https://api.z.ai/api/anthropic")
+    provider[prov_id] = entry
+    cfg["provider"] = provider
+path.write_text(json.dumps(cfg, indent=2) + "\n")
+' || {
+  echo "runner.sh (zcode): falha ao escrever $ZCODE_CLI_CONFIG" >&2
+  exit 1
+}
+
+# Preflight auth: sem apiKey o zcode só imprime "Turn execution failed" (sem Cause).
+PROV_ID="${RESOLVED%%/*}"
+HAS_KEY=$(CONFIG_PATH="$ZCODE_CLI_CONFIG" PROV_ID="$PROV_ID" python3 -c '
+import json, os
+path = os.environ["CONFIG_PATH"]
+prov = os.environ["PROV_ID"]
+try:
+    cfg = json.load(open(path))
+except Exception:
+    print("0"); raise SystemExit
+entry = (cfg.get("provider") or {}).get(prov) or {}
+opts = entry.get("options") or {}
+key = (opts.get("apiKey") or os.environ.get("ZCODE_API_KEY") or "").strip()
+# enc:v1: do GUI não serve no CLI
+print("0" if (not key or key.startswith("enc:v1:")) else "1")
+')
+if [ "$HAS_KEY" != "1" ]; then
+  echo "runner.sh (zcode): sem apiKey para $PROV_ID — rode \`zcode login\` ou defina provider.$PROV_ID.options.apiKey em $ZCODE_CLI_CONFIG (ou ZCODE_API_KEY)" >&2
+  exit 3
+fi
+
+WORKDIR="${ORACFIT_WORKDIR:-${ZCODE_WORKDIR:-$PWD}}"
+MODE="${ZCODE_MODE:-${DISPATCH_ZCODE_MODE:-yolo}}"
+
+ARGS=(--prompt "$(cat "$SPEC_FILE")" --mode "$MODE" --cwd "$WORKDIR")
+[ -n "$SESSION_ID" ] && ARGS+=(--resume "$SESSION_ID")
+[ "${DISPATCH_RUNNER_FORMAT_JSON:-1}" = "1" ] && ARGS+=(--json)
+
+OUTPUT=$("$ZCODE_BIN" "${ARGS[@]}" 2>&1)
+EXIT_CODE=$?
+
+echo "$OUTPUT"
+
+if echo "$OUTPUT" | grep -qiE 'Model config is missing|missing an API key|token expired|Authentication|zcode login'; then
+  echo "runner.sh (zcode): auth/config — rode \`zcode login\` ou coloque apiKey em $ZCODE_CLI_CONFIG provider.*.options" >&2
+  exit 3
+fi
+if echo "$OUTPUT" | grep -qiE '429|rate.?limit'; then
+  exit 2
+fi
+if echo "$OUTPUT" | grep -qiE 'quota|insufficient|out of credit|plan.?limit'; then
+  exit 4
+fi
+
+[ $EXIT_CODE -ne 0 ] && exit 1
+exit 0

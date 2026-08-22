@@ -1,0 +1,34 @@
+id: vision_catalog
+version: "1"
+name: Visão → catálogo de loja
+description: >
+  Map a vision model over product photos with rate_limit_s sleep, then cheap
+  reduce to store-ready catalog assets. Anchor intent ~55 photos → ~N products;
+  loader must not hardcode those counts (FR-5). Stub — Epic 3.3–3.4 implement.
+  Gauntlet no reduce: oracle fail → feedback inject até passar (safety_ceiling).
+stages:
+  - role: map
+    model_ref: tier:vision
+    rate_limit_s: 15
+    input: files_glob
+    prompt_template: vision_product_fields
+    json_schema: product_from_photo
+    artifacts: map/
+    max_attempts: 2
+  - role: reduce
+    model_ref: tier:cheap
+    input: prev_stage
+    prompt_template: group_photos_write_store_assets
+    json_schema: store_product_catalog
+    artifacts: reduce/
+    oracle: true
+    max_attempts: 3
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+preflight:
+  - classify
+  - check-spec
+on_fail: halt

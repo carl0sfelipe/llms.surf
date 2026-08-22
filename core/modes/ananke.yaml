@@ -1,0 +1,100 @@
+# MODO ANANKE — god mode v4: mecanismo primeiro, protocolo mínimo
+#
+# Ἀνάγκη: a necessidade que nem os deuses desobedecem. O nome é a tese do v4:
+# nos irmãos v3.5 (ouroboros→pantocrator) TODA proteção era disciplina do
+# modelo, e os incidentes de 2026-08-12 mediram a disciplina degradando na
+# MESMA sessão que a escreveu (autarca), matando o despertador declarado
+# frágil (aion) e varrendo árvore alheia no commit que criava a cláusula
+# proibindo (autarca). No ananke a proteção não pede obediência: ela recusa.
+#
+# LINHAGEM (o que herda e o que MECANIZA):
+#   pantocrator → protocolo do anel e papéis frontier em contexto fresco
+#   aion        → ring runner em script; aqui promovido a bin/oracfit-ring.sh
+#   demiurgo    → oráculo monotônico; aqui por sha256, não por promessa
+#   talos       → DO-DONO nunca chutado; yaml que PASSA no loader E no lint
+#
+# O QUE É MECANISMO (executável, fail-closed — o modelo não consegue pular):
+#   abrir anel    → `oracfit ring open`  (preflight, teto no ledger, colisão,
+#                    trave congelada por sha, valida+linta este yaml)
+#   fechar anel   → `oracfit ring close` (veredito de ARQUIVO validado,
+#                    oráculo real, retest de teste novo, gate visual por diff,
+#                    staging guard, commit pathspec, ledger transacional,
+#                    pós-condição de árvore limpa)
+#   contar        → ledger jsonl schema ring-v1 (workdir + central)
+#   sobreviver    → prime-agent daemon / bin/oracfit-daemon.sh (setsid)
+#   acordar       → prime-agent schedule/heartbeat — NUNCA sleep em terminal
+#   segurar o fim → prime-agent --autonomous-gate "oracfit ring close ..."
+#   calibrar      → `oracfit ring score --real N` (delta previsão×dono)
+#
+# O QUE FICA COMO PROTOCOLO, deliberadamente (julgamento, não disciplina):
+#   j1. plan: escolher a próxima story do backlog versionado; spec congelada
+#       na abertura do anel (mudou = DECLARACAO nas notas do anel).
+#   j2. build: incremento mínimo que entrega a story.
+#   j3. review multi-lente em contextos frescos (adversarial, edge-case,
+#       verification-gap); reviewer não conversa com executor.
+#   j4. critic fresco por anel (core/critic-profiles/ananke-critic.md) grava
+#       ring/verdicts/<RING>.json — o CONTEÚDO é julgamento; o canal e a
+#       validação são mecanismo (bin/check-verdict.py).
+#   j5. prosa do checkpoint: notas do executor em ring/notes/<RING>.md
+#       (os NÚMEROS do checkpoint quem escreve é o runner — claims-check).
+#   j6. DO-DONO (preço, credencial, jurídico, negócio): pendência nas notas
+#       e pula para a próxima EXECUTÁVEL. Nunca chuta.
+#
+# REGRA /refine-É-PROTOCOLO: memória, supplemental prompt ou skill criada
+# por /refine do prime-agent NUNCA conta como proteção — no Factorio o
+# refine construiu skills de trapaça, e cláusula manuscrita degrada em
+# horas (autarca). Só é proteção o que passa em `oracfit mode lint`
+# (claim → executável existente). Corolário mecânico: /refine não alcança
+# ring/oracle.sh nem o critic-profile — a guarda monotônica do close recusa
+# trave alterada sem DECLARACAO-ORACULO + oracle_change_approved do critic.
+#
+# never (protocolo residual, cada um com o mecanismo que o cobre):
+#   push sem revisão humana        → ring close não faz push (só commit local)
+#   vitória sem gate               → --autonomous-gate = ring close
+#   editar trave para passar       → guarda monotônica sha256
+#   tocar arquivo de outro agente  → preflight árvore limpa + staging guard
+#   inventar número                → checkpoint escrito pelo runner (medido)
+#   critic escreve/commita         → janela do critic-guard: write fora de
+#                                    ring/verdicts/ mata o dispatch (exit 5)
+#
+# declarações verificadas pelo lint (claims→mecanismos, regra 32):
+# mecanismo(wake): bin/oracfit-daemon.sh
+# mecanismo(ring): bin/oracfit-ring.sh
+# mecanismo(visual): bin/oracfit-ring.sh
+# mecanismo(critic_guard): bin/critic-guard.sh
+#
+# NOTA de execução: model_ref "frontier-host" não é dispatchável — o modo é
+# executado pelo frontier no prime-agent (ver adapters/prime-agent/AGENTS.md)
+# ou por host IDE. Campos de máquina abaixo: schema v1 puro.
+
+id: ananke
+version: "1"
+name: ananke
+description: >
+  God mode v4 em cadeia contínua sobre mecanismos: o frontier planeja e
+  constrói; abrir, fechar, contar, medir, acordar e sobreviver são código
+  (oracfit ring + prime-agent daemon/schedule/autonomous-gate). Ledger
+  mecânico por anel, oráculo monotônico por sha256, veredito de arquivo
+  fail-closed, gate visual por gatilho de diff, teto contado — o anel não
+  fecha por persuasão. Protocolo reduzido ao julgamento: escolher story,
+  construir, revisar, escrever prosa. Sucessor do pantocrator com a
+  disciplina transferida da fé para o executável.
+preflight: >
+  bash bin/ring-preflight.sh "${ANANKE_TARGET:?}" --require-clean --ignore ring
+stages:
+  - role: plan
+    model_ref: frontier-host
+    max_attempts: 1
+  - role: run
+    model_ref: frontier-host
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+  loop_target: run
+  critic_model_ref: frontier-host
+run_attempt_budget: 10
+on_fail: halt

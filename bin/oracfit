@@ -1,0 +1,293 @@
+#!/bin/bash
+# oracfit — CLI router v1 (usage-derived aliases + terreno custom)
+# Motor: bin/dispatch-mode.sh · Panel: bin/oracfit-panel.sh
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cmd="${1:-help}"
+shift || true
+
+did_you_mean() {
+  cat >&2 <<EOF
+Oracfit (ex-Dispatch) — '$1' não é subcomando conhecido.
+
+Uso base:
+  oracfit start | first-proof
+  oracfit run normal <spec> <task>
+  oracfit panel
+
+Custom (ouro):
+  oracfit run <mode_id> <spec|input_dir> <task>
+  oracfit modes
+  oracfit mode validate <id|path.yaml>
+  oracfit mode init <id>
+
+Legado equivalente: bin/dispatch-mode.sh <mode> …
+
+ARCH/COPY não são modes — classify recusa modelo.
+Painel = observe-only. stop/rerun = CLI reservado (AD-14).
+Oracfit — Carlos Felipe
+EOF
+}
+
+lifecycle_reserved() {
+  cat >&2 <<EOF
+Oracfit: '$1' está reservado (lifecycle CLI, AD-8/AD-14).
+Painel não executa stop/rerun. Por enquanto:
+  - parar run ativo: Ctrl+C no terminal do runner
+  - rerun: oracfit run <mode> …  (novo run_id)
+Ver: _bmad-output/planning-artifacts/v1-modes-catalog.md
+EOF
+  exit 2
+}
+
+cmd_help() {
+  cat <<EOF
+Oracfit (ex-Dispatch) — CLI v1
+
+BASE
+  oracfit start                         # first-proof (stub se DISPATCH_RUNNER=stub)
+  oracfit first-proof
+  oracfit run normal <spec> <task>      # modo base Flash-class
+  oracfit batch <batch_file>            # N itens (spec|task|dir[|model]) com
+                                        # checkpoint+rollback — NUNCA loop à mão
+                                        # (incidente 2026-08-11-hand-rolled-loop)
+  oracfit panel [--workdir DIR] [--port N]
+  oracfit gui [--target DIR] [--port N]     # GUI completa (home/anéis/dispatches/…)
+  oracfit gui-tunnel --auth-token SEGREDO [--target DIR] [--enable-dispatch]
+                                           # link https p/ celular (cloudflared)
+  oracfit hitl <target-dir> [--port N]      # calibração: nota real 0-10 por anel
+
+CUSTOM (terreno v1 · runtime multi-stage = v2)
+  oracfit modes
+  oracfit mode validate <id|yaml>
+  oracfit mode lint <id|yaml>       # v4: claims→mecanismos + shadow de id
+  oracfit mode init <id>
+  # vision_catalog / unlock_plan: YAML shipa; execução map/reduce/unlock → v2
+
+RING (v4 — god mode com mecanismo, não protocolo)
+  oracfit ring init --mode <id> [--target DIR] [--oracle-cmd "<cmd>"]
+  oracfit ring open  RING-N "hipótese" [--target DIR]
+  oracfit ring close RING-N [--target DIR] -- <pathspec...>
+  oracfit ring abort RING-N "motivo" | score RING-N --real N | status
+
+DAEMON (v4 — processo longo imune à morte da sessão)
+  oracfit daemon start <log> <cmd> [args...]   # double-fork+setsid+pidfile
+  oracfit daemon status <log> | stop <log>
+
+CRITIC-GUARD (v4 — critic é read-only por código, não por prompt)
+  oracfit critic-guard run   --target DIR [--budget S] -- <cmd>  # write mata (exit 5)
+  oracfit critic-guard arm   --target DIR [--budget S]  # antes de dispatch host-mode (Task)
+  oracfit critic-guard check --target DIR               # depois: tripwire, drift=quarentena
+  oracfit critic-guard status --target DIR
+
+USAGE HUB (v3.5 — tokens/quota built-in, sem daemon)
+  oracfit usage status                  # tokens por provider (opencode.db)
+  oracfit usage recommend --provider X  # use/wait/exhausted (exit 0/1/4)
+  oracfit usage pick --tiers "r1 r2"    # 1º model ref viável p/ subagent
+  oracfit usage observe --kind rate_limit --model-ref M
+  oracfit usage limits --set opencode 5h 4000000
+
+ROOT vs workdir
+  ORACFIT_ROOT = instalação (bin/, panel/, core/modes/)
+  workdir      = projeto (.dispatch/logs/)
+
+oracle_exit=2 = oráculo QUEBRADO, não 'falta trabalho'.
+Sintaxe completa: _bmad-output/planning-artifacts/v1-modes-catalog.md
+Oracfit — Carlos Felipe
+EOF
+}
+
+cmd_modes() {
+  # Workdir overlay first, then ROOT — same resolution order as dispatch-mode.sh
+  # (AD-16, v1-modes-catalog.md §4). A workdir mode with the same id as a ROOT
+  # mode shadows it in listing, matching what `oracfit run <id>` would actually
+  # execute.
+  # macOS ships bash 3.2 (no `declare -A`) — use a newline list + grep -xF as
+  # the membership check instead of an associative array (same class of bug
+  # as `mapfile` earlier: don't assume bash 4+ on this host).
+  local root_dir="${ORACFIT_ROOT:-$ROOT}/core/modes"
+  local workdir_dir="${ORACFIT_WORKDIR:-$PWD}/core/modes"
+  local f id
+  local workdir_ids=""
+
+  if [ -d "$workdir_dir" ] && [ "$workdir_dir" != "$root_dir" ]; then
+    echo "modes in $workdir_dir (workdir overlay)"
+    for f in "$workdir_dir"/*.yaml; do
+      [ -f "$f" ] || continue
+      id=$(basename "$f" .yaml)
+      echo "  $id"
+      workdir_ids="$workdir_ids$id"$'\n'
+    done
+  fi
+
+  echo "modes in $root_dir"
+  if [ ! -d "$root_dir" ]; then
+    echo "(missing)" >&2
+    exit 3
+  fi
+  for f in "$root_dir"/*.yaml; do
+    [ -f "$f" ] || continue
+    id=$(basename "$f" .yaml)
+    if printf '%s' "$workdir_ids" | grep -qxF "$id"; then
+      echo "  $id (shadowed by workdir overlay)"
+    else
+      echo "  $id"
+    fi
+  done
+}
+
+resolve_mode_yaml() { # $1=id|path — imprime caminho ou sai 3
+  local target="$1"
+  local file="$target"
+  if [ ! -f "$file" ]; then
+    # Workdir overlay first, then ROOT — same order dispatch-mode.sh resolves
+    # at run time, so `validate` actually checks what `run` would execute.
+    file="${ORACFIT_WORKDIR:-$PWD}/core/modes/${target}.yaml"
+  fi
+  if [ ! -f "$file" ]; then
+    file="${ORACFIT_ROOT:-$ROOT}/core/modes/${target}.yaml"
+  fi
+  if [ ! -f "$file" ]; then
+    echo "ERROR: mode yaml not found: $target (tried ${ORACFIT_WORKDIR:-$PWD}/core/modes/${target}.yaml and ${ORACFIT_ROOT:-$ROOT}/core/modes/${target}.yaml)" >&2
+    exit 3
+  fi
+  echo "$file"
+}
+
+cmd_mode_validate() {
+  local file
+  file=$(resolve_mode_yaml "${1:?usage: oracfit mode validate <id|path.yaml>}")
+  exec python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" validate "$file"
+}
+
+cmd_mode_lint() {
+  local file
+  file=$(resolve_mode_yaml "${1:?usage: oracfit mode lint <id|path.yaml>}")
+  exec python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" lint "$file" \
+    --root "${ORACFIT_ROOT:-$ROOT}" --workdir "${ORACFIT_WORKDIR:-$PWD}"
+}
+
+cmd_mode_init() {
+  local id="${1:?usage: oracfit mode init <id>}"
+  case "$id" in
+    *[!a-z0-9_]*|"") echo "ERROR: id must be [a-z0-9_]+" >&2; exit 2 ;;
+  esac
+  local dir="${ORACFIT_WORKDIR:-$PWD}/core/modes"
+  mkdir -p "$dir"
+  local dest="$dir/${id}.yaml"
+  if [ -e "$dest" ]; then
+    echo "ERROR: exists $dest" >&2
+    exit 3
+  fi
+  cat >"$dest" <<EOF
+id: ${id}
+version: "1"
+name: ${id}
+description: Custom mode scaffold — edit stages, then oracfit mode validate ${id}
+stages:
+  - role: run
+    model_ref: tier:cheap
+    oracle: true
+    max_attempts: 3
+on_fail: halt
+EOF
+  echo "wrote $dest"
+  echo "next: oracfit mode validate ${id} && oracfit run ${id} <spec> <task>"
+}
+
+cmd_run() {
+  local mode="${1:?usage: oracfit run <mode> <spec|input> <task>}"
+  shift
+  # P5: multi-stage modes (unlock_plan, vision_catalog, …) use dispatch-stages.sh
+  local mode_yaml stage_n
+  mode_yaml="${ORACFIT_WORKDIR:-$PWD}/core/modes/${mode}.yaml"
+  [ -f "$mode_yaml" ] || mode_yaml="${ROOT}/core/modes/${mode}.yaml"
+  stage_n=1
+  if [ -f "$mode_yaml" ]; then
+    stage_n=$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" dump "$mode_yaml" 2>/dev/null | python3 -c 'import json,sys; print(len((json.load(sys.stdin).get("stages") or [])))' 2>/dev/null || echo 1)
+  fi
+  if [ "${stage_n:-1}" -gt 1 ] 2>/dev/null; then
+    exec "$SCRIPT_DIR/dispatch-stages.sh" "$mode" "$@"
+  fi
+  exec "$SCRIPT_DIR/dispatch-mode.sh" "$mode" "$@"
+}
+
+cmd_resume() {
+  # resume (v1, 2026-08-01): retoma um dispatch JA TERMINADO com uma
+  # mensagem nova do humano, reaproveitando a mesma sessao do opencode
+  # (preserva cache — ver lessons/2026-08-01-continuidade-de-sessao-hitl-p0-cache.md).
+  # Complementa o interrupt do painel (que so funciona em run VIVO); isto
+  # funciona em run que ja fechou (pass ou fail).
+  local run_id="${1:?usage: oracfit resume <run_id> \"<mensagem>\"}"
+  local msg="${2:?usage: oracfit resume <run_id> \"<mensagem>\"}"
+  local wd="${ORACFIT_WORKDIR:-$PWD}"
+  local inbox_dir="$wd/.dispatch/logs/inbox"
+  mkdir -p "$inbox_dir"
+  if [ ! -f "$inbox_dir/${run_id}.spec-file" ]; then
+    echo "ERROR: run_id $run_id sem spec/mode/task persistidos em $inbox_dir — dispatch original é anterior a esta feature, ou run_id errado" >&2
+    exit 3
+  fi
+  MSG="$msg" python3 -c "
+import json, os, sys, time
+entry = {'ts': time.time(), 'text': os.environ['MSG'], 'interrupt': False}
+with open(sys.argv[1], 'a', encoding='utf-8') as f:
+    f.write(json.dumps(entry, ensure_ascii=False) + chr(10))
+" "$inbox_dir/${run_id}.jsonl"
+  echo "mensagem gravada, retomando run_id=$run_id..."
+  exec "$SCRIPT_DIR/dispatch-mode.sh" --resume-run-id "$run_id"
+}
+
+cmd_first_proof() {
+  : "${ORACFIT_ROOT:?set ORACFIT_ROOT to checkout or ~/.oracfit/current}"
+  : "${DISPATCH_RUNNER:?set DISPATCH_RUNNER e.g. \$ORACFIT_ROOT/adapters/stub/runner.sh}"
+  exec "$SCRIPT_DIR/dispatch-mode.sh" normal \
+    "${ORACFIT_ROOT}/specs/oracfit-smoke-normal.md" \
+    "${1:-first-proof}"
+}
+
+case "$cmd" in
+  help|--help|-h|"") cmd_help ;;
+  start|first-proof|tldr|smoke) cmd_first_proof "$@" ;;
+  run) cmd_run "$@" ;;
+  panel|abrir|open) exec "$SCRIPT_DIR/oracfit-panel.sh" "$@" ;;
+  gui) exec "$SCRIPT_DIR/oracfit-gui.sh" "$@" ;;
+  gui-tunnel)
+    # link público AUTENTICADO p/ celular (cloudflared quick) — exige token
+    exec "$SCRIPT_DIR/oracfit-gui-tunnel.sh" "$@" ;;
+  hitl)
+    # calibração de anel exige alvo com ring/ — o resto da GUI vem junto
+    target="${1:?uso: oracfit hitl <target-dir> [--port N]}"
+    shift
+    exec "$SCRIPT_DIR/oracfit-gui.sh" --target "$target" "$@"
+    ;;
+  modes) cmd_modes ;;
+  mode)
+    sub="${1:-}"
+    shift || true
+    case "$sub" in
+      validate) cmd_mode_validate "$@" ;;
+      lint) cmd_mode_lint "$@" ;;
+      init) cmd_mode_init "$@" ;;
+      list|"") cmd_modes ;;
+      *) did_you_mean "mode $sub"; exit 2 ;;
+    esac
+    ;;
+  ring) exec "$SCRIPT_DIR/oracfit-ring.sh" "$@" ;;
+  daemon) exec "$SCRIPT_DIR/oracfit-daemon.sh" "$@" ;;
+  critic-guard|guard) exec "$SCRIPT_DIR/critic-guard.sh" "$@" ;;
+  resume) cmd_resume "$@" ;;
+  usage) exec python3 "$SCRIPT_DIR/usage-hub.py" "$@" ;;
+  batch) exec "$SCRIPT_DIR/dispatch-batch.sh" "$@" ;;
+  stop|rerun|switch|status|follow|ps) lifecycle_reserved "$cmd" ;;
+  normal)
+    # leigo: oracfit normal spec task → run normal
+    cmd_run normal "$@"
+    ;;
+  *)
+    did_you_mean "$cmd"
+    exit 2
+    ;;
+esac

@@ -1,0 +1,84 @@
+id: content_factory
+version: "3"
+name: content_factory
+description: >
+  v3: Fim-a-fim — run CF (T1-T4) -> export MDX -> render Playwright ->
+  vision-gate gemma-4-26b free via fatias ≤1800px (bin/vision-gate-slices.sh),
+  prompt neutro + CTA mecânico no HTML
+  biggest_gap e volta pro export (loop_target). Publish exige humano.
+  Esquema: docs/v3-fable-spec.md. Sem infográfico (v3.1).
+stages:
+  - role: run
+    command: >
+      if [ "${ORACFIT_STAGE_ATTEMPT:-1}" -gt 1 ]; then
+        rm -f "$ORACFIT_WORKDIR/apps/content-factory/artifacts/$ORACFIT_NICHE_FOLDER/T4-content-validation.yaml";
+        rm -rf "$ORACFIT_WORKDIR/apps/content-factory/artifacts/$ORACFIT_NICHE_FOLDER/T4-content-bundle";
+        rm -f "$ORACFIT_WORKDIR/apps/content-factory/checkpoints/$ORACFIT_NICHE_FOLDER.json";
+      fi &&
+      cd "$ORACFIT_WORKDIR/apps/content-factory" &&
+      SEARXNG_URL=http://localhost:8888 uv run python main.py
+      --mode hierarchical --niche "$ORACFIT_NICHE"
+    stage_oracle: >
+      python3 "$ORACFIT_ROOT/bin/check-bundle-facts.py"
+      "$ORACFIT_SPEC_FILE"
+      "$ORACFIT_WORKDIR/apps/content-factory/artifacts/$ORACFIT_NICHE_FOLDER/T4-content-bundle"
+    oracle: true
+    max_attempts: 2
+  - role: export
+    command: >
+      cd "$ORACFIT_WORKDIR/apps/content-factory" &&
+      uv run python export-to-blog.py --niche "$ORACFIT_NICHE"
+    # Python inline aqui quebrava: o folding do bloco > cola linhas e vira
+    # SyntaxError (run 5F50DC24). Oracle vive em script proprio.
+    stage_oracle: >
+      python3 "$ORACFIT_ROOT/bin/check-export-mdx.py"
+      "$ORACFIT_WORKDIR/apps/storefront/content/blog/$ORACFIT_NICHE_FOLDER.mdx"
+    oracle: true
+    max_attempts: 2
+  - role: render
+    preflight: >
+      ( curl --fail --silent --show-error --max-time 2
+      "http://127.0.0.1:3010/" >/dev/null &&
+      curl --fail --silent --show-error --max-time 2
+      "http://127.0.0.1:3010/blog/$ORACFIT_NICHE" >/dev/null ) ||
+      { echo "ERROR: storefront route for niche '$ORACFIT_NICHE' is not reachable at localhost:3010; start the current storefront before render." >&2; exit 1; }
+    command: >
+      cd "$ORACFIT_WORKDIR/apps/storefront" &&
+      SCREENSHOTS="$ORACFIT_WORKDIR/apps/storefront/tests/e2e/evidence/visual-qa/$ORACFIT_NICHE_FOLDER" &&
+      URL="http://127.0.0.1:3010/blog/$ORACFIT_NICHE" &&
+      rm -f "$SCREENSHOTS/desktop-full.png" "$SCREENSHOTS/mobile-full.png" &&
+      mkdir -p "$SCREENSHOTS" &&
+      node scripts/screenshot-page.js "$URL"
+      "$SCREENSHOTS/desktop-full.png" --viewport 1440x900 &&
+      node scripts/screenshot-page.js "$URL"
+      "$SCREENSHOTS/mobile-full.png" --device "Pixel 5"
+    freshness_targets:
+      - "apps/storefront/tests/e2e/evidence/visual-qa/$ORACFIT_NICHE_FOLDER/desktop-full.png"
+      - "apps/storefront/tests/e2e/evidence/visual-qa/$ORACFIT_NICHE_FOLDER/mobile-full.png"
+    stage_oracle: >
+      test -s
+      "$ORACFIT_WORKDIR/apps/storefront/tests/e2e/evidence/visual-qa/$ORACFIT_NICHE_FOLDER/desktop-full.png" &&
+      test "$(wc -c < "$ORACFIT_WORKDIR/apps/storefront/tests/e2e/evidence/visual-qa/$ORACFIT_NICHE_FOLDER/desktop-full.png" | tr -d ' ')" -gt 30000 &&
+      test -s
+      "$ORACFIT_WORKDIR/apps/storefront/tests/e2e/evidence/visual-qa/$ORACFIT_NICHE_FOLDER/mobile-full.png" &&
+      test "$(wc -c < "$ORACFIT_WORKDIR/apps/storefront/tests/e2e/evidence/visual-qa/$ORACFIT_NICHE_FOLDER/mobile-full.png" | tr -d ' ')" -gt 30000
+    oracle: true
+    max_attempts: 2
+  - role: vision_gate
+    command: >
+      SCREENSHOTS="$ORACFIT_WORKDIR/apps/storefront/tests/e2e/evidence/visual-qa/$ORACFIT_NICHE_FOLDER" &&
+      bash "$ORACFIT_ROOT/bin/vision-gate-slices.sh" "$SCREENSHOTS"
+      --url "http://127.0.0.1:3010/blog/$ORACFIT_NICHE_FOLDER"
+    oracle: true
+    max_attempts: 2
+    loop_target: export
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 4
+  loop_target: export
+  critic_model_ref: deepseek/deepseek-v4-flash-direct
+run_attempt_budget: 4
+publish: human_approval
+on_fail: halt

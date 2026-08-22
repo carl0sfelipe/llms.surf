@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — Agora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+</head>
+<body class="gui" data-page="home">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content" id="main">
+    <h2 class="page-title">Agora</h2>
+    <p class="page-plain">Esta página mostra o que os robôs estão fazendo neste momento
+      e se alguma coisa precisa de você. Se aparecer um botão azul, essa é a única
+      coisa a fazer — o resto é só para olhar.</p>
+    <p class="page-sub">Atualiza sozinha a cada 15s.</p>
+    <div id="lead"></div>
+    <div class="telemetry-strip" id="tiles"></div>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Rodando agora</h3></div>
+      <div id="active"><div class="empty-note">…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Anéis abertos (god mode)</h3></div>
+      <div id="open-rings"><div class="empty-note">…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title"><abbr title="ledger = o caderno de registro onde cada acontecimento fica anotado, em ordem">Ledger</abbr> central — últimos acontecimentos</h3>
+        <span class="row-meta mono" id="ledger-path"></span></div>
+      <div id="tail"><div class="empty-note">…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Erros que ainda não viraram proteção</h3></div>
+      <div id="audit"><div class="empty-note">…</div></div>
+    </section>
+    <div id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+
+  function leadHTML(d) {
+    if (d.to_score > 0) {
+      return `<div class="action-lead">
+        <span class="lead-text">${d.to_score} ${d.to_score === 1 ? "anel fechado espera" : "anéis fechados esperam"} sua nota real.</span>
+        <span class="lead-meta">~2 min por anel</span>
+        <a class="btn primary" href="hitl.html">Dar notas agora</a>
+      </div>`;
+    }
+    if (d.active_runs.length > 0) {
+      return `<div class="action-lead">
+        <span class="lead-text">${d.active_runs.length} run(s) em execução — nada exige você agora.</span>
+        <a class="btn" href="index.html">Acompanhar ao vivo</a>
+      </div>`;
+    }
+    return `<div class="action-lead calm">
+      <span class="lead-text">Nada rodando e nada esperando você.</span>
+      <span class="lead-meta">bom momento para despachar trabalho novo</span>
+    </div>`;
+  }
+
+  function diskClass(level) { return level === "critico" ? "crit" : (level === "atencao" ? "warn" : "ok"); }
+
+  async function load() {
+    let d;
+    try { d = await getJSON("/api/gui/home"); }
+    catch (err) { showError($("lead"), err); return; }
+
+    $("lead").innerHTML = leadHTML(d);
+
+    const debts = (d.audit && d.audit.debts) || [];
+    $("tiles").innerHTML = `
+      <div class="data-tile"><div class="data-tile-label">Disco livre</div>
+        <div class="data-tile-value ${diskClass(d.disk.level)}">${d.disk.free_gb ?? "—"}<span class="data-tile-unit">GB</span></div></div>
+      <div class="data-tile"><div class="data-tile-label">Runs vivos</div>
+        <div class="data-tile-value ${d.active_runs.length ? "" : "ok"}">${d.active_runs.length}</div></div>
+      <div class="data-tile"><div class="data-tile-label">Anéis abertos</div>
+        <div class="data-tile-value ${d.open_rings.length ? "" : "ok"}">${d.open_rings.length}</div></div>
+      <div class="data-tile"><div class="data-tile-label">Incidents sem regra</div>
+        <div class="data-tile-value ${debts.length ? "warn" : "ok"}">${d.audit && d.audit.ok === false ? "—" : debts.length}</div></div>`;
+
+    if (d.disk.level !== "ok") {
+      $("lead").insertAdjacentHTML("beforeend",
+        `<div class="alert-banner">Disco em ${d.disk.free_gb} GB livres — abaixo de ${d.disk.level === "critico" ? "10 GB: pausar trabalho em massa e liberar espaço pelos alvos seguros" : "25 GB: vale liberar espaço em breve"} (regra 51).</div>`);
+    }
+
+    renderCapped($("active"), d.active_runs, (r) => `
+      <div class="row"><span class="badge-nominal">vivo</span>
+        <span class="row-main">${esc(r.task || r.run_id)} <span class="row-meta">${esc(r.mode || "")}</span></span>
+        <span class="row-meta">${esc(r.model || "")} · ${fmtTs(r.started)}</span></div>`);
+    if (!d.active_runs.length) $("active").innerHTML = '<div class="empty-note">Nenhum run em execução.</div>';
+
+    renderCapped($("open-rings"), d.open_rings, (r) => `
+      <div class="row"><span class="badge-warning">aberto</span>
+        <span class="row-main"><span class="mono">${esc(r.ring)}</span> — ${esc(r.hypothesis || "")}</span>
+        <span class="row-meta">${esc(r.mode || "")} · ${fmtTs(r.opened_at)}</span></div>`);
+    if (!d.open_rings.length) $("open-rings").innerHTML = '<div class="empty-note">Nenhum anel aberto.</div>';
+
+    renderCapped($("tail"), d.central_tail, (e) => `
+      <div class="row"><span class="${e.ok ? "badge-nominal" : "badge-critical"}">${e.kind}</span>
+        <span class="row-main">${esc(e.label)}</span>
+        <span class="row-meta">${fmtTs(e.ts)}</span></div>`);
+    if (!d.central_tail.length) $("tail").innerHTML = '<div class="empty-note">Ledger central vazio.</div>';
+
+    if (d.audit && d.audit.ok === false) {
+      $("audit").innerHTML = `<div class="empty-note">Audit indisponível: ${esc(d.audit.error)}</div>`;
+    } else {
+      const debtRows = debts.length ? debts : [];
+      renderCapped($("audit"), debtRows, (ln) => `
+        <div class="row"><span class="badge-warning">recorrível sem regra</span>
+          <span class="row-main">${esc(ln.replace(/^.*DÍVIDA:\s*/, ""))}</span></div>`);
+      if (!debts.length) $("audit").innerHTML = '<div class="empty-note">Nenhum incidente recorrível sem regra — feedback em dia.</div>';
+    }
+  }
+
+  load();
+  setInterval(load, 15000);
+  </script>
+</body>
+</html>

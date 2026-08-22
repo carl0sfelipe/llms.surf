@@ -1,0 +1,35 @@
+id: ui_visual_qa
+version: "2"
+name: QA visual de storefront (screenshots → JSON + gauntlet)
+description: >
+  Map vision sobre prints Playwright → findings JSONL; com --gauntlet --bar DIR
+  roda blind A/B (ours vs barra fetchable) ate ours ganhar ou safety_ceiling,
+  e emite .gauntlet.json + .revise.md (biggest_gap). Runtime multi-stage map
+  no dispatch-mode ainda e v2 — use bin/dispatch-vision-ui-qa.sh. Padrao:
+  https://github.com/robonuggets/gauntlet-loop
+stages:
+  - role: map
+    model_ref: tier:vision
+    rate_limit_s: 15
+    input: files_glob
+    prompt_template: ui_visual_findings
+    json_schema: storefront_visual_findings
+    artifacts: map/
+    max_attempts: 2
+  - role: reduce
+    model_ref: tier:cheap
+    input: prev_stage
+    prompt_template: merge_ui_findings
+    json_schema: storefront_visual_report
+    artifacts: reduce/
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 4
+preflight:
+  - classify
+  - check-spec
+on_fail: halt

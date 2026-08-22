@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — Modelos & uso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+</head>
+<body class="gui" data-page="registry">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content">
+    <h2 class="page-title">Modelos &amp; uso</h2>
+    <p class="page-plain">Lista dos robôs (modelos de IA) que o sistema pode usar:
+      quão bem cada um foi medido, quais já saíram de serviço, e quanto de cada
+      plano de uso já foi gasto.</p>
+    <p class="page-sub">Fontes: <span class="mono">model-registry.json</span> +
+      usage-hub (tokens por provider).</p>
+    <div class="telemetry-strip" id="tiles"></div>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Quota por provider (usage-hub)</h3></div>
+      <div id="usage"><div class="empty-note">Carregando…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Modelos em serviço</h3></div>
+      <div id="models"><div class="empty-note">Carregando…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Aposentados / indisponíveis</h3></div>
+      <div id="retired"><div class="empty-note">Carregando…</div></div>
+    </section>
+    <div id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+
+  function modelRow(m) {
+    const acc = m.accuracy != null ? `${Math.round(m.accuracy * 100)}%` : "—";
+    const lat = m.latency_ms != null ? `${m.latency_ms}ms` : "—";
+    return `
+      <div class="row">
+        <span class="badge-neutral">${esc(m.tier || "?")}</span>
+        <span class="row-main"><span class="mono">${esc(m.id)}</span>
+          <span class="row-meta">${esc((m.best_for || []).slice(0, 3).join(", "))}</span></span>
+        <span class="row-num">acc ${acc} · ${lat}</span>
+        <span class="row-meta">${esc(m.provider || "")}</span>
+      </div>`;
+  }
+
+  async function load() {
+    let d;
+    try { d = await getJSON("/api/gui/registry"); }
+    catch (err) { showError(document.getElementById("models"), err); return; }
+
+    const active = d.models.filter((m) => !m.retired);
+    const retired = d.models.filter((m) => m.retired);
+    document.getElementById("tiles").innerHTML = `
+      <div class="data-tile"><div class="data-tile-label">Modelos no registry</div>
+        <div class="data-tile-value">${d.models.length}</div></div>
+      <div class="data-tile"><div class="data-tile-label">Em serviço</div>
+        <div class="data-tile-value ok">${active.length}</div></div>
+      <div class="data-tile"><div class="data-tile-label">Aposentados</div>
+        <div class="data-tile-value">${retired.length}</div></div>
+      <div class="data-tile"><div class="data-tile-label">Providers com plano</div>
+        <div class="data-tile-value">${Object.keys(d.limits).length}</div></div>`;
+
+    active.sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
+    renderCapped(document.getElementById("models"), active, modelRow);
+    renderCapped(document.getElementById("retired"), retired, modelRow);
+    if (!retired.length) document.getElementById("retired").innerHTML =
+      '<div class="empty-note">Nenhum modelo aposentado.</div>';
+
+    // tokens reais por provider — mesmo endpoint que o painel ao vivo usa
+    try {
+      const u = await getJSON("/api/usage");
+      const provs = (u.providers || []);
+      if (!provs.length) throw new Error("sem dados de uso");
+      renderCapped(document.getElementById("usage"), provs, (p) => {
+        const plan = d.limits[p.provider] ? d.limits[p.provider].plan : "";
+        const badge = p.action === "use" ? '<span class="badge-nominal">use</span>'
+          : p.action === "wait" ? '<span class="badge-warning">wait</span>'
+          : p.action ? `<span class="badge-critical">${esc(p.action)}</span>` : "";
+        const tok = (p.windows && p.windows.day && p.windows.day.tokens) ??
+                    (p.windows && p.windows["5h"] && p.windows["5h"].tokens) ?? p.tokens;
+        return `<div class="row">${badge}
+          <span class="row-main">${esc(p.provider)} <span class="row-meta">${esc(plan || p.message || "")}</span></span>
+          <span class="row-num">${tok != null ? Number(tok).toLocaleString("pt-BR") + " tok" : ""}</span></div>`;
+      });
+    } catch (_) {
+      document.getElementById("usage").innerHTML =
+        '<div class="empty-note">usage-hub sem dados nesta máquina — só o registry está disponível.</div>';
+    }
+  }
+
+  load();
+  </script>
+</body>
+</html>

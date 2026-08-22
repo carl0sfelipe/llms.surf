@@ -1,0 +1,17 @@
+id: glm_smart
+version: "1"
+name: glm_smart
+description: >
+  Modo custom oficial pra stories do EPIC-2 que precisam de julgamento/decisao
+  (nao transformacao mecanica) - GLM 5.2 via assinatura Zhipu AI Coding Plan.
+stages:
+  - role: run
+    model_ref: zhipuai/glm-5.2-coding-plan
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 4
+on_fail: halt

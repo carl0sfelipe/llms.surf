@@ -1,0 +1,16 @@
+id: normal
+version: "1"
+stages:
+  - role: run
+    model_ref: deepseek-v4-flash-free
+    oracle: true
+max_attempts: 3
+description: >
+  Flash-class only. Gauntlet injects oracle failure feedback into the next
+  attempt; exit is oracle_exit=0 (safety_ceiling when until_approved).
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+on_fail: halt

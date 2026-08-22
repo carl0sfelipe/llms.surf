@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — Dispatches</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+</head>
+<body class="gui" data-page="dispatches">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content">
+    <h2 class="page-title">Dispatches</h2>
+    <p class="page-plain">Cada linha é uma tarefa que foi entregue a um robô para
+      fazer sozinho. Verde = terminou e passou no teste automático. Vermelho = não
+      passou. Nenhum destes precisa de você — é só o histórico.</p>
+    <p class="page-sub">Runs dos 3 <abbr title="ledger = o caderno de registro onde cada acontecimento fica anotado, em ordem">ledgers</abbr>, declarados um a um (regra 38) —
+      fonte que não existe aparece como ausente, nunca some do placar.</p>
+    <div class="telemetry-strip" id="tiles"></div>
+    <section class="panel" id="dispatch-panel">
+      <div class="panel-header"><h3 class="panel-title">Entregar uma tarefa a um robô</h3></div>
+      <div id="dispatch-area"><div class="empty-note">Carregando…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Fontes declaradas</h3></div>
+      <div id="sources"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Runs — mais recentes primeiro</h3></div>
+      <div id="runs"><div class="empty-note">Carregando…</div></div>
+    </section>
+    <div id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+
+  function runRow(r) {
+    const badge = r.ok ? '<span class="badge-nominal">passou</span>'
+                       : '<span class="badge-critical">falhou</span>';
+    const items = (r.items || []).length
+      ? `<details class="ver-mais"><summary>${r.items.length} itens do lote</summary>
+           <pre>${r.items.map((i) => `${i.ok ? "ok " : "FAIL"} ${i.task} (${fmtDur(i.duration_s)})`).map(esc).join("\n")}</pre></details>`
+      : "";
+    return `
+      <div class="row" style="flex-wrap:wrap">
+        ${badge}
+        <span class="badge-neutral">${esc(r.source)}</span>
+        <span class="row-main">${esc(r.task || "?")} <span class="row-meta">${esc(r.detail || "")}</span></span>
+        <span class="row-num">${esc(r.model || "")}</span>
+        <span class="row-meta">${fmtDur(r.duration_s)} · ${fmtTs(r.ts)}</span>
+        ${items ? `<div style="flex-basis:100%">${items}</div>` : ""}
+      </div>`;
+  }
+
+  /* ── Entregar uma tarefa (POST /api/dispatch) ─────────────────────────── */
+  const dispatchArea = document.getElementById("dispatch-area");
+
+  async function loadDispatchForm() {
+    let d;
+    try { d = await getJSON("/api/gui/modes"); }
+    catch (err) { dispatchArea.innerHTML = `<div class="alert-banner">Falha ao carregar: ${esc(err.message)}</div>`; return; }
+
+    // regra 38: desligado aparece como desligado, nunca some
+    if (!d.dispatch_enabled) {
+      dispatchArea.innerHTML = `<div class="empty-note">Despacho pela GUI está desligado.
+        É uma escolha: esta tela só observa. Para despachar daqui (inclusive do celular),
+        suba a GUI com <span class="mono">--enable-dispatch</span>.</div>`;
+      return;
+    }
+
+    const modeOpts = d.modes.map((m) => `<option value="${esc(m)}"${m === "normal" ? " selected" : ""}>${esc(m)}</option>`).join("");
+    const adapterOpts = d.adapters.map((a) => `<option value="${esc(a)}"${a === "zcode" ? " selected" : ""}>${esc(a)}</option>`).join("");
+    dispatchArea.innerHTML = `
+      <p class="page-plain" style="margin:0 0 var(--space-3)">Escolha a tarefa (um arquivo de spec dentro do projeto) e o robô que vai fazer.
+        O despacho passa pelos mesmos porteiros do terminal — oráculo, watchdog, ledger.</p>
+      <form id="dispatch-form" class="form-grid">
+        <label>Spec (caminho no projeto)
+          <input id="df-spec" type="text" placeholder="specs/minha-tarefa.md" required /></label>
+        <label>Tarefa (nome curto)
+          <input id="df-task" type="text" placeholder="minha-task" pattern="[a-z0-9][a-z0-9._-]*" required /></label>
+        <label>Robô (adapter)
+          <select id="df-adapter">${adapterOpts}</select></label>
+        <label>Mode
+          <select id="df-mode">${modeOpts}</select></label>
+        <button class="btn primary" type="submit" id="df-submit">Entregar tarefa ao robô</button>
+      </form>
+      <div id="df-result" style="margin-top:var(--space-3)"></div>`;
+
+    document.getElementById("dispatch-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("df-submit");
+      const out = document.getElementById("df-result");
+      btn.disabled = true;
+      btn.textContent = "Entregando…";
+      try {
+        const { body } = await postJSON("/api/dispatch", {
+          spec: document.getElementById("df-spec").value.trim(),
+          task: document.getElementById("df-task").value.trim(),
+          adapter: document.getElementById("df-adapter").value,
+          mode: document.getElementById("df-mode").value,
+        });
+        out.innerHTML = `<div class="alert-banner" style="border-color:var(--data-success)">
+          Entregue: ${esc(body.task)} via ${esc(body.adapter)} (mode ${esc(body.mode)}).
+          <a href="index.html">Ver o robô trabalhando ao vivo →</a></div>`;
+      } catch (err) {
+        out.innerHTML = `<div class="alert-banner">Não deu para entregar: ${esc(err.message || err)}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Entregar tarefa ao robô";
+      }
+    });
+  }
+  loadDispatchForm();
+
+  async function load() {
+    const runsEl = document.getElementById("runs");
+    let d;
+    try { d = await getJSON("/api/gui/dispatches"); }
+    catch (err) { showError(runsEl, err); return; }
+
+    const okCount = d.runs.filter((r) => r.ok).length;
+    document.getElementById("tiles").innerHTML = `
+      <div class="data-tile"><div class="data-tile-label">Runs registrados</div>
+        <div class="data-tile-value">${d.runs.length}</div></div>
+      <div class="data-tile"><div class="data-tile-label">Passaram</div>
+        <div class="data-tile-value ok">${okCount}</div></div>
+      <div class="data-tile"><div class="data-tile-label">Falharam</div>
+        <div class="data-tile-value ${d.runs.length - okCount ? "crit" : "ok"}">${d.runs.length - okCount}</div></div>`;
+
+    document.getElementById("sources").innerHTML = d.sources.map((s) => `
+      <div class="row">
+        ${s.exists ? '<span class="badge-nominal">lida</span>' : '<span class="badge-warning">ausente</span>'}
+        <span class="row-main">${esc(s.source)} <span class="row-meta mono">${esc(s.path)}</span></span>
+        <span class="row-num">${s.exists ? `${s.entries} registro(s)` : "arquivo não existe"}</span>
+      </div>`).join("");
+
+    if (!d.runs.length) {
+      runsEl.innerHTML = '<div class="empty-note">Nenhum run nos ledgers ainda.</div>';
+      return;
+    }
+    renderCapped(runsEl, d.runs, runRow);
+  }
+
+  load();
+  setInterval(load, 15000);
+  </script>
+</body>
+</html>

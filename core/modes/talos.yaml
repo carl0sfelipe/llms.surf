@@ -1,0 +1,116 @@
+# MODO TALOS — god mode experimental do oracfit 3.5 (o terceiro da trinca)
+#
+# DEMIURGO evolui UM artefato contra oráculo congelado. PYTHIA executa UMA
+# missão com julgamento contínuo. TALOS patrulha um PRODUTO INTEIRO: o
+# frontier model roda sozinho o ciclo completo — triagem de backlog, build,
+# crítica, refinamento, auditoria — em voltas sucessivas, sem dispatch para
+# modelos free e sem humano no loop até o dono vir ler os checkpoints.
+#
+# O nome é honesto: Talos era o autômato de bronze que Hefesto forjou para
+# patrulhar Creta — dava três voltas na ilha por dia, sozinho, sem
+# supervisão. Mas tinha UMA veia, e quando ela abriu, ele caiu. A veia do
+# TALOS é a mesma: gerador, crítico e juiz são o mesmo modelo. Viés de
+# auto-preferência não é hipótese, é literatura. Por isso as proteções são
+# ESTRUTURAIS, herdadas do DEMIURGO e endurecidas para escopo de produto:
+#
+#   1. BACKLOG ESCRITO ANTES DA 1ª VOLTA: a triagem (patrol) produz uma
+#      lista ordenada por valor×risco ANTES de qualquer edição, commitada
+#      no checkpoint 0. O modelo não escolhe a tarefa depois de ver o quão
+#      fácil ela é.
+#   2. PORTÃO DO DONO: toda tarefa é classificada EXECUTÁVEL ou DO-DONO.
+#      Preço, credencial, DNS, decisão de negócio = DO-DONO, vai para a
+#      lista de pendências e NUNCA é chutada. Herança direta da regra 37:
+#      número não medido / decisão não tomada não entra no código.
+#   3. ORÁCULO DETERMINÍSTICO POR VOLTA: tsc, lint, suíte de verificação e
+#      oráculos de fluxo do repo-alvo rodam em TODA volta. Vermelho não
+#      negociável: 2 vermelhos seguidos na mesma tarefa = tarefa devolvida
+#      ao backlog com nota, volta encerrada sem commit de código.
+#   4. SELF-AUDIT COM CHECKLIST: a crítica é contra checklist escrito no
+#      plano da volta (antes do build), não contra impressão. Perfil de
+#      critic adversarial de core/critic-profiles/ quando aplicável.
+#   5. CHECKPOINT COMMITADO POR VOLTA: commit git + entrada no diário do
+#      repo-alvo com: hipótese, diff, o que a auditoria pegou, o que ficou
+#      pendente. Checkpoint é a interface de revisão humana.
+#   6. TETO DURO: safety_ceiling de voltas por sessão. Loop sem teto já
+#      estourou limite de uso — não repete.
+#
+# Limitação declarada (não escondida): TALOS não substitui o gauntlet
+# multi-modelo nem o dispatch econômico. É o modo mais caro do oracfit,
+# justificado quando custo do erro >> custo do token e o dono ordenou
+# autonomia. Vitória declarada só após revisão humana dos checkpoints.
+#
+# NOTA de execução: model_ref "frontier-session" não é dispatchável via
+# opencode — este modo é executado pelo próprio agente frontier orquestrador
+# (Cursor/Claude Code) seguindo os stages abaixo como protocolo.
+
+id: talos
+version: "1"
+name: talos
+description: >
+  God mode experimental v3.5 para evolução autônoma de produto: frontier
+  model faz triagem+build+crítica+auditoria sozinho, em voltas com oráculo
+  determinístico obrigatório, portão do dono para decisões de negócio,
+  checkpoint commitado por volta e teto duro de voltas. Teste inaugural:
+  evoluir o now.services2.0 (missão em specs/ do repo-alvo).
+stages:
+  - role: patrol
+    model_ref: frontier-session
+    oracle: false
+    max_attempts: 1
+    # Protocolo: varrer estado real do repo (git log, specs, diários, FRs
+    # dos epics vs código) e produzir/atualizar o backlog ordenado com
+    # classificação EXECUTÁVEL|DO-DONO. Roda uma vez por sessão (volta 0)
+    # e o backlog é commitado antes de qualquer edição de código.
+  - role: build
+    model_ref: frontier-session
+    oracle: false
+    max_attempts: 1
+    # Protocolo: pegar a PRIMEIRA tarefa EXECUTÁVEL do backlog, escrever o
+    # plano da volta com checklist de aceite, implementar o incremento
+    # MÍNIMO que entrega valor. Uma tarefa por volta.
+  - role: oracle_gate
+    command: >
+      cd "$TALOS_TARGET" && bash scripts/talos-oraculo.sh
+    stage_oracle: >
+      cd "$TALOS_TARGET" && bash scripts/talos-oraculo.sh
+    oracle: true
+    max_attempts: 2
+    loop_target: build
+    # Suíte determinística do repo-alvo (tsc, lint, verificar, oráculos de
+    # fluxo). 1º vermelho: volta ao build para corrigir. 2º vermelho:
+    # tarefa devolvida ao backlog com nota, sem commit de código.
+  - role: self_audit
+    model_ref: frontier-session
+    oracle: true
+    max_attempts: 1
+    loop_target: build
+    # Protocolo: trocar de chapéu, auditar o diff contra o checklist do
+    # plano da volta + invariantes do repo (custo, segurança, i18n).
+    # Achado real → volta ao build (conta como refine, não nova volta).
+  - role: checkpoint
+    command: >
+      cd "$TALOS_TARGET" && git add -A && git commit -m "talos: checkpoint da volta"
+    oracle: true
+    max_attempts: 1
+    # Na prática o agente escreve a entrada no diário do repo-alvo com
+    # hipótese, evidência do oráculo, achados da auditoria e pendências,
+    # e o commit real usa mensagem descritiva da tarefa.
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: false
+  safety_ceiling: 5        # máx 5 voltas build->checkpoint por sessão
+  loop_target: build
+  critic_model_ref: frontier-session
+run_attempt_budget: 12
+on_fail: halt
+halt_conditions:
+  - "backlog sem tarefa EXECUTÁVEL restante (só sobrou DO-DONO)"
+  - "2 vermelhos consecutivos do oracle_gate na mesma tarefa"
+  - "2 voltas consecutivas revertidas pela self_audit"
+  - "safety_ceiling atingido"
+never:
+  - "push sem revisão humana dos checkpoints"
+  - "inventar preço, credencial, número não medido ou decisão de negócio (DO-DONO)"
+  - "violar invariante de custo do repo-alvo sem ADR novo"
+  - "declarar vitória sem revisão humana"

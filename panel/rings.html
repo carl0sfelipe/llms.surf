@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — Anéis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+</head>
+<body class="gui" data-page="rings">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content">
+    <h2 class="page-title">Anéis — god mode</h2>
+    <p class="page-plain">Aqui fica o histórico dos blocos de trabalho
+      (<abbr title="anel = um bloco de trabalho com começo e fim que o robô entrega de uma vez">anéis</abbr>)
+      que os robôs entregaram. Verde = entregue e testado. Quando o sistema devolveu
+      um trabalho incompleto, dá para ver o motivo em "ver gates".</p>
+    <p class="page-sub">Runs de anel no <abbr title="ledger = o caderno de registro onde cada acontecimento fica anotado, em ordem">ledger</abbr> central, o mais recente primeiro.</p>
+    <div id="lead"></div>
+    <div id="groups"><div class="empty-note">Carregando…</div></div>
+    <div id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+
+  function fmtDelta(d) { return d == null ? "" : (d > 0 ? "+" : "") + Number(d).toFixed(1); }
+
+  function ringBadge(r) {
+    if (r.status === "fechado") return '<span class="badge-nominal">fechado</span>';
+    if (r.status === "abortado") return '<span class="badge-neutral">abortado</span>';
+    return '<span class="badge-warning">aberto</span>';
+  }
+
+  function ringRow(r) {
+    const attempts = (r.close_attempts || []);
+    const gates = attempts.length
+      ? `<details class="ver-mais"><summary>${attempts.length} close(s) recusado(s) — ver gates</summary>
+           <pre>${attempts.map(esc).join("\n")}</pre></details>`
+      : "";
+    const score = r.scored
+      ? `<span class="row-num">previu ${esc(r.pred)} · real ${esc(r.real)} · Δ ${fmtDelta(r.delta)}</span>`
+      : (r.status === "fechado" ? '<span class="row-meta">aberto para nota</span>' : "");
+    return `
+      <div class="row" style="flex-wrap:wrap">
+        ${ringBadge(r)}
+        <span class="row-main"><span class="mono">${esc(r.ring)}</span> — ${esc(r.hypothesis || "")}</span>
+        ${score}
+        <span class="row-meta">${fmtTs(r.closed_at || r.opened_at)}</span>
+        ${gates ? `<div style="flex-basis:100%">${gates}</div>` : ""}
+      </div>`;
+  }
+
+  async function load() {
+    const groupsEl = document.getElementById("groups");
+    let d;
+    try { d = await getJSON("/api/gui/rings"); }
+    catch (err) { showError(groupsEl, err); return; }
+
+    const toScore = d.target && d.target.to_score;
+    document.getElementById("lead").innerHTML = toScore
+      ? `<div class="action-lead"><span class="lead-text">${toScore} ${toScore === 1 ? "anel do alvo atual espera" : "anéis do alvo atual esperam"} sua nota.</span>
+         <a class="btn primary" href="hitl.html">Calibrar agora</a></div>`
+      : "";
+
+    if (!d.groups.length) {
+      groupsEl.innerHTML = '<div class="empty-note">Nenhum evento de anel no ledger central ainda.</div>';
+      return;
+    }
+    groupsEl.innerHTML = "";
+    for (const g of d.groups) {
+      const sec = document.createElement("section");
+      sec.className = "panel";
+      sec.innerHTML = `
+        <div class="panel-header">
+          <h3 class="panel-title">run <span class="mono">${esc(g.run)}</span></h3>
+          <span class="row-meta mono">${g.closed} fechado(s) · ${g.scored} com nota ·
+            ${g.refused_attempts} close(s) recusado(s) · ${fmtTs(g.last_ts)}</span>
+        </div>
+        <div class="ring-rows"></div>`;
+      groupsEl.appendChild(sec);
+      renderCapped(sec.querySelector(".ring-rows"), g.rings, ringRow);
+    }
+  }
+
+  load();
+  setInterval(load, 15000);
+  </script>
+</body>
+</html>

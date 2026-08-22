@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — Calibração</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+  <style>
+    /* Cartão de calibração — hierarquia: projeto e entrega primeiro,
+       hipótese técnica depois em fonte menor. */
+    .ring-head { margin: 0 0 var(--space-4); }
+    .ring-project {
+      font-size: 30px; font-weight: 700; letter-spacing: -0.02em;
+      color: var(--fg-primary); line-height: 1.15;
+    }
+    .ring-project .ring-tag {
+      font-family: var(--font-mono); font-size: 16px; font-weight: 600;
+      color: var(--data-primary); margin-left: 10px; vertical-align: 2px;
+    }
+    .ring-sub {
+      font-size: 12px; color: var(--fg-secondary);
+      font-family: var(--font-mono); margin-top: 4px;
+    }
+    .asked-quote {
+      border-left: 3px solid var(--border-default);
+      background: var(--bg-surface);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 0 0 var(--space-4);
+      padding: var(--space-2) var(--space-3);
+      font-size: 12px; font-style: italic; color: var(--fg-secondary);
+    }
+    .asked-quote .ctx-label { font-style: normal; }
+    .eyes-box { margin: 0 0 var(--space-4); }
+    .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .ba-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--fg-tertiary); margin-bottom: 4px;
+    }
+    .shot-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: var(--space-3); margin-top: var(--space-2);
+    }
+    figure.shot {
+      margin: 0; background: var(--bg-surface);
+      border: 1px solid var(--border-subtle); border-radius: var(--radius);
+      padding: var(--space-2);
+    }
+    figure.shot img {
+      width: 100%; height: auto; display: block;
+      border-radius: 2px; background: #fff;
+    }
+    figure.shot pre {
+      margin: 0; font-family: var(--font-mono); font-size: 10px;
+      white-space: pre-wrap; word-break: break-word; color: var(--fg-primary);
+    }
+    figure.shot figcaption {
+      font-size: 10px; color: var(--fg-tertiary);
+      font-family: var(--font-mono); margin-top: 4px;
+    }
+    pre.cmd {
+      font-family: var(--font-mono); font-size: 12px;
+      background: var(--bg-default); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius); padding: var(--space-2) var(--space-3);
+      white-space: pre-wrap; word-break: break-word; margin: var(--space-1) 0 0;
+    }
+    details.note-full { margin: 0 0 var(--space-4); }
+    .critic-panel { text-align: left; max-width: 560px; margin: var(--space-4) auto 0; }
+  </style>
+</head>
+<body class="gui" data-page="hitl">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content">
+    <div class="hitl-stage" id="stage">
+      <div class="empty-note">Carregando anéis…</div>
+    </div>
+    <div class="hitl-stage" id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+  /* HITL de calibração — uma decisão por tela.
+   * Anti-âncora: a previsão do critic NÃO está no payload de /api/rings para
+   * anel sem nota; ela só chega na resposta do POST, depois da escolha. */
+
+  const stage = document.getElementById("stage");
+  let queue = [];        // anéis fechados sem nota, na ordem do ledger
+  let total = 0;         // total a calibrar nesta sessão
+  let done = [];         // {ring, real, pred, delta} desta sessão
+  let skipped = [];      // pulados — opção legítima
+  let alreadyScored = []; // notas dadas antes desta sessão
+  let project = "";      // basename do alvo (ex. "torlink") — vem da API
+
+  function fmtDelta(d) {
+    if (d == null) return "—";
+    return (d > 0 ? "+" : "") + Number(d).toFixed(1);
+  }
+
+  function deltaClass(d) {
+    return Math.abs(Number(d)) <= 0.5 ? "ok" : (Math.abs(Number(d)) <= 1.5 ? "" : "warn");
+  }
+
+  async function boot() {
+    let data;
+    try { data = await getJSON("/api/rings"); }
+    catch (err) { showError(stage, err); return; }
+    project = data.project || String(data.target || "").split("/").pop() || "";
+    queue = data.rings.filter((r) => !r.scored);
+    alreadyScored = data.rings.filter((r) => r.scored);
+    total = queue.length;
+    // deep-link #start: cai direto na primeira decisão (sem tela inicial)
+    if (location.hash === "#start" && total > 0) { renderRing(); return; }
+    renderStart(data);
+  }
+
+  function renderStart(data) {
+    if (total === 0) {
+      stage.innerHTML = `
+        <h2 class="page-title">Calibração</h2>
+        <div class="action-lead calm">
+          <span class="lead-text">Nada esperando sua nota — todos os anéis fechados de
+            <span class="mono">${esc(data.run)}</span> já têm nota real.</span>
+        </div>
+        ${winTableHTML()}
+        <p class="page-sub">Próximo passo em 1 clique: <a class="btn" href="rings.html">ver os anéis</a></p>`;
+      return;
+    }
+    stage.innerHTML = `
+      <h2 class="page-title">Calibração de anéis${project ? ` — ${esc(project)}` : ""}</h2>
+      <p class="page-plain">Robôs terminaram trabalhos e um revisor automático já os avaliou.
+        Agora é a sua vez: dê a nota que VOCÊ acha justa. Sua nota ensina o revisor
+        a ser mais duro ou mais generoso da próxima vez.</p>
+      <p class="page-sub">Alvo <span class="mono">${esc(data.target)}</span> · run <span class="mono">${esc(data.run)}</span></p>
+      <div class="action-lead">
+        <span class="lead-text">${total} ${total === 1 ? "trabalho terminado espera" : "trabalhos terminados esperam"} sua nota (0–10).</span>
+        <span class="lead-meta">~2 min por anel · dá para parar no meio, nada se perde</span>
+      </div>
+      <button class="btn primary" id="btn-start">Dar a primeira nota</button>`;
+    document.getElementById("btn-start").addEventListener("click", () => renderRing());
+  }
+
+  /* "Como ver com seus olhos": evidências de ring/screens/<RING>/ do alvo.
+   * Imagem chega por URL (/ring-file/, restrito ao ring/ do alvo); render de
+   * terminal (.txt) chega inline no payload. Pares antes/depois inferidos
+   * pelo nome; sem evidência e sem "como testar" a seção some inteira. */
+  function shotFigure(s) {
+    const caption = String(s.name || "").replace(/\.[a-z0-9]+$/i, "").replace(/[-_]/g, " ");
+    const body = s.kind === "img"
+      ? `<img src="${esc(s.url)}" alt="${esc(s.name)}" loading="lazy" />`
+      : `<pre>${esc(s.content || "")}</pre>`;
+    return `<figure class="shot">${body}<figcaption>${esc(caption)}</figcaption></figure>`;
+  }
+
+  function screensHTML(shots) {
+    const isBefore = (n) => /antes|before/i.test(n) && !/depois|after/i.test(n);
+    const isAfter = (n) => /depois|after/i.test(n);
+    const before = shots.filter((s) => isBefore(s.name));
+    const after = shots.filter((s) => isAfter(s.name));
+    if (before.length && after.length) {
+      const rest = shots.filter((s) => !isBefore(s.name) && !isAfter(s.name));
+      return `
+        <div class="ba-grid">
+          <div><div class="ba-label">antes</div>${before.map(shotFigure).join("")}</div>
+          <div><div class="ba-label">depois</div>${after.map(shotFigure).join("")}</div>
+        </div>
+        ${rest.length ? `<div class="shot-grid">${rest.map(shotFigure).join("")}</div>` : ""}`;
+    }
+    return `<div class="shot-grid">${shots.map(shotFigure).join("")}</div>`;
+  }
+
+  function eyesHTML(r) {
+    const shots = r.screens || [];
+    if (shots.length) {
+      return `
+        <div class="eyes-box">
+          <div class="ctx-label">Como ver com seus olhos — evidências geradas pelo robô</div>
+          ${screensHTML(shots)}
+        </div>`;
+    }
+    if (r.how_to_test) {
+      return `
+        <div class="eyes-box">
+          <div class="ctx-label">Como ver com seus olhos — rode no terminal</div>
+          <pre class="cmd">${esc(r.how_to_test)}</pre>
+        </div>`;
+    }
+    return "";
+  }
+
+  function renderRing() {
+    if (queue.length === 0) { renderWin(); return; }
+    const r = queue[0];
+    const idx = total - queue.length + 1;
+    const oracle = r.oracle || {};
+    const attempts = (r.close_attempts || []).length;
+    stage.innerHTML = `
+      <div class="hitl-progress">
+        <span class="label">anel ${idx} de ${total}</span>
+        <div class="progress-bar"><div class="progress-bar-fill" style="width:${((idx - 1) / total) * 100}%"></div></div>
+        <span class="label">${done.length} com nota</span>
+      </div>
+      <header class="ring-head">
+        <div class="ring-project">${esc(project || "projeto")}<span class="ring-tag">${esc(r.ring)}</span></div>
+        <div class="ring-sub">trabalho fechado em ${fmtTs(r.closed_at)}</div>
+      </header>
+      <div class="plain-box">
+        <div class="plain-label">O que foi entregue · Em português claro</div>
+        ${esc(r.delivered || r.plain || "")}
+      </div>
+      <blockquote class="asked-quote">
+        <div class="ctx-label">O que foi pedido — a hipótese técnica do <abbr title="anel = um bloco de trabalho com começo e fim que o robô entrega de uma vez">anel</abbr></div>
+        “${esc(r.hypothesis || "—")}”
+      </blockquote>
+      ${eyesHTML(r)}
+      ${r.note ? `
+      <details class="ver-mais note-full">
+        <summary>ler a nota completa do executor</summary>
+        <pre>${esc(r.note)}</pre>
+      </details>` : ""}
+      <h2 class="hitl-question">Que nota você dá a <span class="ring-id">${esc(r.ring)}</span>?
+        <strong>Dê a nota 0–10 que VOCÊ acha que esse trabalho merece.</strong></h2>
+      <div class="score-grid" id="score-grid">
+        ${Array.from({ length: 11 }, (_, n) =>
+          `<button class="score-btn" data-score="${n}">${n}</button>`).join("")}
+      </div>
+      <div class="panel hitl-context">
+        <div class="panel-header"><h3 class="panel-title">Detalhe técnico (opcional)</h3></div>
+        <div class="ctx-item">
+          <div class="ctx-label">Medido pelo runner</div>
+          <div class="ctx-value mono"><abbr title="oráculo = o teste automático que decide se o trabalho está pronto; exit 0 = passou">oráculo</abbr> exit ${esc(oracle.exit)} · ${esc(oracle.runs)} rodada(s) ·
+            ${esc(r.files_staged)} arquivo(s), ${esc(r.test_files)} de teste</div>
+        </div>
+        <div class="ctx-item">
+          <div class="ctx-label">Fechado em</div>
+          <div class="ctx-value mono">${fmtTs(r.closed_at)}${attempts ? ` · ${attempts} tentativa(s) de close recusada(s) antes` : ""}</div>
+        </div>
+        <details class="ver-mais">
+          <summary>ver mais — checkpoint, commit (a opinião do revisor aparece DEPOIS da sua nota)</summary>
+          <div class="ctx-item" style="margin-top:8px">
+            <div class="ctx-label">Commit do build</div>
+            <div class="ctx-value mono">${esc(r.build_commit || "(anel de infra/doc, sem diff)")}</div>
+          </div>
+          ${r.checkpoint_excerpt ? `<div class="ctx-item"><div class="ctx-label">Checkpoint</div><pre>${esc(r.checkpoint_excerpt)}</pre></div>` : ""}
+        </details>
+      </div>
+      <button class="btn ghost" id="btn-skip">pular por agora — sem problema, o anel continua aberto para nota</button>`;
+
+    document.getElementById("score-grid").addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".score-btn");
+      if (btn) submitScore(r, Number(btn.dataset.score));
+    });
+    document.getElementById("btn-skip").addEventListener("click", () => {
+      skipped.push(r);
+      queue.shift();
+      renderRing();
+    });
+  }
+
+  async function submitScore(r, score) {
+    document.querySelectorAll(".score-btn").forEach((b) => { b.disabled = true; });
+    let res;
+    try {
+      res = await postJSON("/api/ring-score", { ring: r.ring, real: score });
+    } catch (err) {
+      showError(stage, err);
+      return;
+    }
+    if (!res.body.ok) {
+      const old = stage.querySelector(".alert-banner");
+      if (old) old.remove();
+      stage.insertAdjacentHTML("afterbegin",
+        `<div class="alert-banner">Sua nota NÃO foi gravada. Motivo: ${esc(res.body.error)}.
+         Nada se perdeu — o anel continua aberto para nota. Dá para tentar de novo agora
+         ou pular por agora.</div>`);
+      document.querySelectorAll(".score-btn").forEach((b) => { b.disabled = false; });
+      return;
+    }
+    const { real, pred, delta } = res.body;
+    done.push({ ring: r.ring, real, pred, delta });
+    queue.shift();
+    // veredito do critic: só AGORA pode aparecer (anti-âncora preservada);
+    // fallback para o biggest_gap do close se o server ainda não mandar critic
+    const critic = res.body.critic
+      || (r.biggest_gap ? { biggest_gap: r.biggest_gap, verdict: r.verdict } : null);
+    renderDelta(r.ring, real, pred, delta, critic);
+  }
+
+  function deltaPlain(real, pred, delta) {
+    // delta = sua nota − nota prevista pelo revisor
+    const abs = Math.abs(Number(delta)).toFixed(1).replace(".0", "");
+    if (Math.abs(Number(delta)) < 0.5) {
+      return "Vocês quase concordaram — o revisor automático previu sua nota com precisão.";
+    }
+    if (Number(delta) < 0) {
+      return `O revisor foi mais generoso que você: esperava nota ${abs} ponto(s) maior. Sua nota vai deixá-lo mais exigente.`;
+    }
+    return `O revisor foi mais duro que você: esperava nota ${abs} ponto(s) menor. Sua nota vai deixá-lo menos severo.`;
+  }
+
+  function criticHTML(c) {
+    if (!c || (!c.biggest_gap && !(c.findings || []).length && !c.verdict)) return "";
+    const verdictWord = c.verdict === "APPROVED" ? "aprovou o trabalho"
+      : (c.verdict ? `veredito ${c.verdict}` : "");
+    const claims = c.claims_total
+      ? `<div class="ctx-item"><div class="ctx-label">Alegações checadas</div>
+         <div class="ctx-value">${esc(c.claims_verified)} de ${esc(c.claims_total)} verificadas com evidência</div></div>` : "";
+    const findings = (c.findings || []);
+    return `
+      <div class="panel critic-panel">
+        <div class="panel-header"><h3 class="panel-title">O que o robô-revisor apontou</h3></div>
+        ${verdictWord ? `<div class="ctx-item"><div class="ctx-label">Veredito</div><div class="ctx-value">${esc(verdictWord)}</div></div>` : ""}
+        ${c.biggest_gap ? `<div class="ctx-item"><div class="ctx-label">A maior falha que ele viu</div><div class="ctx-value">${esc(c.biggest_gap)}</div></div>` : ""}
+        ${claims}
+        ${findings.length ? `
+        <details class="ver-mais">
+          <summary>outros apontamentos (${findings.length})</summary>
+          ${findings.map((f) => `<div class="ctx-item" style="margin-top:6px"><div class="ctx-value">· <span class="mono">[${esc(f.severity || "?")}]</span> ${esc(f.description || "")}</div></div>`).join("")}
+        </details>` : ""}
+      </div>`;
+  }
+
+  function renderDelta(ring, real, pred, delta, critic) {
+    // só AGORA a previsão e o veredito do critic aparecem — depois da sua nota
+    const criticBlock = criticHTML(critic);
+    stage.innerHTML = `
+      <div class="hitl-progress">
+        <span class="label">anel ${total - queue.length} de ${total}</span>
+        <div class="progress-bar"><div class="progress-bar-fill" style="width:${((total - queue.length) / total) * 100}%"></div></div>
+        <span class="label">${done.length} com nota</span>
+      </div>
+      <div class="delta-reveal">
+        <div class="delta-value ${deltaClass(delta)}">Δ ${fmtDelta(delta)}</div>
+        <div class="delta-caption">${esc(ring)} · sua nota ${real} · o revisor previu ${pred} — gravado no ledger</div>
+        <div class="plain-box" style="max-width:520px;margin:16px auto 0;text-align:left">
+          <div class="plain-label">O que isso significa</div>
+          ${esc(deltaPlain(real, pred, delta))}
+        </div>
+        ${criticBlock}
+        ${criticBlock ? `<button class="btn primary" id="btn-next" style="margin-top:16px">${queue.length ? "dar a próxima nota" : "ver o resumo da sessão"}</button>` : ""}
+      </div>`;
+    if (criticBlock) {
+      // com o veredito na tela, o dono lê no ritmo dele — sem timer
+      document.getElementById("btn-next").addEventListener("click", () => renderRing());
+    } else {
+      setTimeout(() => renderRing(), 3400);
+    }
+  }
+
+  function winTableHTML() {
+    const rows = [...alreadyScored.map((r) => ({ ring: r.ring, real: r.real, pred: r.pred, delta: r.delta })), ...done];
+    if (!rows.length) return "";
+    return `
+      <div class="panel">
+        <div class="panel-header"><h3 class="panel-title">Calibração — delta por anel</h3></div>
+        <table class="win-table">
+          <tr><th>anel</th><th>revisor previu</th><th>sua nota</th><th>delta = sua − dele</th></tr>
+          ${rows.map((d) => `<tr><td>${esc(d.ring)}</td><td>${esc(d.pred)}</td><td>${esc(d.real)}</td>
+            <td class="d-${deltaClass(d.delta) === "warn" ? "warn" : "ok"}">${fmtDelta(d.delta)}</td></tr>`).join("")}
+        </table>
+      </div>`;
+  }
+
+  function renderWin() {
+    const skippedNote = skipped.length
+      ? `<p class="page-sub">${skipped.length} ${skipped.length === 1 ? "anel ficou aberto" : "anéis ficaram abertos"} para nota
+         (${skipped.map((s) => esc(s.ring)).join(", ")}) — voltar depois ou deixar assim, os dois valem.</p>`
+      : "";
+    stage.innerHTML = `
+      <div class="hitl-progress">
+        <span class="label">pronto</span>
+        <div class="progress-bar"><div class="progress-bar-fill" style="width:100%"></div></div>
+        <span class="label">${done.length} de ${total} com nota</span>
+      </div>
+      <h2 class="page-title">${done.length ? `Feito — ${done.length} ${done.length === 1 ? "anel calibrado" : "anéis calibrados"} nesta sessão.` : "Sessão encerrada sem notas — tudo bem."}</h2>
+      ${winTableHTML()}
+      ${skippedNote}
+      <a class="btn primary" href="home.html">Voltar ao Agora</a>`;
+  }
+
+  boot();
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+# MODO HEFESTO — god mode executor de spec-packs (experimento v3.5)
+#
+# Terceiro da família god mode da v3.5 (ouroboros = papéis em contextos
+# frescos; demiurgo = evoluir artefato contra oráculo congelado). O HEFESTO
+# cobre o caso que faltava: EXECUTAR um prompt pack inteiro (specs S1..Sn
+# com oráculo mecânico já escrito) com o frontier model fazendo todos os
+# papéis — implementar, criticar, auditar, decidir desvios — sem dispatch a
+# modelo free e sem humano no loop até os checkpoints.
+#
+# O nome é honesto: Hefesto forja sozinho, mas não escolhe a encomenda. As
+# specs e o oráculo (scripts/check.py do pack) foram escritos ANTES da
+# execução e são soberanos — o executor não pode afrouxá-los para passar.
+#
+# Proteções ESTRUTURAIS (herdadas do demiurgo, adaptadas a packs):
+#   1. ORÁCULO PRÉ-EXISTENTE: cada sessão começa com o oráculo VERMELHO e
+#      só fecha VERDE; alterar o check.py de uma sessão só para adicionar o
+#      alvo da sessão corrente — nunca para enfraquecer alvo existente.
+#   2. CHECKPOINT COMMITADO por sessão: UM commit feat(<pack>-S<n>) no repo
+#      do pack + entrada em CHECKPOINTS.md (o humano audita sem abrir chat).
+#   3. DESVIO DECLARADO: qualquer desvio de spec (ex.: troca de modelo por
+#      restrição de hardware) é registrado em ESTADO.md ANTES de prosseguir,
+#      citando a diretiva do dono que o autoriza.
+#   4. ORÇAMENTO DURO: safety_ceiling de sessões por run; sem ganho ou
+#      oráculo vermelho após 3 tentativas honestas -> halt, não improviso.
+#   5. NUNCA PUSH: os commits ficam locais até revisão humana.
+#
+# Limitação declarada: executor e auditor são o mesmo modelo — viés de
+# auto-preferência existe. Mitigação: o veredito de cada sessão é o exit
+# code do oráculo mecânico, nunca a opinião do executor.
+#
+# NOTA de execução: model_ref "frontier-session" não é dispatchável via
+# opencode — este modo é executado pelo próprio agente frontier orquestrador
+# (Cursor/Claude Code) seguindo os stages abaixo como protocolo.
+
+id: hefesto
+version: "1"
+name: hefesto
+description: >
+  God mode executor de spec-packs (v3.5): frontier model executa as sessões
+  S1..Sn de um prompt pack inteiro — implementa, critica, audita e decide
+  desvios sozinho — com o oráculo mecânico do pack (check.py) como juiz
+  soberano, um commit-checkpoint por sessão e nunca push. Missão inaugural:
+  canirunit-comfy (vertical diffusion do CanIRunIt) até o CLI saber sozinho
+  o melhor modelo de imagem que cabe no hardware e o s/imagem estimado.
+stages:
+  - role: pick_session
+    model_ref: frontier-session
+    oracle: false
+    max_attempts: 1
+    # Protocolo: ler ESTADO.md do pack; primeira sessão pendente com
+    # dependências feitas; marcar "em curso". Dependência externa ausente
+    # sem diretiva do dono -> BLOQUEADA e halt.
+  - role: red_check
+    command: >
+      cd "$HEFESTO_PACK" && uv run python scripts/check.py "$HEFESTO_TARGET"
+    oracle: false
+    max_attempts: 1
+    # O oráculo da sessão DEVE estar vermelho antes do trabalho. Verde
+    # antecipado = sessão já feita ou oráculo frouxo -> halt e investigar.
+  - role: forge
+    model_ref: frontier-session
+    oracle: false
+    max_attempts: 3
+    # Implementar SOMENTE as "Saídas exatas" da spec. Desvio necessário ->
+    # registrar em ESTADO.md antes (proteção 3).
+  - role: oracle_gate
+    command: >
+      cd "$HEFESTO_PACK" && uv run python scripts/check.py "$HEFESTO_TARGET"
+      && uv run python scripts/check.py all
+    stage_oracle: >
+      cd "$HEFESTO_PACK" && uv run python scripts/check.py all
+    oracle: true
+    max_attempts: 3
+    loop_target: forge
+  - role: checkpoint
+    model_ref: frontier-session
+    oracle: false
+    max_attempts: 1
+    # Atualizar ESTADO.md + CHECKPOINTS.md; UM commit feat(<pack>-S<n>).
+    # Depois voltar ao pick_session até acabar o pack ou bater o teto.
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: false
+  safety_ceiling: 8        # máx 8 sessões fechadas por run
+  loop_target: forge
+  critic_model_ref: frontier-session
+run_attempt_budget: 10
+on_fail: halt
+halt_conditions:
+  - "oráculo vermelho após 3 tentativas honestas na mesma sessão"
+  - "contradição entre contrato e spec do pack"
+  - "[A DEFINIR] bloqueante sem diretiva registrada do dono"
+  - "necessidade de enfraquecer alvo existente do check.py para passar"
+never:
+  - "push sem revisão humana dos checkpoints"
+  - "afrouxar oráculo, frações provisórias ou pisos de contagem do pack"
+  - "inventar número sem fonte (sem measured -> null + base declarada)"
+  - "escrever fora do diretório do pack além das exceções do contrato dele"

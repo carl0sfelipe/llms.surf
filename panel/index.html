@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — painel v3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar" id="session-bar" aria-label="Sessão">
+    <div class="topbar-row">
+      <h1 class="brand">Oracfit</h1>
+      <span class="badge observe-only">observe-only</span>
+      <nav class="guinav" aria-label="Páginas da GUI">
+        <a href="home.html">Agora</a>
+        <a href="hitl.html">Calibração</a>
+        <a href="rings.html">Anéis</a>
+        <a href="dispatches.html">Dispatches</a>
+        <span class="guinav-here">Run ao vivo</span>
+      </nav>
+      <span class="credit">Oracfit — Carlos Felipe</span>
+    </div>
+    <div class="topbar-row meta-row">
+      <label class="field">
+        <span class="label">Run</span>
+        <select id="run-switcher" class="select" aria-label="Seletor de runs"></select>
+      </label>
+      <span class="meta"><span class="label">Modo</span> <b id="sb-mode">—</b></span>
+      <span class="meta"><span class="label">Task</span> <b id="sb-task">—</b></span>
+      <span class="meta"><span class="label">Modelo</span> <b id="sb-model">—</b></span>
+      <span id="sb-status" class="status-badge cold">cold</span>
+      <a id="logs-link" class="logs-link" href="#" target="_blank" rel="noopener">logs brutos</a>
+    </div>
+  </header>
+
+  <p class="observe-hint" role="note">
+    HITL v1 · mensagem chega no run selecionado — enfileirar espera o próximo attempt;
+    marcar <em>interromper</em> mata o attempt atual · painel observe-only (sem chamada a modelo)
+  </p>
+
+  <form id="hitl-form" class="hitl" aria-label="Mensagem humana no loop">
+    <textarea
+      id="hitl-text"
+      class="hitl-textarea"
+      rows="2"
+      placeholder="mensagem pro run selecionado…"
+    ></textarea>
+    <div class="hitl-actions">
+      <label class="checkbox-label">
+        <input type="checkbox" id="hitl-interrupt" />
+        interromper
+      </label>
+      <button type="submit" class="btn primary" id="hitl-send">Enviar</button>
+      <span id="hitl-status" class="hitl-status" role="status" aria-live="polite"></span>
+      <span id="hitl-consumed" class="hitl-consumed" hidden></span>
+    </div>
+  </form>
+
+  <section id="alerts" class="alerts" aria-label="Alertas" hidden></section>
+
+  <section id="pipeline" class="pipeline panel" aria-label="Pipeline de stages">
+    <div class="pipeline-empty" id="pipeline-empty">Aguardando eventos…</div>
+    <div id="pipeline-track" class="pipeline-track" hidden></div>
+  </section>
+
+  <section id="stage-log" class="stage-log panel" aria-label="Log do stage">
+    <div class="stage-log-toolbar panel-header">
+      <span class="toolbar-label panel-title">Log do stage</span>
+      <span id="stage-log-title" class="stage-log-title muted">—</span>
+      <button type="button" class="chip on" id="btn-log-pause-scroll" aria-pressed="true">auto-scroll</button>
+    </div>
+    <pre id="stage-log-body" class="stage-log-body">Selecione um run para ver o log do gauntlet…</pre>
+    <button type="button" class="btn resume log-resume" id="log-resume" hidden>↓ retomar scroll</button>
+  </section>
+
+  <section id="usage-panel" class="usage-panel panel" aria-label="Quota por provider" hidden>
+    <div class="usage-header panel-header">
+      <span class="toolbar-label panel-title">Quota</span>
+      <span id="usage-updated" class="muted"></span>
+    </div>
+    <div id="usage-body"></div>
+  </section>
+
+  <section id="batch-panel" class="batch-panel panel" aria-label="Batches" hidden>
+    <div class="batch-header panel-header">
+      <span class="toolbar-label panel-title">Batch</span>
+    </div>
+    <div id="batch-body"></div>
+  </section>
+
+  <div class="feed-toolbar panel-header" aria-label="Filtros do feed">
+    <span class="toolbar-label panel-title">Feed</span>
+    <button type="button" class="chip on" data-feed="tool_call">tool_call</button>
+    <button type="button" class="chip on" data-feed="thinking">thinking</button>
+    <button type="button" class="chip on" data-feed="prompt_sent">prompt_sent</button>
+    <button type="button" class="chip" id="btn-feed-total" aria-pressed="false">Total</button>
+    <span id="feed-count" class="muted feed-count"></span>
+    <button type="button" class="chip" id="btn-pause-scroll" aria-pressed="false">auto-scroll</button>
+  </div>
+
+  <main id="feed" class="feed" aria-label="Feed ao vivo">
+    <div class="empty-state" id="feed-empty">
+      Nenhum evento ainda.<br />
+      O silêncio aqui significa que nada foi despachado.
+    </div>
+  </main>
+  <button type="button" class="btn resume" id="resume" hidden>↓ retomar scroll</button>
+
+  <footer class="metric-bar" id="metric-bar" aria-label="Métricas">
+    <span class="metric-item">duração <b id="mb-duration">—</b></span>
+    <span class="metric-item">tentativas <b id="mb-attempts">—</b></span>
+    <span class="metric-item">flash_work_s <b id="mb-flash">—</b></span>
+    <span class="metric-item">custo <b id="mb-cost">—</b></span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

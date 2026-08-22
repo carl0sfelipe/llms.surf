@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — TODO / Backlog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+  <style>
+  /* Só o que o checklist precisa além do gui.css — tudo via token
+   * (open-design: identidade Mission Control já existe, nada de cor nova). */
+  .todo-mark {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+    width: 22px;
+    text-align: center;
+    flex: none;
+  }
+  .todo-mark.feito { color: var(--data-success); }
+  .todo-mark.andamento { color: var(--data-alert-warning); }
+  .todo-mark.fila { color: var(--fg-tertiary); }
+  .todo-mark.abortado { color: var(--data-alert-critical); }
+  .row.todo-feito .row-main { color: var(--fg-tertiary); text-decoration: line-through; }
+  .row.todo-andamento { border-color: var(--border-default); background: var(--bg-surface-hover); }
+  .todo-sources { font-family: var(--font-mono); font-size: 11px; color: var(--fg-tertiary); }
+  </style>
+</head>
+<body class="gui" data-page="todo">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content">
+    <h2 class="page-title">TODO — backlog de anéis</h2>
+    <p class="page-plain">A lista de trabalho de um projeto, como um checklist:
+      o que os robôs já entregaram (verde), o que está sendo feito agora e o que
+      ainda está na fila do
+      <abbr title="backlog = a lista versionada de itens planejados (docs/BACKLOG.md do projeto)">backlog</abbr>.
+      Atualiza sozinha a cada 5 segundos.</p>
+    <p class="page-sub" id="target-line">Carregando…</p>
+    <div id="lead"></div>
+    <div id="tiles" class="telemetry-strip"></div>
+    <div class="hitl-progress" id="progress" hidden>
+      <span class="label" id="progress-label"></span>
+      <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+    <section class="panel">
+      <div class="panel-header">
+        <h3 class="panel-title">Checklist do run</h3>
+        <span class="row-meta mono" id="run-line"></span>
+      </div>
+      <div id="items"><div class="empty-note">Carregando…</div></div>
+    </section>
+    <p class="todo-sources" id="sources"></p>
+    <div id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+
+  const MARKS = { feito: "✓", andamento: "▶", fila: "○", abortado: "✕" };
+  const BADGES = {
+    feito: '<span class="badge-nominal">feito</span>',
+    andamento: '<span class="badge-warning">em andamento</span>',
+    fila: '<span class="badge-neutral">na fila</span>',
+    abortado: '<span class="badge-critical">abortado</span>',
+  };
+
+  const PROJECT = new URLSearchParams(location.search).get("project") || "";
+  const API = "/api/gui/todo" + (PROJECT ? `?project=${encodeURIComponent(PROJECT)}` : "");
+
+  // gui.js é compartilhado com outro trabalho em andamento — a entrada de
+  // navegação desta página entra por aqui, depois do buildSidebar dele.
+  document.addEventListener("DOMContentLoaded", () => {
+    const rings = document.querySelector('#sidebar [data-nav="rings"]');
+    if (!rings || document.querySelector('[data-nav="todo"]')) return;
+    const a = document.createElement("a");
+    a.className = "nav-link active";
+    a.href = "todo.html";
+    a.dataset.nav = "todo";
+    a.textContent = "TODO / Backlog";
+    rings.after(a);
+  });
+
+  function attemptsNote(it, ceiling) {
+    const n = it.attempts || 0;
+    if (!n && !ceiling) return "";
+    const teto = ceiling ? ` de teto ${ceiling}` : "";
+    return `${n} close(s) recusado(s)${teto}`;
+  }
+
+  function itemDetails(it) {
+    const bits = [];
+    if (it.hypothesis) bits.push(`<div class="ctx-label">hipótese</div><div class="ctx-value">${esc(it.hypothesis)}</div>`);
+    if (it.artifacts) bits.push(`<div class="ctx-label">artefatos</div><div class="ctx-value mono">${esc(it.artifacts)}</div>`);
+    const mech = [];
+    if (it.build_commit) mech.push(`commit ${esc(it.build_commit)}`);
+    if (it.files_staged != null) mech.push(`${it.files_staged} arquivo(s)`);
+    if (it.oracle_runs) mech.push(`oráculo verde ${it.oracle_runs}x`);
+    if (it.scored) mech.push(`nota real ${esc(it.real)}`);
+    if (it.abort_reason) mech.push(`abortado: ${esc(it.abort_reason)}`);
+    if (mech.length) bits.push(`<div class="ctx-label">entrega</div><div class="ctx-value mono">${mech.join(" · ")}</div>`);
+    if (!bits.length) return "";
+    return `<details class="ver-mais"><summary>detalhes</summary><div class="hitl-context">${bits.join("")}</div></details>`;
+  }
+
+  function itemRow(state) {
+    const ceiling = state && state.close_attempt_ceiling;
+    return (it) => {
+      const st = it.status || "fila";
+      const meta = st === "andamento"
+        ? `${fmtTs(it.opened_at)} · ${attemptsNote(it, ceiling) || "nenhum close recusado"}`
+        : st === "feito"
+          ? `${fmtTs(it.closed_at)}${it.attempts ? " · " + attemptsNote(it, ceiling) : ""}`
+          : "";
+      const details = st === "fila" ? "" : itemDetails(it);
+      return `
+        <div class="row todo-${st}" style="flex-wrap:wrap">
+          <span class="todo-mark ${st}">${MARKS[st] || "○"}</span>
+          ${BADGES[st] || BADGES.fila}
+          <span class="row-main">${it.id ? `<span class="mono">${esc(it.id)}</span> — ` : ""}${esc(it.title || it.hypothesis || "")}</span>
+          ${meta ? `<span class="row-meta">${meta}</span>` : ""}
+          ${details ? `<div style="flex-basis:100%">${details}</div>` : ""}
+        </div>`;
+    };
+  }
+
+  function tile(label, value, cls) {
+    return `<div class="data-tile"><div class="data-tile-label">${label}</div>
+      <div class="data-tile-value${cls ? " " + cls : ""}">${value}</div></div>`;
+  }
+
+  async function load() {
+    const itemsEl = document.getElementById("items");
+    let d;
+    try { d = await getJSON(API); }
+    catch (err) { showError(itemsEl, err); return; }
+
+    const c = d.counters;
+    document.getElementById("target-line").innerHTML =
+      `Alvo: <span class="mono">${esc(d.target)}</span>` +
+      (d.ring_initialized ? "" : ' · <span class="badge-neutral">sem ring init ainda</span>');
+    document.getElementById("run-line").textContent =
+      d.run ? `run ${d.run} · modo ${d.mode || "?"}` : "nenhum run de anel ainda";
+
+    const doing = d.items.find((i) => i.status === "andamento");
+    const ceiling = d.state && d.state.close_attempt_ceiling;
+    let leadHtml;
+    if (c.total === 0) {
+      leadHtml = `<div class="action-lead"><span class="lead-text">Nada para mostrar ainda — sem backlog e sem anéis neste alvo.</span></div>`;
+    } else if (c.feito === c.total) {
+      leadHtml = `<div class="action-lead calm"><span class="lead-text">Tudo entregue: ${c.total} de ${c.total} itens.</span></div>`;
+    } else {
+      const doingTxt = doing
+        ? ` — <span class="mono">${esc(doing.id)}</span> em andamento (${attemptsNote(doing, ceiling) || "nenhum close recusado"})`
+        : "";
+      leadHtml = `<div class="action-lead"><span class="lead-text">${c.feito} de ${c.total} itens entregues${doingTxt}.</span></div>`;
+    }
+    document.getElementById("lead").innerHTML = leadHtml;
+
+    document.getElementById("tiles").innerHTML =
+      tile("feitos", `${c.feito}<span class="data-tile-unit">/ ${c.total}</span>`, c.feito ? "ok" : "") +
+      tile("em andamento", c.andamento, c.andamento ? "warn" : "") +
+      tile("na fila", c.fila, "") +
+      tile("closes recusados", `${c.closes_recusados}${ceiling ? `<span class="data-tile-unit">teto ${ceiling}/anel</span>` : ""}`,
+           c.closes_recusados ? "warn" : "") +
+      (c.abortado ? tile("abortados", c.abortado, "crit") : "");
+
+    const prog = document.getElementById("progress");
+    prog.hidden = c.total === 0;
+    if (c.total) {
+      const pct = Math.round((c.feito / c.total) * 100);
+      document.getElementById("progress-label").textContent = `${pct}%`;
+      document.getElementById("progress-fill").style.width = `${pct}%`;
+    }
+
+    if (!d.items.length) {
+      itemsEl.innerHTML = '<div class="empty-note">Sem itens: nem backlog nem anéis neste alvo ainda.</div>';
+    } else {
+      renderCapped(itemsEl, d.items, itemRow(d.state), 8);
+    }
+
+    document.getElementById("sources").textContent =
+      `fontes: ${d.backlog.path} (${d.backlog.exists ? d.backlog.items + " item(ns)" : "AUSENTE"})` +
+      ` · ring/ledger.jsonl (${d.ring_initialized ? "ring init ok" : "AUSENTE — alvo sem ring init"})`;
+  }
+
+  load();
+  setInterval(load, 5000);
+  </script>
+</body>
+</html>

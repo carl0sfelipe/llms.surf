@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — Incidents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+</head>
+<body class="gui" data-page="incidents">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content">
+    <h2 class="page-title">Incidents</h2>
+    <p class="page-plain">Este é o diário de erros do sistema. Cada erro registrado
+      deve virar uma proteção para não acontecer de novo. A lista de cima mostra os
+      erros que ainda estão SEM proteção — é o que vale atenção.</p>
+    <p class="page-sub">Falha registrada vira proteção (regra 16). Fonte:
+      <span class="mono">incident.sh audit</span> + arquivos de <span class="mono">incidents/</span>.</p>
+    <div id="lead"></div>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Audit — recorríveis sem regra</h3></div>
+      <div id="audit"><div class="empty-note">Carregando…</div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><h3 class="panel-title">Incidents recentes</h3>
+        <span class="row-meta" id="total"></span></div>
+      <div id="list"><div class="empty-note">Carregando…</div></div>
+    </section>
+    <div id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+
+  async function load() {
+    const listEl = document.getElementById("list");
+    let d;
+    try { d = await getJSON("/api/gui/incidents"); }
+    catch (err) { showError(listEl, err); return; }
+
+    const debts = (d.audit && d.audit.debts) || [];
+    document.getElementById("lead").innerHTML = debts.length
+      ? `<div class="action-lead"><span class="lead-text">${debts.length} incidente(s) recorrível(is) ainda sem regra.</span>
+         <span class="lead-meta">próximo passo: bin/incident.sh promote no terminal (~5 min por regra)</span></div>`
+      : '<div class="action-lead calm"><span class="lead-text">Nenhum recorrível sem regra — o ciclo de feedback está em dia.</span></div>';
+
+    const auditEl = document.getElementById("audit");
+    if (d.audit && d.audit.ok === false) {
+      auditEl.innerHTML = `<div class="empty-note">Audit indisponível: ${esc(d.audit.error)}</div>`;
+    } else {
+      const lines = d.audit.lines || [];
+      if (!lines.length) {
+        auditEl.innerHTML = '<div class="empty-note">Audit sem apontamentos.</div>';
+      } else {
+        renderCapped(auditEl, lines, (ln) => `
+          <div class="row">
+            ${ln.includes("DÍVIDA") ? '<span class="badge-warning">sem regra</span>' : '<span class="badge-neutral">nota</span>'}
+            <span class="row-main">${esc(ln)}</span>
+          </div>`);
+      }
+    }
+
+    document.getElementById("total").textContent = `${d.total} no total`;
+    renderCapped(listEl, d.incidents, (i) => `
+      <div class="row">
+        <span class="row-main">${esc(i.title)}</span>
+        <span class="row-meta mono">${esc(i.path.split("/").pop())}</span>
+        <span class="row-meta">${fmtTs(i.mtime)}</span>
+      </div>`);
+    if (!d.incidents.length) listEl.innerHTML = '<div class="empty-note">Nenhum incident registrado.</div>';
+  }
+
+  load();
+  </script>
+</body>
+</html>

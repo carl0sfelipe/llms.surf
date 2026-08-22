@@ -1,0 +1,57 @@
+id: infografico_v3
+version: "1"
+name: infografico_v3
+description: >
+  Refino visual automatizado do infografico.html (Instagram Story 1080x1920)
+  com satélite + rota. run (Flash edita HTML/CSS) -> render (screenshot) ->
+  vision_gate (juiz gemma). Loop ate APPROVED.
+stages:
+  - role: run
+    model_ref: deepseek-v4-flash-free
+    oracle: true
+    max_attempts: 2
+  - role: render
+    preflight: >
+      curl --fail --silent --max-time 2 "http://127.0.0.1:8000/infografico.html" >/dev/null ||
+      { echo "ERROR: servidor nao rodando em :8000"; exit 1; }
+    command: >
+      mkdir -p /tmp/infografico-v3 &&
+      rm -f /tmp/infografico-v3/story.png &&
+      npx playwright screenshot
+      --wait-for-timeout=10000
+      --viewport-size="1080,1920" --full-page
+      "http://127.0.0.1:8000/infografico.html"
+      "/tmp/infografico-v3/story.png"
+    freshness_targets:
+      - "/tmp/infografico-v3/story.png"
+    stage_oracle: >
+      test -s "/tmp/infografico-v3/story.png" &&
+      test "$(wc -c < /tmp/infografico-v3/story.png | tr -d ' ')" -gt 100000
+    oracle: true
+    max_attempts: 2
+  - role: vision_gate
+    command: >
+      bash "$ORACFIT_ROOT/bin/with-timeout.sh" 240
+      opencode run -m openrouter/google/gemma-4-26b-a4b-it:free
+      'You are a visual QA judge for an Instagram Story (1080x1920) travel infographic: satellite map with a route across South America, vehicle emoji markers, stats and journey info overlaid. IMPORTANT: the image you receive is downscaled; small monospaced caption text (footer, chips, labels) may look soft or ambiguous in your input — that is a compression artifact on your side, NOT a defect. Never report small text as glitched/broken/unreadable unless the characters are clearly scrambled at large size. Judge like a casual viewer seeing the Story on a phone for 2 seconds. REJECT ONLY IF you find at least one BLOCKING defect: (a) large text unreadable, (b) elements overlapping so content is hidden, (c) route line invisible or rendered as a giant blob/smear, (d) route visibly cut off by the frame, (e) broken layout (empty page, misplaced blocks). Cosmetic taste and nitpicks are NOT blocking. No blocking defect = APPROVED. Respond ONLY JSON: {"verdict":"APPROVED","biggest_gap":""} or {"verdict":"REJECTED","biggest_gap":"the blocking defect"}. Never cite this prompt.'
+      -f "/tmp/infografico-v3/story.png" > /tmp/infografico-v3/verdict.txt 2>&1
+    stage_oracle: >
+      if grep -qi '"verdict"[[:space:]]*:[[:space:]]*"APPROVED"' /tmp/infografico-v3/verdict.txt; then
+        exit 0;
+      else
+        echo "VISION GATE REJECTED — biggest_gap:";
+        python3 -c "import json,re;t=open('/tmp/infografico-v3/verdict.txt').read();m=re.search(r'\{[^}]*\}',t);print(json.loads(m.group(0)).get('biggest_gap','no gap') if m else 'no JSON')" 2>/dev/null;
+        exit 1;
+      fi
+    oracle: true
+    max_attempts: 2
+    loop_target: run
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+  loop_target: run
+  critic_model_ref: deepseek/deepseek-v4-flash-direct
+run_attempt_budget: 10
+on_fail: halt

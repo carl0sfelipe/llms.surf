@@ -1,0 +1,10 @@
+{"v":1,"ts":"2026-08-11T10:22:01+00:00","run_id":"healthy-e2e","type":"run_started","mode":"content_factory","task":"beelink-fixture"}
+{"v":1,"ts":"2026-08-11T10:22:05+00:00","run_id":"healthy-e2e","type":"stage_changed","stage":"research","index":"0"}
+{"v":1,"ts":"2026-08-11T10:22:10+00:00","run_id":"healthy-e2e","type":"tool_call","tool":"read","detail":"[read] specs/niche-beelink.md","input":{"filePath":"specs/niche-beelink.md"},"preview":"# Beelink SER5 Max\nRAM 24GB\nExit code: 0"}
+{"v":1,"ts":"2026-08-11T10:23:00+00:00","run_id":"healthy-e2e","type":"tool_call","tool":"bash","detail":"[bash] python3 -c validate","input":{"command":"python3 -c \"import json; json.load(open('bundle.json')); print('ok')\""},"preview":"ok\nExit code: 0"}
+{"v":1,"ts":"2026-08-11T10:24:00+00:00","run_id":"healthy-e2e","type":"tool_call","tool":"write","detail":"[write] output/T2-seo-strategy.md","input":{"filePath":"output/T2-seo-strategy.md","content":"# SEO strategy\nVerified RAM: 24GB\n"},"preview":"Wrote output/T2-seo-strategy.md\nExit code: 0"}
+{"v":1,"ts":"2026-08-11T10:25:00+00:00","run_id":"healthy-e2e","type":"oracle_result","exit":"0","attempt":"1","stage":"research"}
+{"v":1,"ts":"2026-08-11T10:30:00+00:00","run_id":"healthy-e2e","type":"gauntlet_feedback","attempt":"1","oracle_exit":"1","biggest_gap":"missing explicit price fallback when API fails at runtime"}
+{"v":1,"ts":"2026-08-11T10:35:00+00:00","run_id":"healthy-e2e","type":"tool_call","tool":"edit","detail":"[edit] output/T2-seo-strategy.md","input":{"filePath":"output/T2-seo-strategy.md","oldString":"Verified RAM","newString":"Verified RAM with fallback pricing"},"preview":"Updated output/T2-seo-strategy.md\nExit code: 0"}
+{"v":1,"ts":"2026-08-11T10:40:00+00:00","run_id":"healthy-e2e","type":"gauntlet_feedback","attempt":"2","oracle_exit":"0","biggest_gap":"CTA UTM parameters still missing on secondary links"}
+{"v":1,"ts":"2026-08-11T10:45:00+00:00","run_id":"healthy-e2e","type":"run_finished","status":"pass","stages":"2","duration_s":"1380"}

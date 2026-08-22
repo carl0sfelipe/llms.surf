@@ -1,0 +1,112 @@
+# MODO PANTOCRATOR — god mode do oracfit 3.5 em CADEIA CONTÍNUA de produto
+#
+# Παντοκράτωρ: "o que governa tudo". O nome é honesto e a limitação também:
+# spec, execução, review, triagem, refino, auditoria e PLANEJAMENTO da
+# próxima tarefa são todos o MESMO frontier model (em contextos frescos por
+# papel, via subagents do host). O humano não participa do loop — audita
+# depois, por CHECKPOINTS.md do workdir. Mas o pantocrator NÃO decide
+# vitória: vitória é oráculo mecânico verde + critic sem 🔴. Deus governa;
+# a física (suíte determinística do repo) continua soberana.
+#
+# LINHAGEM (o que herda de cada irmão):
+#   ouroboros → papéis frontier em contexto fresco; oráculo mecânico soberano
+#   autarca   → cadeia contínua: fechado um anel, o próprio frontier escolhe
+#               a próxima story do backlog versionado e abre o anel seguinte
+#               sem pedir permissão
+#   demiurgo  → trave que só aperta: oráculo monotônico (adicionar check é
+#               livre; remover/relaxar exige DECLARACAO no checkpoint)
+#   talos     → portão do dono: preço, credencial, jurídico, decisão de
+#               negócio = DO-DONO; registra pendência e pula, NUNCA chuta
+#
+# DIFERENCIAL DE RELEASE: é o primeiro god mode cujo YAML PASSA em
+# `bin/lib-oracfit-mode-loader.py validate` (postmortem de 2026-08-12:
+# "yaml vira documentação no host-mode" — campo fora do schema é protocolo
+# silenciosamente ignorado). Todo o protocolo vive em comentários; os campos
+# de máquina são 100% schema v1. `tests/test-pantocrator-mode.sh` prova.
+#
+# PROTOCOLO DO ANEL (executado pelo frontier host, ex.: Cursor/Fable):
+#   anel 0 (stage plan, 1x por sessão):
+#     p1. preflight diário: consultar incidents/ do oracfit pelos mecanismos
+#         que a cadeia usa (git, subagents, serviços, ledger) e citar no
+#         checkpoint 0 quais regras se aplicam (regra promovida de manhã não
+#         pode ser redescoberta à tarde).
+#     p2. preflight de colisão: git log/status do workdir — working tree
+#         sujo por OUTRO agente = para a cadeia (stop_when).
+#     p3. serviços de longa duração vivos e fora do terminal da sessão
+#         (launchd/systemd; nunca nohup — incidente do Metro 2x no mesmo dia).
+#     p4. triagem: backlog versionado do workdir (epics/sprint-status) →
+#         lista ordenada com classificação EXECUTÁVEL | DO-DONO, escrita no
+#         checkpoint 0 ANTES de qualquer edição (o modelo não escolhe a
+#         tarefa depois de ver o quão fácil ela é).
+#   anéis 1..N (stage run, uma story por anel):
+#     r1. spec da story derivada do backlog (intent congelado no início do
+#         anel; mudar a spec no meio = DECLARACAO no checkpoint).
+#     r2. build do incremento mínimo que entrega a story.
+#     r3. review multi-lente em contextos FRESCOS (mín. 3 subagents:
+#         adversarial, edge-case, verification-gap; +intent-alignment quando
+#         a spec veio de terceiros). Reviewer não conversa com executor.
+#     r4. triagem dos achados pelo host (severidade por consequência), patch
+#         dos aceitos, defer documentado dos reais fora do anel.
+#     r5. ORÁCULO MECÂNICO (soberano): a suíte determinística do workdir —
+#         `.pantocrator-oracle.sh` se existir, senão o padrão do repo (ex.:
+#         cargo test --workspace + clippy -D warnings). Vermelho→r2 (conta
+#         no teto). Monotônico: check só entra, nunca sai em silêncio.
+#     r6. critic (persona core/critic-profiles/pantocrator-auditor.md, em
+#         contexto fresco): biggest_gap obrigatório e não-vazio (APPROVED
+#         vazio NÃO fecha anel — fail-closed); claims-check por amostragem
+#         (número citado sem artefato = anel não fecha); previsão da nota do
+#         dono (0-10) registrada — |delta| > 2 na calibração real rebaixa o
+#         juiz a triagem.
+#     r7. checkpoint: bloco em CHECKPOINTS.md do workdir (o que/por quê/
+#         evidência/pendências/nota prevista) escrito ANTES de abrir o
+#         próximo anel; commit com PATHSPEC EXPLÍCITO (git add -A/-u
+#         proibidos — commit de 12/08 varreu arquivo de outro agente);
+#         linha JSON em ledger/ledger.jsonl do oracfit (anel, story,
+#         oracle_exit real, veredito do critic, commit hash) — host-mode
+#         não é invisível.
+#   stop_when: humano intervém (qualquer mensagem) | colisão com sessão
+#     paralela | oráculo vermelho após o budget | 3 anéis fechados na sessão
+#     (teto de cadeia; o safety_ceiling do gauntlet governa loops DENTRO do
+#     anel).
+#   skip_when: story classificada DO-DONO → pendência no checkpoint e segue
+#     para a próxima EXECUTÁVEL.
+#   never: push sem revisão humana | declarar vitória sem revisão humana |
+#     editar o oráculo/critic-profile para passar | tocar arquivo de outro
+#     agente | inventar número/decisão não medida (regra 37).
+#
+# NOTA de execução: model_ref "frontier-host" não é dispatchável via
+# opencode — este modo é executado pelo próprio agente frontier orquestrador
+# seguindo o protocolo acima. Campos de máquina abaixo: schema v1 puro.
+
+id: pantocrator
+version: "1"
+name: pantocrator
+description: >
+  God mode v3.5 em cadeia contínua: frontier model faz spec, build, review
+  multi-lente, triagem, refino, auditoria E o planejamento da próxima story
+  — sozinho, anel após anel, até o teto da sessão ou intervenção humana.
+  Oráculo mecânico soberano (suíte determinística do workdir), critic
+  fail-closed com previsão de nota do dono, checkpoint commitado por anel
+  em CHECKPOINTS.md, ledger JSON por anel. Primeiro god mode com YAML que
+  passa no mode-loader (protocolo em comentários, máquina em schema v1).
+  Teste inaugural: evoluir o eaas-bitcoin (motor de entropia + ancoragem
+  Bitcoin) story a story a partir da 2.4.
+preflight: >
+  bash -c 'test -z "$(git -C "${PANTOCRATOR_TARGET:?}" status --porcelain)"'
+stages:
+  - role: plan
+    model_ref: frontier-host
+    max_attempts: 1
+  - role: run
+    model_ref: frontier-host
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+  loop_target: run
+  critic_model_ref: frontier-host
+run_attempt_budget: 10
+on_fail: halt

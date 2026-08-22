@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — Corte público</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+  <style>
+  /* Só o que a triagem de corte precisa além do gui.css — tudo via token
+   * (open-design: identidade Mission Control já existe, nada de cor nova). */
+  .check-row {
+    display: flex; align-items: baseline; gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .check-row:last-child { border-bottom: none; }
+  .check-mark { font-family: var(--font-mono); font-weight: 700; flex: none; width: 18px; }
+  .check-mark.pass { color: var(--data-success); }
+  .check-mark.fail { color: var(--data-alert-critical); }
+  .check-id { font-family: var(--font-mono); font-size: 12px; color: var(--fg-secondary); flex: none; width: 72px; }
+  .check-detail { font-size: 13px; color: var(--fg-primary); }
+  .diff-path { font-family: var(--font-mono); font-size: 12px; }
+  .diff-actions { display: flex; gap: var(--space-2); margin-left: auto; flex: none; }
+  .btn.mini { padding: 3px 10px; font-size: 11px; }
+  .btn.mini.chosen { border-color: var(--data-secondary); color: var(--data-secondary); }
+  .apply-box {
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.5;
+    background: var(--bg-default); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius); padding: var(--space-3);
+    white-space: pre-wrap; word-break: break-all;
+    max-height: 240px; overflow: auto;
+  }
+  /* alert-banner-text (DESIGN.md §6) e todo-sources (padrão do todo.html)
+   * não são globais no gui.css — declarados aqui via token. */
+  .alert-banner-text { font-size: 14px; font-weight: 500; color: var(--data-alert-critical); }
+  .todo-sources { font-family: var(--font-mono); font-size: 11px; color: var(--fg-tertiary); }
+  </style>
+</head>
+<body class="gui" data-page="corte">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content">
+    <h2 class="page-title">Corte público — revisão de versão</h2>
+    <p class="page-plain">A comparação entre a oficina (este repo, privado) e o
+      corte que vai pro mundo: o que vazou, o que ficou para trás e o que mudou
+      desde o último corte. A máquina escaneia tudo; você só decide os pontos
+      que ela não pode decidir. A página <strong>não publica nada</strong> —
+      publicar é comando seu no terminal.</p>
+    <div id="lead"></div>
+    <div id="tiles" class="telemetry-strip"></div>
+
+    <section class="panel" id="bloqueios-panel" hidden>
+      <div class="panel-header">
+        <h3 class="panel-title">Bloqueios — resolvem antes de publicar</h3>
+      </div>
+      <div id="bloqueios"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h3 class="panel-title">Checagens</h3>
+        <span class="row-meta mono" id="corte-line"></span>
+      </div>
+      <div id="checks"><div class="empty-note">Carregando…</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h3 class="panel-title">Divergências da superfície mecânica</h3>
+        <button class="btn ghost" id="refresh" type="button">atualizar agora</button>
+      </div>
+      <p class="page-sub">Arquivos que o espelho automático deveria manter
+        iguais: o que falta no corte, o que mudou de um lado e o que só existe
+        no corte. Marcar decisão é rastro seu no navegador — o comando final
+        fica no rodapé.</p>
+      <div id="divergencias"><div class="empty-note">Carregando…</div></div>
+    </section>
+
+    <section class="panel" id="apply-panel" hidden>
+      <div class="panel-header">
+        <h3 class="panel-title">Comandos das suas decisões</h3>
+        <button class="btn primary" id="copy-cmd" type="button">copiar comandos</button>
+      </div>
+      <div class="apply-box" id="apply-box"></div>
+    </section>
+
+    <p class="todo-sources" id="sources"></p>
+    <div id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+
+  /* ── Decisão por item: rastro no NAVEGADOR, chaveado pelo HEAD do corte ──
+   * (padrão dodono.html: marcar aqui é rastro pessoal; o servidor não
+   * escreve no corte por causa de um clique — publicar é ato do terminal). */
+  function corteState(head) {
+    try {
+      const s = JSON.parse(localStorage.getItem(`oracfit-corte:${head}`) || "null");
+      if (s) return s;
+    } catch (_) { /* ilegível = recomeça limpo */ }
+    return { decisoes: {} };
+  }
+  function corteSave(head, st) {
+    try { localStorage.setItem(`oracfit-corte:${head}`, JSON.stringify(st)); } catch (_) {}
+  }
+
+  function shQuote(s) {
+    return `'${String(s).replaceAll("'", "'\\''")}'`;
+  }
+
+  function verdictLead(d) {
+    if (d.verdict === "APPROVED") {
+      return `<div class="action-lead calm"><strong>Nada bloqueia este corte.</strong>
+        ${esc(d.biggest_gap || "Todas as checagens passaram.")}
+        Publicar é decisão sua — o corte fica local até o push.</div>`;
+    }
+    return `<div class="alert-banner"><div class="alert-banner-text">
+        <strong>${esc(d.verdict)}</strong> — ${esc(d.biggest_gap || "há bloqueios")}
+      </div></div>`;
+  }
+
+  function tilesHTML(d) {
+    const scan = d.checks.find((c) => c.id === "scan");
+    const diff = d.checks.find((c) => c.id === "diff");
+    const scanOk = scan && scan.status === "pass";
+    const diverg = (diff.faltando.length + diff.mudou.length + diff.extra.length);
+    const tile = (label, value, unit, cls) =>
+      `<div class="data-tile ${cls || ""}"><div class="data-tile-label">${label}</div>
+       <div class="data-tile-value">${value}<span class="data-tile-unit">${unit || ""}</span></div></div>`;
+    return (
+      tile("oficina", esc(d.oficina.version || "?"), "", "") +
+      tile("corte", esc(d.corte.version || "?"), `${d.corte.commits} commit(s)`, "") +
+      tile("scan público", scanOk ? "limpo" : "achados", "", scanOk ? "ok" : "crit") +
+      tile("incidents", `${d.contexto.incidents_corte}`, `de ${d.contexto.incidents_oficina} na oficina`, "") +
+      tile("divergências", String(diverg), diff.faltando.length ? "com faltando" : "em dia", diff.faltando.length ? "warn" : "ok")
+    );
+  }
+
+  function checkRow(c) {
+    const mark = c.status === "pass" ? "✓" : "✗";
+    const extra = (c.achados || []).slice(0, 3)
+      .map((a) => `<div class="row-meta diff-path">${esc(a)}</div>`).join("");
+    return `<div class="check-row">
+      <span class="check-mark ${c.status}">${mark}</span>
+      <span class="check-id">${esc(c.id)}</span>
+      <span class="check-detail">${esc(c.detalhe)}${extra}</span>
+    </div>`;
+  }
+
+  function diffItemHTML(path, kind, head) {
+    const st = corteState(head);
+    const minha = st.decisoes[path];
+    const chosen = (v) => (minha === v ? " chosen" : "");
+    const acao = kind === "extra" ? "fora" : "publicar"; // default sensato por classe
+    return `<div class="row ${minha ? "todo-feito" : ""}">
+      <div class="row-main">
+        <span class="diff-path">${esc(path)}</span>
+        <span class="row-meta"> ${esc(kindLabel(kind))}</span>
+      </div>
+      <div class="diff-actions">
+        ${kind === "extra" ? "" :
+          `<button class="btn ghost mini${chosen("publicar")}" type="button"
+             data-dec="publicar" data-path="${esc(path)}">publicar no corte</button>`}
+        <button class="btn ghost mini${chosen("fora")}" type="button"
+          data-dec="fora" data-path="${esc(path)}">manter fora</button>
+        ${minha ? `<button class="btn ghost mini" type="button"
+          data-dec="" data-path="${esc(path)}">desfazer</button>` : ""}
+      </div>
+    </div>`;
+  }
+
+  function kindLabel(kind) {
+    return { faltando: "existe na oficina, falta no corte",
+             mudou: "conteúdo difere entre os dois",
+             extra: "só existe no corte",
+             transform: "reescrito de propósito" }[kind] || kind;
+  }
+
+  function renderDivergencias(diff, head) {
+    const host = document.getElementById("divergencias");
+    const grupos = [
+      ["faltando", diff.faltando], ["mudou", diff.mudou],
+      ["extra", diff.extra], ["transform", diff.transform],
+    ];
+    let alguma = false;
+    host.innerHTML = "";
+    for (const [kind, itens] of grupos) {
+      if (!itens.length) continue;
+      alguma = true;
+      const sec = document.createElement("div");
+      sec.innerHTML = `<h4 class="panel-title" style="margin:var(--space-3) 0 var(--space-2)">${kindLabel(kind)} (${itens.length})</h4>`;
+      const list = document.createElement("div");
+      sec.appendChild(list);
+      host.appendChild(sec);
+      renderCapped(list, itens, (p) => diffItemHTML(p, kind, head));
+    }
+    if (!alguma) host.innerHTML = '<div class="empty-note">Superfície mecânica idêntica entre oficina e corte.</div>';
+    host.querySelectorAll("button[data-dec]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const st = corteState(head);
+        const path = btn.dataset.path;
+        if (btn.dataset.dec) st.decisoes[path] = btn.dataset.dec;
+        else delete st.decisoes[path];
+        corteSave(head, st);
+        renderDivergencias(diff, head);
+        renderApply(differencaAtual, head);
+      });
+    });
+  }
+
+  let differencaAtual = null;
+
+  function renderApply(diff, head) {
+    const st = corteState(head);
+    const pubs = Object.entries(st.decisoes)
+      .filter(([, v]) => v === "publicar").map(([p]) => p);
+    const panel = document.getElementById("apply-panel");
+    const box = document.getElementById("apply-box");
+    if (!pubs.length) { panel.hidden = true; return; }
+    panel.hidden = false;
+    const linhas = [];
+    for (const p of pubs) {
+      const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
+      linhas.push(`mkdir -p ${shQuote(`${window.__corte_dir}/${dir}`)}`);
+      linhas.push(`cp ${shQuote(`${window.__oficina_dir}/${p}`)} ${shQuote(`${window.__corte_dir}/${p}`)}`);
+    }
+    linhas.push(`# depois de copiar: revise o diff e commite no corte — a página não publica`);
+    box.textContent = linhas.join("\n");
+  }
+
+  function render(d) {
+    if (!d.ok) {
+      document.getElementById("lead").innerHTML =
+        `<div class="alert-banner"><div class="alert-banner-text">${esc(d.error || "review indisponível")}</div></div>`;
+      document.getElementById("tiles").innerHTML = "";
+      document.getElementById("checks").innerHTML = "";
+      document.getElementById("divergencias").innerHTML = "";
+      return;
+    }
+    window.__oficina_dir = d.oficina.dir;
+    window.__corte_dir = d.corte.dir;
+    differencaAtual = d.checks.find((c) => c.id === "diff");
+
+    document.getElementById("lead").innerHTML = verdictLead(d);
+    document.getElementById("tiles").innerHTML = tilesHTML(d);
+    document.getElementById("corte-line").textContent =
+      `oficina ${d.oficina.head} → corte ${d.corte.head}`;
+
+    const falhos = d.checks.filter((c) => c.status === "fail");
+    document.getElementById("bloqueios-panel").hidden = !falhos.length;
+    const bloq = document.getElementById("bloqueios");
+    bloq.innerHTML = falhos.map((c) =>
+      `<div class="alert-banner" style="margin-bottom:var(--space-2)">
+         <div class="alert-banner-text"><strong>${esc(c.id)}</strong>: ${esc(c.detalhe)}</div>
+       </div>
+       ${(c.achados || []).map((a) => `<div class="row-meta diff-path">${esc(a)}</div>`).join("")}
+       ${(c.presentes || []).length ? `<div class="row-meta diff-path">presentes: ${esc(c.presentes.join(", "))}</div>` : ""}`
+    ).join("");
+
+    document.getElementById("checks").innerHTML = d.checks.map(checkRow).join("");
+
+    renderDivergencias(differencaAtual, d.corte.head);
+    renderApply(differencaAtual, d.corte.head);
+
+    document.getElementById("sources").textContent =
+      `fontes: ${d.fontes.join(" · ")} · review: python3 bin/corte-review.py <corte> · ${d.ts}`;
+  }
+
+  async function boot() {
+    try {
+      render(await getJSON("/api/gui/corte"));
+    } catch (err) {
+      showError(document.getElementById("lead"), err);
+    }
+  }
+
+  document.getElementById("refresh").addEventListener("click", boot);
+  document.getElementById("copy-cmd").addEventListener("click", () => {
+    const txt = document.getElementById("apply-box").textContent;
+    if (txt) navigator.clipboard.writeText(txt).catch(() => {});
+  });
+  boot();
+  setInterval(boot, 60000); // o servidor já cacheia 60s — F5 não força scan novo
+  </script>
+</body>
+</html>

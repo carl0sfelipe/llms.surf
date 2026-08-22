@@ -1,0 +1,26 @@
+id: scentmatch_v1
+version: "1"
+name: scentmatch_v1
+description: >
+  Executor do prompt pack ~/scentmatch (plano/01..07). Economia v3: o
+  orquestrador caro escreveu as specs uma vez; flash free implementa cada
+  sessao; o oraculo mecanico da propria spec fecha o gate. Gauntlet v3
+  injeta biggest_gap (ADR-0005) ate APPROVED. Workdir esperado: raiz do
+  repo scentmatch (preflight recusa outro lugar).
+stages:
+  - role: run
+    model_ref: deepseek-v4-flash-free
+    preflight: >
+      test -f plano/00-contexto-global.md && test -f ESTADO.md ||
+      { echo "ERROR: workdir nao e a raiz do repo scentmatch (falta plano/00-contexto-global.md)"; exit 1; }
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+  loop_target: run
+  critic_model_ref: deepseek/deepseek-v4-flash-direct
+run_attempt_budget: 5
+on_fail: halt

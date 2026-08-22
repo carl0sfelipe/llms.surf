@@ -1,0 +1,28 @@
+id: unlock_plan
+version: "2"
+name: Unlock → Plan → Run
+description: >
+  P5 runtime via bin/dispatch-stages.sh (oracfit run unlock_plan …). Expensive
+  unlock → mid plan → cheap run; oracle stages use gauntlet inject; on_fail halt
+  so unlock failure never starts run (FR-4). Stub-friendly with adapters/stub.
+stages:
+  - role: unlock
+    model_ref: tier:expensive
+    artifacts: unlock/
+    oracle: true
+    max_attempts: 3
+  - role: plan
+    model_ref: tier:mid
+    input: prev_stage
+    artifacts: plan/
+  - role: run
+    model_ref: tier:cheap
+    input: prev_stage
+    oracle: true
+    max_attempts: 3
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+on_fail: halt

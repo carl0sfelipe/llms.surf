@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# llms-surf — fachada pública do llms.surf (antes Oracfit).
+#
+# Rename mínimo (docs/RENAME-MINIMO-DESIGN.md, owner 2026-08-22: identificador
+# llms-surf, site llms.surf): TUDO interno continua oracfit/* — um caminho só,
+# zero implementação paralela. Se um rename completo valer a pena um dia, esta
+# fachada é o ponto único de troca.
+exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/oracfit" "$@"

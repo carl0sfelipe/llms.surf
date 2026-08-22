@@ -1,0 +1,95 @@
+# MODO AION — god mode experimental do oracfit 3.5 (4º da família:
+# pythia → demiurgo → ouroboros → aion; cada um nasce do incident do anterior)
+#
+# Nome: Aión (Αἰών), o deus do tempo cíclico e sem fim — o loop que gira
+# sozinho e se regenera. Honesto com a missão: evolução perpétua e
+# auto-dirigida, com o humano lendo checkpoints quando quiser.
+#
+# Tese: manter TODOS os papéis no frontier host (como ouroboros), mas
+# converter as proteções que lá degradaram para protocolo em MECANISMO
+# executável de workdir, e trocar o critic de "correção" por "classe de
+# qualidade".
+#
+# Nasce de dois incidents abertos de 2026-08-12:
+#   1. "aprovou 4 ciclos e o dono deu 3.72" → critic media correção, não
+#      classe. AION: profile aion-comprador prevê a NOTA DO DONO (aprova
+#      só com predição ≥ 4.5/5 e valor-para-o-comprador nomeado em 1 frase).
+#   2. "6 anéis verdes mas toda proteção era protocolo" → ledger vazio,
+#      teto manuscrito, add -A varrendo árvore de outro agente. AION: anel
+#      só abre/fecha via script executável no workdir (aion/ring.sh) que
+#      roda o oráculo de verdade, grava ledger.jsonl (workdir + oracfit),
+#      conta o teto mecanicamente, recusa APPROVED com biggest_gap vazio e
+#      commita só com pathspec explícito (regras candidatas 1, 3, 5 e 6 do
+#      postmortem do ouroboros).
+#
+# Diferença de missão vs irmãos: pythia/demiurgo/ouroboros executam spec
+# dada; AION se auto-dirige — mantém backlog ordenado por leverage
+# (aion/BACKLOG.md no workdir) e escolhe o próximo incremento sozinho.
+# Uso inaugural: evoluir o protótipo Neural Loop (relay-juggler, branch
+# demo/neural-loop) no automático até o humano revisar CHECKPOINTS.md
+# para a negociação da merger Relay × AI Juggler.
+#
+# Limitação declarada (não escondida): o despertador do loop vive na
+# sessão do IDE e morre com ela (3ª ocorrência no dia 2026-08-12); cada
+# anel fecha commitado, então morte da sessão perde só o futuro, nunca o
+# passado. E o viés de auto-preferência do critic continua real — o
+# profile mitiga (persona adversarial + nota-do-dono), não elimina.
+
+id: aion
+version: "1"
+name: aion
+description: >
+  MODO DEUS auto-dirigido (experimento v3.5): frontier host em todos os
+  papéis + backlog próprio ordenado por leverage. Proteções mecânicas de
+  workdir: anel só abre/fecha via aion/ring.sh (oráculo real + ledger +
+  teto contado + biggest_gap fail-closed + commit com pathspec explícito).
+  Critic fresco com profile aion-comprador: diligência técnica do outro
+  lado da mesa, prevê a nota do dono, aprova só ≥ 4.5/5. Vitória =
+  oracle_exit=0 + critic sem 🔴 + checkpoint commitado com números do ledger.
+stages:
+  - role: plan
+    model_ref: frontier-host
+    oracle: false
+    max_attempts: 1
+    # Escolhe do backlog o item de maior leverage p/ negociação; escopo de
+    # UM anel (entregável pequeno). Abre o anel: bash aion/ring.sh open <id> "<hipótese>"
+  - role: build
+    model_ref: frontier-host
+    oracle: false
+    max_attempts: 2
+    # Executa direto (sem dispatch). Edição mínima; uma hipótese por anel.
+  - role: critic
+    model_ref: frontier-host      # contexto fresco (Task subagent do host)
+    oracle: true
+    max_attempts: 2
+    loop_target: build
+    # profile aion-comprador; APPROVED exige biggest_gap não-vazio E
+    # nota-do-dono prevista ≥ 4.5/5 — senão volta pro build com feedback.
+    # Veredito gravado em aion/verdicts/<ring>.json (o ring.sh valida).
+  - role: ring_close
+    command: bash aion/ring.sh close <ring-id> -- <pathspec...>
+    oracle: true
+    max_attempts: 1
+    # O script roda o oráculo mecânico (typecheck + testes), valida o
+    # veredito, monta o checkpoint com números REAIS (claims-check),
+    # commita com pathspec explícito e grava o ledger. Falhou = anel aberto.
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5              # anéis por run; contado pelo ring.sh, não por promessa
+  loop_target: build
+  critic_model_ref: frontier-host
+  critic_profile: aion-comprador
+run_attempt_budget: 5
+on_fail: halt
+halt_conditions:
+  - "2 anéis consecutivos rejeitados pelo critic na mesma hipótese"
+  - "oracle_exit != 0 que persista após 1 tentativa de correção"
+  - "teto de 5 anéis no run (ring.sh recusa abrir o 6º)"
+never:
+  - "git add -A / -u — commit só com pathspec explícito (o ring.sh é quem commita)"
+  - "push sem revisão humana dos checkpoints"
+  - "editar o oráculo (comandos no ring.sh) com anel aberto"
+  - "checkpoint com número que não saiu do ledger/oráculo (claims-check)"
+  - "tocar skills instaladas (~/.claude, ~/.cursor, ~/.hermes) durante a evolução"

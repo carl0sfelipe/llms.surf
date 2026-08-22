@@ -1,0 +1,582 @@
+/* Oracfit GUI — Mission Control design system (~/open-design/design-systems/mission-control)
+ * Protocolo open-design: bloco :root de tokens ANTES de qualquer CSS próprio;
+ * todo CSS abaixo referencia token. Anti-patterns respeitados: radius <= 4px,
+ * monospace em todo dado, cor só com significado operacional, animação só em
+ * sinal que importa (o reveal do delta na calibração). Dark-only por design. */
+
+:root {
+  /* Mission Control tokens (DESIGN.md §2) */
+  --bg-default: #0B1120;
+  --bg-surface: #111827;
+  --bg-surface-hover: #1A2535;
+  --bg-surface-active: #1E3A5F;
+  --border-default: #1E3A5F;
+  --border-subtle: #162035;
+  --data-primary: #FFB800;
+  --data-secondary: #00D4FF;
+  --data-alert-critical: #FF4757;
+  --data-alert-warning: #FF9F43;
+  --data-success: #26DE81;
+  --fg-primary: #E8F0FE;
+  --fg-secondary: #8BA3C7;
+  --fg-tertiary: #4A6080;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  --radius: 4px;
+  --transition-fast: 100ms ease-in;
+  --transition-base: 150ms ease-out;
+  --transition-slow: 300ms ease-out;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body.gui {
+  margin: 0;
+  background: var(--bg-default);
+  color: var(--fg-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  min-height: 100vh;
+}
+
+/* ── sidebar persistente ───────────────────────────────────────────────── */
+.sidebar {
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-default);
+  padding: var(--space-4) 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar .brand {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fg-primary);
+  padding: 0 var(--space-4) var(--space-3);
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.sidebar .brand small {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-tertiary);
+}
+
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-tertiary);
+  padding: var(--space-3) var(--space-4) var(--space-1);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  color: var(--fg-secondary);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.nav-link:hover { background: var(--bg-surface-hover); color: var(--fg-primary); }
+
+.nav-link.active {
+  background: var(--bg-surface-hover);
+  color: var(--fg-primary);
+  border-left-color: var(--data-secondary);
+}
+
+.nav-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--data-primary);
+}
+
+/* ── área principal ────────────────────────────────────────────────────── */
+main.content {
+  padding: var(--space-5) var(--space-6);
+  max-width: 1080px;
+  width: 100%;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 var(--space-1);
+}
+
+.page-sub {
+  color: var(--fg-secondary);
+  font-size: 13px;
+  margin: 0 0 var(--space-4);
+}
+
+.page-sub .mono, .mono { font-family: var(--font-mono); }
+
+/* "Em português claro" — texto sem jargão, sempre visível antes do técnico */
+.plain-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-left: 4px solid var(--data-primary);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  font-size: 14px;
+  color: var(--fg-primary);
+  line-height: 1.55;
+}
+
+.plain-box .plain-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--data-primary);
+  margin-bottom: var(--space-1);
+}
+
+.plain-box strong { color: var(--data-primary); }
+
+/* "O que é esta página" — parágrafo sem jargão abaixo do título */
+.page-plain {
+  color: var(--fg-primary);
+  font-size: 13px;
+  margin: 0 0 var(--space-3);
+  max-width: 760px;
+}
+
+/* jargão inevitável ganha tooltip curto */
+abbr[title] {
+  text-decoration: underline dotted var(--fg-tertiary);
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+/* glossário mínimo compartilhado (componente do gui.js) */
+.glossary dt {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--data-secondary);
+  margin-top: var(--space-2);
+}
+
+.glossary dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-secondary);
+}
+
+/* Ação primeiro (i-have-adhd regra 1): bloco líder de cada página */
+.action-lead {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-left: 4px solid var(--data-secondary);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.action-lead.calm { border-left-color: var(--data-success); }
+
+.action-lead .lead-text { font-size: 15px; font-weight: 500; }
+
+.action-lead .lead-meta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-secondary);
+}
+
+/* ── painéis / tiles (DESIGN.md §5-6) ─────────────────────────────────── */
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-secondary);
+  margin: 0;
+}
+
+.telemetry-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.data-tile {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+.data-tile-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.data-tile-value {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--data-primary);
+  line-height: 1.0;
+}
+
+.data-tile-value.ok { color: var(--data-success); }
+.data-tile-value.warn { color: var(--data-alert-warning); }
+.data-tile-value.crit { color: var(--data-alert-critical); }
+
+.data-tile-unit {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--fg-tertiary);
+  margin-left: 4px;
+}
+
+/* ── badges de status (DESIGN.md §6) ──────────────────────────────────── */
+.badge-nominal, .badge-warning, .badge-critical, .badge-neutral {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.badge-nominal {
+  background: rgba(38, 222, 129, 0.15);
+  color: var(--data-success);
+  border: 1px solid rgba(38, 222, 129, 0.3);
+}
+
+.badge-warning {
+  background: rgba(255, 159, 67, 0.15);
+  color: var(--data-alert-warning);
+  border: 1px solid rgba(255, 159, 67, 0.3);
+}
+
+.badge-critical {
+  background: rgba(255, 71, 87, 0.15);
+  color: var(--data-alert-critical);
+  border: 1px solid rgba(255, 71, 87, 0.3);
+}
+
+.badge-neutral {
+  background: var(--bg-surface-hover);
+  color: var(--fg-secondary);
+  border: 1px solid var(--border-default);
+}
+
+/* ── alert banner (DESIGN.md §6) ──────────────────────────────────────── */
+.alert-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: rgba(255, 71, 87, 0.1);
+  border: 1px solid rgba(255, 71, 87, 0.4);
+  border-left: 4px solid var(--data-alert-critical);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  color: var(--data-alert-critical);
+  font-weight: 500;
+}
+
+/* ── listas (máx 5 visíveis + ver mais) ───────────────────────────────── */
+.row-list { display: flex; flex-direction: column; gap: var(--space-1); }
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+}
+
+.row:hover { background: var(--bg-surface-hover); }
+
+.row .row-main { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .row-meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-tertiary); white-space: nowrap; }
+.row .row-num  { font-family: var(--font-mono); font-size: 12px; color: var(--fg-secondary); white-space: nowrap; }
+
+.see-more {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  color: var(--data-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.see-more:hover { border-color: var(--data-secondary); }
+
+.empty-note { color: var(--fg-secondary); font-size: 13px; padding: var(--space-2); }
+
+/* ── botões ───────────────────────────────────────────────────────────── */
+.btn {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface-hover);
+  color: var(--fg-primary);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn:hover { border-color: var(--data-secondary); }
+
+.btn.primary {
+  background: var(--data-secondary);
+  border-color: var(--data-secondary);
+  color: var(--bg-default);
+  font-size: 15px;
+  padding: var(--space-3) var(--space-6);
+}
+
+.btn.ghost { background: none; color: var(--fg-secondary); }
+.btn.ghost:hover { color: var(--fg-primary); }
+
+/* ── HITL: uma decisão por tela ───────────────────────────────────────── */
+.hitl-stage { max-width: 720px; margin: 0 auto; }
+
+.hitl-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.hitl-progress .label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border-default);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--data-secondary);
+  border-radius: 2px;
+  transition: width var(--transition-slow);
+}
+
+.hitl-question {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 var(--space-4);
+}
+
+.hitl-question .ring-id { font-family: var(--font-mono); color: var(--data-primary); }
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.score-btn {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  min-height: 56px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--fg-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.score-btn:hover, .score-btn:focus-visible {
+  border-color: var(--data-secondary);
+  background: var(--bg-surface-hover);
+  outline: none;
+}
+
+.score-btn:disabled { opacity: 0.45; cursor: default; }
+
+@media (max-width: 720px) {
+  .score-grid { grid-template-columns: repeat(6, 1fr); }
+  body.gui { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border-default); }
+}
+
+.hitl-context .ctx-item { margin-bottom: var(--space-2); }
+
+.ctx-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-tertiary);
+  margin-bottom: 2px;
+}
+
+.ctx-value { font-size: 13px; color: var(--fg-primary); }
+.ctx-value.mono { font-family: var(--font-mono); font-size: 12px; color: var(--fg-secondary); }
+
+details.ver-mais > summary {
+  cursor: pointer;
+  color: var(--data-secondary);
+  font-size: 12px;
+  list-style: none;
+  padding: var(--space-1) 0;
+}
+
+details.ver-mais > summary::-webkit-details-marker { display: none; }
+
+details.ver-mais pre {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-secondary);
+  white-space: pre-wrap;
+  background: var(--bg-default);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* reveal do delta — ÚNICA animação da GUI: é o sinal que importa */
+.delta-reveal {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.delta-reveal .delta-value {
+  font-family: var(--font-mono);
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.0;
+  color: var(--data-primary);
+  animation: pulse-glow 2s ease-in-out 1;
+}
+
+.delta-reveal .delta-value.ok { color: var(--data-success); }
+.delta-reveal .delta-value.warn { color: var(--data-alert-warning); }
+
+.delta-reveal .delta-caption {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-secondary);
+  margin-top: var(--space-2);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 8px currentColor; }
+  50% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* tabela de resultado final do HITL (vitória visível, sem enterrar) */
+.win-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 13px; }
+.win-table th {
+  text-align: left; font-family: var(--font-sans); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-tertiary);
+  padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--border-subtle);
+}
+.win-table td { padding: var(--space-2); border-bottom: 1px solid var(--border-subtle); }
+.win-table .d-ok { color: var(--data-success); }
+.win-table .d-warn { color: var(--data-alert-warning); }
+.win-table .d-muted { color: var(--fg-tertiary); }
+
+/* formulário de dispatch (dispatches.html) — celular primeiro */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+.form-grid label {
+  display: flex; flex-direction: column; gap: var(--space-1);
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--fg-tertiary);
+}
+.form-grid input, .form-grid select {
+  font: inherit; font-size: 14px; text-transform: none; letter-spacing: normal;
+  color: var(--fg-primary); background: var(--bg-default);
+  border: 1px solid var(--border-subtle); border-radius: 8px;
+  padding: var(--space-3); min-width: 0;
+}
+.form-grid input:focus, .form-grid select:focus {
+  outline: none; border-color: var(--data-secondary);
+}
+.form-grid button { min-height: 46px; }  /* alvo de dedo confortável */

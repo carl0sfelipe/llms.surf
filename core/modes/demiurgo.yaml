@@ -1,0 +1,85 @@
+# MODO DEMIURGO — god mode experimental do oracfit 3.5
+#
+# Tese do experimento: TODOS os papéis (gerar, criticar, julgar, auditar)
+# colapsam num único frontier model — sem dispatch para modelos free, sem
+# humano no loop até o checkpoint. O nome é honesto: o demiurgo constrói o
+# mundo sozinho, mas não é onisciente. Por isso as proteções deste modo são
+# ESTRUTURAIS, não de julgamento:
+#
+#   1. ORÁCULO CONGELADO: casos + rubrica escritos ANTES da 1ª iteração,
+#      sha256 em evals/HASHES, verificado por script executável a cada
+#      rodada. O modelo não pode mover a trave que ele mesmo vai chutar.
+#   2. HARD-FAILS MECÂNICOS: violação de regra-nunca zera o caso, sem
+#      apelação — não é opinião do juiz, é grep na rubrica.
+#   3. ORÇAMENTO DURO: safety_ceiling de iterações por sessão. Regra 1 do
+#      tdah-loops existe porque loop sem teto já estourou limite de uso.
+#   4. REGRESSÃO REVERTE: score cai ou hard-fail aparece → git revert da
+#      iteração. O histórico é o undo.
+#   5. CHECKPOINT COMMITADO por iteração (branch dedicada, nunca push):
+#      o humano audita depois, com diff + scores + notas do juiz.
+#
+# Limitação declarada (não escondida): juiz e gerador são o mesmo modelo —
+# viés de auto-preferência é real e conhecido. Este modo NÃO substitui o
+# gauntlet multi-modelo em produção; é um teste da v3.5 para medir quanto
+# um frontier sozinho consegue evoluir um artefato contra oráculo congelado.
+# Vitória declarada só após revisão humana dos checkpoints.
+#
+# NOTA de execução: model_ref "frontier-session" não é dispatchável via
+# opencode — este modo é executado pelo próprio agente frontier orquestrador
+# (Cursor/Claude Code) seguindo os stages abaixo como protocolo.
+
+id: demiurgo
+version: "1"
+name: demiurgo
+description: >
+  God mode experimental v3.5: frontier model faz gerar+criticar+julgar+auditar
+  sozinho, contra oráculo congelado (sha256), com teto de iterações,
+  reversão em regressão e checkpoint commitado por rodada. Alvo do teste
+  inaugural: evoluir a skill coach de TDAH (tdah-loops-repo, branch demiurgo).
+stages:
+  - role: freeze_check
+    command: >
+      bash "$DEMIURGO_TARGET/evals/checar-congelamento.sh"
+    stage_oracle: >
+      bash "$DEMIURGO_TARGET/evals/checar-congelamento.sh"
+    oracle: true
+    max_attempts: 1
+    # Se o congelamento falhar, o run INTEIRO aborta: trave movida = fraude.
+  - role: evolve
+    model_ref: frontier-session
+    oracle: false
+    max_attempts: 1
+    # Protocolo: ler checkpoint anterior -> 1 hipótese de melhoria -> edição
+    # MÍNIMA e cirúrgica no artefato-alvo. Uma hipótese por iteração.
+  - role: eval_gate
+    model_ref: frontier-session
+    oracle: true
+    max_attempts: 1
+    loop_target: evolve
+    # Protocolo: responder os casos congelados seguindo o artefato editado,
+    # pontuar pela rubrica congelada (dimensões 0-2 + hard-fails mecânicos).
+    # Aceita se media_nova > media_anterior E zero hard-fail; senão reverte.
+  - role: checkpoint
+    command: >
+      cd "$DEMIURGO_TARGET" && git add -A && git commit -m "demiurgo: checkpoint da iteração"
+    oracle: true
+    max_attempts: 1
+    # Na prática o agente escreve checkpoints/checkpoint-NN.md com scores,
+    # notas do juiz, diff aplicado/revertido e hipótese seguinte.
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: false
+  safety_ceiling: 4        # máx 4 iterações evolve->eval por sessão
+  loop_target: evolve
+  critic_model_ref: frontier-session
+run_attempt_budget: 6
+on_fail: halt
+halt_conditions:
+  - "2 iterações consecutivas sem ganho > 0.3 na média (convergência)"
+  - "qualquer alteração em evals/ detectada pelo freeze_check"
+  - "hard-fail que persista após 1 reversão"
+never:
+  - "push da branch demiurgo sem revisão humana dos checkpoints"
+  - "tocar skills instaladas (~/.claude, ~/.cursor, ~/.hermes) durante a evolução"
+  - "editar evals/ depois do congelamento (nem para 'corrigir typo')"

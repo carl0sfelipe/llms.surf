@@ -1,0 +1,78 @@
+{
+  "$schema": "core/verify-suite-spec.md",
+  "version": 2,
+  "descricao": "Suíte de verificação de modelo. Checagem 100% determinística (sem LLM-as-judge) e extensível por modelo leve: adicionar tarefa é acrescentar um objeto em `tasks`, sem tocar em código. Ver core/verify-suite-spec.md.",
+  "regra": "O resultado entra em `measured.suite_accuracy` do model-registry.json — NUNCA no campo `accuracy`, que vem de spec e tem `source`. Números diferentes, campos diferentes (incidente incidents/2026-07-25-registry-com-model-id-inexistente-e-sem-.md).",
+  "historico": "v1 tinha 5 tarefas de resposta curta e media capacidades que o framework quase não usa. A revisão adversarial BMAD de 2026-07-25 apontou: nenhuma tarefa de bulk output nem de refinamento, que são os dois papéis principais do modelo free (regras 1 e 3 do SKILL.md). v2 cobre os dois.",
+  "tasks": [
+    {
+      "id": "instrucao-literal",
+      "tipo": "instruction",
+      "prompt": "Responda exatamente com a palavra OK, sem pontuação e sem mais nada.",
+      "check": { "tipo": "exato", "esperado": "OK" },
+      "por_que": "Aderência literal: specs exigem caminho exato e mensagem de commit exata. Modelo que enfeita a resposta quebra automação."
+    },
+    {
+      "id": "aritmetica",
+      "tipo": "reasoning",
+      "prompt": "Quanto é 17 multiplicado por 23? Responda apenas com o número, sem texto.",
+      "check": { "tipo": "exato", "esperado": "391" },
+      "por_que": "Raciocínio curto verificável, e segunda checagem de aderência a formato."
+    },
+    {
+      "id": "codigo-saida",
+      "tipo": "code",
+      "prompt": "Qual é a saída exata de print(len('dispatch')) em Python? Responda apenas com o número.",
+      "check": { "tipo": "exato", "esperado": "8" },
+      "por_que": "Leitura de código — tarefa padrão do papel de dev júnior."
+    },
+    {
+      "id": "formato-json",
+      "tipo": "instruction",
+      "prompt": "Responda apenas com este JSON, sem cercas de código e sem texto: {\"ok\":true}",
+      "check": { "tipo": "json_igual", "esperado": { "ok": true } },
+      "por_que": "Saída estruturada. Usa json_igual porque JSON válido em várias linhas é CORRETO — reprovar por formatação era falso negativo (achado da revisão adversarial)."
+    },
+    {
+      "id": "bulk-doc-estruturado",
+      "tipo": "bulk",
+      "prompt": "Escreva a documentação de uma função Python chamada somar(a, b) que retorna a soma. Use exatamente estas quatro seções em markdown, nesta ordem, como títulos de nível 2: ## Descrição, ## Parâmetros, ## Retorno, ## Exemplo. Na seção Exemplo inclua um bloco de código Python que chame somar(2, 3). Escreva ao menos 12 linhas no total. Não use texto de preenchimento.",
+      "check": {
+        "tipo": "combinado",
+        "checks": [
+          { "tipo": "contem_todos", "termos": ["## Descrição", "## Parâmetros", "## Retorno", "## Exemplo", "somar(2, 3)"] },
+          { "tipo": "min_linhas", "n": 12 },
+          { "tipo": "nao_contem", "termos": ["TODO", "lorem", "preencher aqui", "..."] }
+        ]
+      },
+      "por_que": "BULK OUTPUT é o papel principal do modelo free (regra 1: >20 linhas vai para free). A suíte v1 não media isso — o achado mais grave da revisão adversarial. Checa estrutura, volume e ausência de preguiça, sem precisar de juiz."
+    },
+    {
+      "id": "refinamento-delete-reescreva-adiciona",
+      "tipo": "refinement",
+      "prompt": "Abaixo está um arquivo de configuração. Aplique EXATAMENTE três mudanças e devolva o arquivo inteiro resultante, sem comentários seus e sem cercas de código:\n\nARQUIVO:\nhost: localhost\nport: 8080\ndebug: true\ntimeout: 30\n\nMUDANÇAS:\n1. DELETE a linha do debug\n2. REESCREVA a porta para 9090\n3. ADICIONE no final a linha: retries: 3",
+      "check": {
+        "tipo": "combinado",
+        "checks": [
+          { "tipo": "contem_todos", "termos": ["host: localhost", "port: 9090", "timeout: 30", "retries: 3"] },
+          { "tipo": "nao_contem", "termos": ["debug", "8080"] }
+        ]
+      },
+      "por_que": "REFINAMENTO DELETE/REESCREVA/ADICIONE é a operação mais recorrente do fluxo (ver fluxos/dispatch/step-04-verify.md) e não era medida. Testa edição sobre texto existente, não geração from-scratch — capacidade em que o deepseek free demonstrou falhar em tarefas reais desta sessão."
+    },
+    {
+      "id": "contexto-recupera-agulha",
+      "tipo": "long_context",
+      "prompt": "Leia o registro abaixo e responda apenas com o valor do campo CODIGO-OPERACAO, sem mais nada.\n\nO framework dispatch orquestra modelos free em camadas. O framework dispatch orquestra modelos free em camadas. O framework dispatch orquestra modelos free em camadas. O framework dispatch orquestra modelos free em camadas. O framework dispatch orquestra modelos free em camadas.\nCODIGO-OPERACAO: ZX42Q\nO framework dispatch orquestra modelos free em camadas. O framework dispatch orquestra modelos free em camadas. O framework dispatch orquestra modelos free em camadas. O framework dispatch orquestra modelos free em camadas. O framework dispatch orquestra modelos free em camadas.\n\nQual é o CODIGO-OPERACAO?",
+      "check": { "tipo": "exato", "esperado": "ZX42Q" },
+      "por_que": "Recuperação em meio a texto repetitivo — versão curta e barata do needle-in-haystack. O teste de contexto grande (--needle) fica separado por custo; este roda sempre."
+    },
+    {
+      "id": "recusa-inventar",
+      "tipo": "instruction",
+      "prompt": "Responda apenas com o nome do arquivo de configuração do projeto XPTO-INEXISTENTE-9Z. Se você não sabe, responda exatamente: NAO SEI",
+      "check": { "tipo": "exato", "esperado": "NAO SEI" },
+      "por_que": "Mede se o modelo admite desconhecimento em vez de inventar. Alucinação de caminho de arquivo é o modo de falha que mais custou nesta sessão (ids fantasma no registry, arquivos inexistentes citados em spec)."
+    }
+  ]
+}

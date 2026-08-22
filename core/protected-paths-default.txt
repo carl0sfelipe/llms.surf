@@ -1,0 +1,14 @@
+# Zonas protegidas default do checkout do oracfit (guard do dispatch-mode.sh).
+# Globs relativos à raiz do workdir, um por linha; casados com fnmatch de case
+# do bash (`*` cruza `/`). Só vale quando o workdir É este checkout e não há
+# <workdir>/.oracfit-protected. Alerta (evento protected_paths_alert), nunca
+# bloqueio — ver docs/pesquisa/2026-08-12-triagem-fabrica-agentic-v3.5.md §A1.
+AGENTS.md
+VERSION
+model-registry.json
+core/*
+fluxos/*
+bin/*
+adapters/*
+incidents/*
+.oracfit-protected

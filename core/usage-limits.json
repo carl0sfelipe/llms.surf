@@ -1,0 +1,37 @@
+{
+ "$schema": "bin/usage-hub.py",
+ "comment": "limit_tokens null = so rastreia, nunca bloqueia (fail-open). NAO invente numero de plano (incidents/2026-07-29-spec-com-dado-inventado-passou-no-gate.md) — calibre com o valor real: bin/usage-hub.py limits --set <provider> <5h|day|week> <tokens>. Chaves = providerID do opencode.db (json_extract(model,'$.providerID')).",
+ "wait_pct": 85,
+ "providers": {
+  "opencode": {
+   "plan": "OpenCode Zen Free (deepseek-v4-flash-free, laguna, nemotron, gemini-3.6-flash…)",
+   "calibration_note": "Calibrado 2026-08-12. Zen NAO publica teto oficial (opencode.ai/docs/zen; issues #16844/#15585: cap diario, reset 00:00 local, estimativas de terceiros ~0.3-0.5M/dia NAO batem com esta conta). Medicao propria: 4.293.366 tokens no dia 2026-08-12 SEM FreeUsageLimitError — so 429 transiente (ja vetado por observacao). Numero de teto continua desconhecido: day fica null ate o cap real ser observado (grave-o com limits --set quando 'Free usage exceeded' aparecer).",
+   "windows": {"5h": {"limit_tokens": null}, "day": {"limit_tokens": null}, "week": {"limit_tokens": null}}
+  },
+  "qwen-token-plan": {
+   "plan": "Qwen Token Plan Pro ($18/mo)",
+   "windows": {"5h": {"limit_tokens": null}, "week": {"limit_tokens": null}}
+  },
+  "openrouter": {
+   "plan": "OpenRouter (chave pre-paga)",
+   "windows": {"day": {"limit_tokens": null}, "week": {"limit_tokens": null}}
+  },
+  "deepseek-direct": {
+   "plan": "DeepSeek API direta",
+   "calibration_note": "Calibrado 2026-08-12: NAO existe janela de quota por design (api-docs.deepseek.com/quick_start/rate_limit) — o limite e concorrencia dinamica (flash 2500 / pro 500 in-flight) + saldo (HTTP 402). limit_tokens null aqui e o estado CORRETO, nao divida: o veto vem por observacao de balance (exit 4 -> observe), ja ativo.",
+   "windows": {"day": {"limit_tokens": null}, "week": {"limit_tokens": null}}
+  },
+  "zhipuai-coding-plan": {
+   "plan": "GLM Coding Plan (z.ai)",
+   "windows": {"5h": {"limit_tokens": null}, "week": {"limit_tokens": null}}
+  },
+  "nvidia": {
+   "plan": "NVIDIA NIM (free)",
+   "windows": {"day": {"limit_tokens": null}}
+  },
+  "claude": {
+   "plan": "Claude Pro (adapter claude-code)",
+   "windows": {"5h": {"limit_tokens": null}, "week": {"limit_tokens": null}}
+  }
+ }
+}

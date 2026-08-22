@@ -1,0 +1,86 @@
+# MODO MIDAS — god mode de arbitragem assimétrica (teste v3.5→v4)
+#
+# Filho do AUTARCA (cadeia contínua, planner=frontier, checkpoints como
+# interface humana), especializado em PROJETOS DE DINHEIRO: oportunidades
+# de arbitragem assimétrica onde esforço pequeno e consistente vira receita
+# em <6 meses (ex.: ~/flips — domínios $1.80 + micro-MVP → venda 22-38x
+# lucro mensal na Flippa).
+#
+# Nome honesto nos dois sentidos: Midas transforma toque em ouro — E o
+# toque dele era maldição sem controle. Por isso a cláusula central do
+# modo é o COFRE: o MIDAS prepara ativos que valorizam; quem gasta
+# dinheiro é SEMPRE o dono. Nenhuma compra, assinatura, deploy pago ou
+# publicação em store sai do modo.
+#
+# Nasce com as lições do incident 2026-08-12 "6 anéis verdes mas toda
+# proteção era protocolo": proteção aqui tenta ser MECÂNICA onde dá
+# (script de oráculo por story, ledger por anel, pathspec no commit,
+# biggest_gap fail-closed) e DECLARADA onde ainda não dá (host-mode não
+# passa por bin/oracfit; ver regra candidata 1 do incident).
+
+id: midas
+version: "1"
+name: midas
+description: >
+  God mode de arbitragem assimétrica (experimento v3.5→v4, filho do
+  autarca): frontier faz TODOS os papéis — planejar a próxima story do
+  backlog, executar, auditar (critic fresco via subagent com profile),
+  refinar e fechar checkpoint — em cadeia contínua, sem humano no loop.
+  Especialização: o alvo é um portfólio de micro-produtos que precisam
+  provar ~$40/mês para valer $1.000 no múltiplo Flippa (fonte na
+  ANALISE.md de cada repo). O humano audita por CHECKPOINTS.md e é o
+  ÚNICO que toca dinheiro.
+chain:
+  planner: frontier-host
+  backlog: workdir              # ~/flips/BACKLOG.md (stories ordenadas)
+  next_without_ask: true
+  order_hint: >
+    valor de venda primeiro (produto pronto para deploy no dia da compra
+    vale mais que pesquisa nova); risco de colisão por último.
+  stop_when:
+    - humano_intervem
+    - colisao_com_sessao_paralela
+    - oracle_vermelho_apos_budget
+  skip_when:
+    - decisao_de_dono_pendente   # ex.: compra do domínio — registra e segue
+cofre:  # a cláusula anti-maldição — tudo aqui é bloqueante
+  - "NUNCA comprar domínio, renovar, assinar API/serviço pago ou publicar em store paga — registrar como decisao_de_dono_pendente no checkpoint"
+  - "NUNCA declarar receita/tráfego não medido como fato (regra 37); projeção sempre rotulada com fonte do múltiplo"
+  - "custo de infra de qualquer MVP tem teto $0/mês até o dono aprovar exceção"
+  - "produto só é 'pronto' se roda 100% client-side ou em free tier declarado no checkpoint"
+hardening:  # herdado do autarca; cada linha nasceu de incident real de 2026-08-12
+  preflight_diario: consultar incidents/ do oracfit pelos mecanismos do anel; citar no 1º checkpoint
+  preflight_anel: git status/log no repo alvo (sessão paralela); serviço longo NUNCA em terminal de sessão
+  ledger_host_mode: abrir/fechar anel grava linha JSON em ledger/ledger.jsonl (ring, story, oracle_exit, critic, commit)
+  oraculo_monotonico: ADICIONAR check é livre; remover/relaxar exige bloco DECLARACAO no checkpoint do anel
+  biggest_gap_fail_closed: veredito do critic sem biggest_gap não-vazio = estágio falho, conta no teto
+  claims_check: todo número do checkpoint aponta artefato; critic reconta por amostragem
+  commit_cirurgico: git add sempre com pathspec explícito; -A/-u proibidos
+  ship_gate: >
+    story de produto só fecha com: oráculo mecânico do repo verde
+    (evals/check.sh executável) + critic fresco sem 🔴 + kill-switch da
+    ANALISE.md re-checado no checkpoint.
+  roi_thread: >
+    cada checkpoint amarra a story à equação da tese ($/mês alvo × múltiplo
+    citado) e diz o que AINDA não está medido — o MIDAS constrói o ativo,
+    não inventa o resultado.
+stages:
+  - role: run
+    model_ref: frontier-host
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+  loop_target: run
+  critic_model_ref: frontier-host
+  critic_profile: ouroboros-nobel
+run_attempt_budget: 5
+on_fail: checkpoint_then_halt
+never:
+  - "gastar dinheiro do dono (ver cofre) — sem exceção, nem de $1.80"
+  - "push sem revisão humana dos checkpoints"
+  - "tocar ~/garimpo/data/buylist.csv sem evidência nova (carrinho/RDAP)"
+  - "editar evals/ do repo alvo para afrouxar check no mesmo anel que o viola"

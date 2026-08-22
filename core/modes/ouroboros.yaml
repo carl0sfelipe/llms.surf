@@ -1,0 +1,29 @@
+id: ouroboros
+version: "1"
+name: ouroboros
+description: >
+  MODO DEUS (experimento v3.5): todos os papéis — spec, execução, judge,
+  critic, refino e auditoria — são o PRÓPRIO frontier model, em contextos
+  frescos por papel (subagents do host). Nenhum dispatch a modelo free.
+  Custo alto por loop; usar quando a tarefa exige julgamento de fronteira
+  em todas as pontas (pesquisa, metodologia, dados sensíveis). O oráculo
+  continua mecânico e soberano: frontier julga, mas não decide vitória —
+  vitória é oracle_exit=0 + critic sem 🔴. Host esperado: Cursor (Fable)
+  orquestrando Task subagents; adapters ficam de fora por design.
+  Checkpoint humano obrigatório por loop fechado em CHECKPOINTS.md do
+  workdir (o humano lê "onde parou e por quê" sem abrir o chat).
+stages:
+  - role: run
+    model_ref: frontier-host        # o próprio host frontier executa (subagent)
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+  loop_target: run
+  critic_model_ref: frontier-host   # critic = frontier em contexto fresco
+  critic_profile: ouroboros-nobel
+run_attempt_budget: 5
+on_fail: halt
