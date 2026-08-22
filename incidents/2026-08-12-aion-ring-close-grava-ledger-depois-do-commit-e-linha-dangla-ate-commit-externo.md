@@ -29,7 +29,7 @@ relay-juggler), reconstruída por evidência:
    sessão de agente que rodou o anel**: nenhum terminal daquela sessão
    estava ativo no horário (mais recente: 21:33, o despertador morto) e a
    autoria git é idêntica em todos os commits da máquina
-   (`Carlos <carlos.felipe@hotmail.com.br>`), o que impede atribuir a
+   (`Carlos <<e-mail-do-dono>>`), o que impede atribuir a
    origem — outra sessão de agente ou o dono à mão.
 
 ## Por que é um incident PRÓPRIO e não um detalhe do postmortem
