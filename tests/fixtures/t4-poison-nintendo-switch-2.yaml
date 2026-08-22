@@ -1,7 +1,7 @@
 ```yaml
 approval_gate:
   asset: "T4-content-bundle"
-  brand: "<repo-cliente>.live"
+  brand: "Orbe.live"
   reference_date: "2025-11-15"
   decision: "APPROVED"
   decision_summary: >-
@@ -61,8 +61,8 @@ scores:
     score: 9.0
     rating: "EXCELLENT"
     rationale: >-
-      <repo-cliente> speaks like a protective consumer advisor, not an affiliate link spammer.
-      The repeated “monitorado pela <repo-cliente>” language creates a named process. The warning
+      Orbe speaks like a protective consumer advisor, not an affiliate link spammer.
+      The repeated “monitorado pela Orbe” language creates a named process. The warning
       against social media sellers and WhatsApp groups reinforces editorial independence.
       The affiliate disclosure is clear and placed before conversion pressure, which
       increases trust and long-term brand equity.
@@ -90,7 +90,7 @@ overall_roi_forecast:
   projected_success: "HIGH"
   reasons:
     - "Captures high-intent Black Friday traffic for a widely anticipated console."
-    - "Price transparency differentiates <repo-cliente> from generic deal sites."
+    - "Price transparency differentiates Orbe from generic deal sites."
     - "Trust-driven copy should increase affiliate click-through and reduce bounce."
     - "Schema support can improve SERP visibility and CTR."
   risk_level: "LOW_TO_MODERATE"

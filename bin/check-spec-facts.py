@@ -12,7 +12,7 @@ DADO FALSO — o bloco "Dados verificados" é aceito por fé. Na spec
     Em `apps/backend/vitest.config.ts` existe o glob
     `src/observability/**/__tests__/**/*.test.ts`. Remover essa entrada.
 
-O glob existe, mas em OUTRO repo (`<repo-cliente>.live-imports`), não no alvo
+O glob existe, mas em OUTRO repo (`orbe.live-imports`), não no alvo
 (`leadher.living`). A spec passou nos 5 checks do `check-spec.sh` e foi
 despachada. O modelo se comportou melhor que o gate: não inventou o glob, foi
 olhar, não achou, e disse. O gate não olhou nada.

@@ -2,7 +2,7 @@
 # check-publico.sh — gate mecânico do corte público: recusa dado pessoal e
 # caminho de máquina.
 #
-# Nasceu do incidente 2026-08-13-oracfit-soldado-no-<repo-cliente>-corte-sem-catego:
+# Nasceu do incidente 2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego:
 # ~2.500 telefones de terceiros chegaram ao repo do produto porque specs/
 # não era categoria do manifesto do publish-cut e nenhum check olhava
 # CONTEÚDO (.gitignore vigia runtime, check-spec vigia fato inventado —

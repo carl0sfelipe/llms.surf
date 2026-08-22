@@ -42,7 +42,7 @@ echo "── Regras ────────────────────
 checar "invariantes da poda"              bash tests/test-regras.sh
 checar "sem dívida de incidente"          bash bin/incident.sh audit
 # superfície exportável sem telefone/e-mail de terceiro/caminho de máquina —
-# incidents/2026-08-13-oracfit-soldado-no-<repo-cliente>-corte-sem-catego.md
+# incidents/2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego.md
 checar "superfície pública sem dado pessoal" bash bin/check-publico.sh --oficina
 
 echo ""

@@ -73,7 +73,7 @@ CURATED_DIRS=(incidents scripts)
 # aqui porque categoria fora do manifesto é a que vaza: specs/fornecedores/
 # (~2.500 telefones de terceiros) chegou ao repo do produto exatamente por
 # specs/ não ser categoria de lista nenhuma. Incidente:
-# incidents/2026-08-13-oracfit-soldado-no-<repo-cliente>-corte-sem-catego.md
+# incidents/2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego.md
 PRIVATE_DIRS=(specs docs/handoffs docs/prompts incidents/uso lessons)
 
 # ------------------------------------------------------------------

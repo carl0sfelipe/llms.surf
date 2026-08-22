@@ -106,9 +106,9 @@ OUT=$(run_review "$CORTE4")
 echo "$OUT" | grep -q "categoria privada NO corte: specs" && ok "T4 specs/ vaza → REJECTED" || not "T4: $OUT"
 
 # ── T5: marcador de cliente em incidents ────────────────────────────────────
-CORTE5="$WORK/corte-<repo-cliente>"; mk_corte "$CORTE5"
-echo "o bug nasceu no repo <repo-cliente> do cliente" > "$CORTE5/incidents/2026-01-01-postmortem.md"
-(cd "$CORTE5" && $GITC add -A && $GITC commit -qm <repo-cliente>)
+CORTE5="$WORK/corte-orbe"; mk_corte "$CORTE5"
+echo "o bug nasceu no repo orbe do cliente" > "$CORTE5/incidents/2026-01-01-postmortem.md"
+(cd "$CORTE5" && $GITC add -A && $GITC commit -qm orbe)
 OUT=$(run_review "$CORTE5")
 echo "$OUT" | grep -q "anon" && echo "$OUT" | grep -q "REJECTED" \
   && ok "T5 marcador de cliente → REJECTED (anon)" || not "T5: $OUT"

@@ -95,7 +95,19 @@ checa README.md "test suites"              '[0-9]\{1,\} test suites'            
 checa README.md "models in the registry"   '[0-9]\{1,\} models in the registry' "$MODELOS"
 checa README.md "modes"                    '[0-9]\{1,\} modes'                  "$MODOS"
 
+# ── contexto: corte vs oficina ─────────────────────────────────────────
+# O corte público shippa só README.md; a oficina tem os três. Se falta
+# Detailed/pt-BR mas também falta docs/handoffs/ (privado), estamos num
+# corte — os dois são pulados com aviso. Na oficina, falta = erro.
+if [ ! -f docs/README.Detailed.md ] && [ ! -d docs/handoffs ]; then
+  echo "  ⓘ corte público: docs/README.Detailed.md e README.pt-BR fora da superfície — pulados"
+elif [ ! -f docs/README.Detailed.md ] || [ ! -f docs/README.pt-BR.md ]; then
+  echo "  ❌ oficina sem os 3 READMEs (Detailed/pt-BR) — superfície incompleta"
+  FALHAS=$((FALHAS + 1))
+fi
+
 # ── docs/README.Detailed.md (EN, história completa) ────────────────────
+if [ -f docs/README.Detailed.md ]; then
 checa_versao docs/README.Detailed.md
 checa_badge_incidentes docs/README.Detailed.md
 checa docs/README.Detailed.md "N so far"            '[0-9]\{1,\} so far'                 "$INCIDENTES"
@@ -107,6 +119,7 @@ checa_versao docs/README.pt-BR.md
 checa_badge_incidentes docs/README.pt-BR.md
 checa docs/README.pt-BR.md "N até hoje"             '[0-9]\{1,\} até hoje'               "$INCIDENTES"
 checa docs/README.pt-BR.md "incidents/ na tabela"   '[0-9]\{1,\} falhas que viraram proteção' "$INCIDENTES"
+fi
 
 if [ "$FALHAS" -eq 0 ]; then
   echo "✅ check-docs: números dos 3 READMEs derivam da árvore (v$VERSAO, $INCIDENTES incidentes, $SUITES suítes, $MODOS modos, $MODELOS modelos)"

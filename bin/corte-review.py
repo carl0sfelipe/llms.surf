@@ -7,13 +7,13 @@
 # (a página também não escreve: painel não executa, AD-14).
 #
 # Checagens (cada uma = classe de falha real do incidente
-# 2026-08-13-oracfit-soldado-no-<repo-cliente>-corte-sem-catego, regra 52):
+# 2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego, regra 52):
 #   scan     bin/check-publico.sh scan cheio no corte (telefone/e-mail/path)
 #   version  VERSION do corte NÃO pode regredir frente à oficina
 #            (classe do rsync --delete invertido: 1.8.0 por cima do 3.5.0)
 #   private  nenhuma PRIVATE_DIR do manifesto presente no corte
 #   anon     incidents do corte sem marcador de cliente que a anonimização
-#            deveria ter trocado por placeholder (<repo-cliente>/<host-local>/fornecedores,
+#            deveria ter trocado por placeholder (orbe/beelink/fornecedores,
 #            path de máquina)
 #   diff     superfície exportável (espelho mecânico) oficina↔corte:
 #            faltando/mudou = staleness (WARN — esperado entre cortes);
@@ -56,7 +56,7 @@ SUPERFICIE_FILES = [
 # links, números) — divergir é esperado, não staleness.
 TRANSFORM_FILES = {"README.md", "model-registry.json"}
 # Marcadores que a anonimização de incidents troca por <repo-cliente> etc.
-# \b para não casar 'absorve'/'órbita'; -i cobre <repo-cliente>/<repo-cliente>/<host-local>.
+# \b para não casar 'absorve'/'órbita'; -i cobre Orbe/ORBE/Beelink.
 # 'fornecedores' NÃO é marcador: substantivo comum (não identifica terceiro —
 # o PII daquele caso era telefone/e-mail, que o scan C1/C2 pega).
 _MINI = "/Users" + "/mini"  # literal quebrado: C3 do check-publico escaneia a própria oficina
