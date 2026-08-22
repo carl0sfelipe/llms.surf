@@ -5,10 +5,18 @@
 > **Your frontier plan thinks. Free models sweat.**
 > **Nothing ships on a model's word — not even the judge's.**
 
+**The problem:** frontier-model bills that grow like rent — and agents that
+say "done" when the work isn't.
+
+**The fix:** one local dispatcher that sends the 1% of tasks that need a
+brain to your expensive model, the other 99% to free ones — and accepts no
+result until a mechanical oracle proves it on your disk.
+
 Orchestrate work across AI models from the CLIs you already have. Code — not trust — decides what ships.
 
 - Your expensive plan does the 1% that needs a brain; free models do the other 99% for cents.
 - Every task carries an **oracle**: a real command that only passes when the work exists.
+- Every run shows where the money went — per-provider token accounting, local, yours.
 - Every failure becomes an incident; every recurring incident becomes code that refuses. **106 postmortems.**
 - Even the AI judge is watched: one write, and code kills it.
 
