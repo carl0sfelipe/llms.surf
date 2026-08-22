@@ -17,7 +17,7 @@ Segunda ocorrência em 24h:
 - **2026-08-11**: disco 100% cheio → limpeza de emergência (`colima delete` +
   datadisk órfão de 60 GB + caches npm) → 59 GB livres. Efeito colateral: o
   volume `infra_postgres_data` foi recriado e o **catálogo Medusa de produção
-  foi zerado** (seed recuperou 19 produtos; Beelink cadastrado fora do seed,
+  foi zerado** (seed recuperou 19 produtos; <host-local> cadastrado fora do seed,
   perdido). Registrado no incidente de 2026-08-11 (interage_com).
 - **2026-08-12 ~14:40**: disco de novo em ~116 MiB livres durante operação de
   commits em massa (10 agentes paralelos) — commits chegaram a falhar com

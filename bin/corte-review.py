@@ -56,7 +56,7 @@ SUPERFICIE_FILES = [
 # links, números) — divergir é esperado, não staleness.
 TRANSFORM_FILES = {"README.md", "model-registry.json"}
 # Marcadores que a anonimização de incidents troca por <repo-cliente> etc.
-# \b para não casar 'absorve'/'órbita'; -i cobre Orbe/ORBE/Beelink.
+# \b para não casar 'absorve'/'órbita'; -i cobre <repo-cliente>/<repo-cliente>/<host-local>.
 # 'fornecedores' NÃO é marcador: substantivo comum (não identifica terceiro —
 # o PII daquele caso era telefone/e-mail, que o scan C1/C2 pega).
 _MINI = "/Users" + "/mini"  # literal quebrado: C3 do check-publico escaneia a própria oficina

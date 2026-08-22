@@ -1,6 +1,6 @@
 ---
 id: 2026-08-09-content-factory-morte-silenciosa-sem-watchdog
-titulo: content_factory Beelink morreu em ~4s e ficou ~8min “rodando” sem verificação
+titulo: content_factory <host-local> morreu em ~4s e ficou ~8min “rodando” sem verificação
 data: 2026-08-09
 recorrivel: sim
 regra: 42
@@ -8,11 +8,11 @@ status: promovido
 repo: <repo-cliente>.live-imports (CF) + Cursor agent shell (macOS)
 ---
 
-# content_factory Beelink — morte silenciosa sem watchdog
+# content_factory <host-local> — morte silenciosa sem watchdog
 
 ## Sintoma
 
-Pedido do humano: rodar content-factory do nicho Beelink **sem timeout**.
+Pedido do humano: rodar content-factory do nicho <host-local> **sem timeout**.
 
 1. **18:52:42** — launch via Cursor Shell: `nohup uv run python main.py … --clean --max-feedback 20 &` (PID 2763).
 2. **18:52:46** — último log: `Executing task: T1-HUNT` + `LiteLLM completion() model=deepseek-v4-flash`. Arquivo parou em **14866 bytes**.
@@ -107,11 +107,11 @@ grep -E 'Executing task:|decision:' /tmp/bmad-<host-local>/run-latest.log | tail
 
 ## Recorrência — 2026-08-09, mesmo dia (3ª manifestação)
 
-O pid **4533** (`opencode run` headless, nicho Beelink SER 6800U) ficou **2h13min**
+O pid **4533** (`opencode run` headless, nicho <host-local> SER 6800U) ficou **2h13min**
 "rodando" após o trabalho real ter terminado. Evidência (verificada em 2026-08-09 ~21:25):
 
 - **18:49** — run `AA3CE24A` start (mtime dos artefatos de inbox).
-- **21:16** — T4 do Beelink gravado (`status: APPROVED`) pelo processo python do CF.
+- **21:16** — T4 do <host-local> gravado (`status: APPROVED`) pelo processo python do CF.
   O `main.py` do CF **encerrou** pouco depois (nenhum filho `main.py` na árvore do 4533).
 - **~21:25** — diagnostiquei o 4533: `ps` mostra estado `S` (sleeping), 1.4% CPU, RSS 130MB.
   O subshell que o monitorava (pid 84768, `sleep 300; ps -p 77586`) **já tinha terminado** —

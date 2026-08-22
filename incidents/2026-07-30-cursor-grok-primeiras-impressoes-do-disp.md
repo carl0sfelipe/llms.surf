@@ -20,7 +20,7 @@ diferente do usual (Grok). Trabalho: desacoplar e2e multi-loja.
 
 | Fase | O quê | Quem fez |
 |------|--------|----------|
-| 0 | Mapear 121 specs → ~112 migráveis / 5 Orbe-only | Explore/investigator |
+| 0 | Mapear 121 specs → ~112 migráveis / 5 <repo-cliente>-only | Explore/investigator |
 | 1 | `brands/<slug>/e2e.json` + loader + helpers | Orquestrador (Cursor) |
 | 2 | Debrand SKUs em 5 lotes (cart/pdp/checkout/journey/misc) | **dispatch-escalate mode 1** |
 | 3 | Package `@carl0sfelipe/e2e-store` + sync (não node_modules) | Orquestrador + `cp` |

@@ -15,8 +15,8 @@ set -uo pipefail   # sem -e: probe que falha é resultado válido (not_found)
 
 # ---------------------------------------------------------------- config ----
 ORACFIT="${ORACFIT_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-ORBE="${ORBE_ROOT:-$HOME/<repo-cliente>.live-imports}"
-CF="$ORBE/apps/content-factory"
+<repo-cliente>="${ORBE_ROOT:-$HOME/<repo-cliente>.live-imports}"
+CF="$<repo-cliente>/apps/content-factory"
 OUT="."
 MAX_BYTES=6000          # teto por captura (--full remove)
 KEEP_RAW=0
@@ -45,7 +45,7 @@ USAGE
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --oracfit)  ORACFIT="$2"; shift 2 ;;
-    --<repo-cliente>)     ORBE="$2"; CF="$ORBE/apps/content-factory"; shift 2 ;;
+    --<repo-cliente>)     <repo-cliente>="$2"; CF="$<repo-cliente>/apps/content-factory"; shift 2 ;;
     --out)      OUT="$2"; shift 2 ;;
     --ping)     PING_MODEL="$2"; shift 2 ;;
     --full)     MAX_BYTES=0; shift ;;
@@ -113,7 +113,7 @@ human() {
 
 has() { [[ -e "$1" ]] && echo yes || echo no; }
 
-echo "cf-probe: oracfit=$ORACFIT <repo-cliente>=$ORBE" >&2
+echo "cf-probe: oracfit=$ORACFIT <repo-cliente>=$<repo-cliente>" >&2
 [[ -d "$ORACFIT" ]] || echo "AVISO: $ORACFIT não existe" >&2
 [[ -d "$CF" ]]      || echo "AVISO: $CF não existe" >&2
 printf 'sondando' >&2
@@ -126,7 +126,7 @@ probe repo_state.oracfit_git_status P1 "working tree sujo do oracfit" \
 probe repo_state.oracfit_head P2 "HEAD + branch do oracfit" \
   'cd "$ORACFIT" && git log -1 --oneline && git branch --show-current'
 probe repo_state.orbe_git_status P1 "working tree sujo em apps/content-factory" \
-  'cd "$ORBE" && git status --porcelain -- apps/content-factory'
+  'cd "$<repo-cliente>" && git status --porcelain -- apps/content-factory'
 probe repo_state.gauntlet_files_uncommitted P1 "arquivos de gauntlet sem commit" \
   'cd "$ORACFIT" && git status --porcelain | grep -i gauntlet'
 probe repo_state.tree_oracfit_core P1 "arvore core/ do oracfit" \
@@ -289,10 +289,10 @@ probe dispatch.timeout_wrapper P1 "with-timeout no caminho de dispatch?" \
   'grep -rn "timeout" "$ORACFIT/adapters" 2>/dev/null | head -15'
 probe dispatch.run_id_generation P0 "como run_id e gerado/exposto" \
   'grep -rn "run_id" "$ORACFIT/core" --include="*.py" | head -25'
-probe dispatch.beelink_pid P0 "run Beelink ainda viva?" \
+probe dispatch.beelink_pid P0 "run <host-local> ainda viva?" \
   'ps -eo pid,lstart,command | grep -iE "oracfit|content-factory|bmad_crew|main\.py" | grep -v grep | grep -v cf-probe | awk -v me=$$ -v pai=$PPID "\$1 != me && \$1 != pai"'
 
-EVENTS="$(find "$ORBE" "$ORACFIT" -name 'events.jsonl' -not -path '*/node_modules/*' 2>/dev/null | head -3)"
+EVENTS="$(find "$<repo-cliente>" "$ORACFIT" -name 'events.jsonl' -not -path '*/node_modules/*' 2>/dev/null | head -3)"
 fact dispatch.events_jsonl_path P0 "path do events.jsonl" "${EVENTS:-<nao encontrado>}"
 if [[ -n "$EVENTS" ]]; then
   E1="$(printf '%s' "$EVENTS" | head -1)"
@@ -305,7 +305,7 @@ else
 fi
 
 # ========================================= 8. artifacts_and_idempotency =====
-ART_FILES="$(find "$ORBE" -name 'T4-content-validation*' -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | head -20)"
+ART_FILES="$(find "$<repo-cliente>" -name 'T4-content-validation*' -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | head -20)"
 fact artifacts.t4_files P0 "arquivos T4 no disco" "${ART_FILES:-<nenhum>}"
 if [[ -n "$ART_FILES" ]]; then
   ART_DIR="$(dirname "$(printf '%s' "$ART_FILES" | head -1)")"
@@ -346,7 +346,7 @@ probe artifacts.cleanup_mechanism P1 "existe limpeza entre runs?" \
   'grep -rn "rmtree\|unlink\|shutil\|clean" "$ORACFIT/core" --include="*.py" | head -15'
 
 # ======================================= 9. observability_and_evidence ======
-LOGS="$(find "$ORBE" "$ORACFIT" -name '*.log' -mtime -3 -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | head -10)"
+LOGS="$(find "$<repo-cliente>" "$ORACFIT" -name '*.log' -mtime -3 -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | head -10)"
 fact observability.log_paths P0 "logs recentes (3d)" "${LOGS:-<nenhum>}"
 if [[ -n "$LOGS" ]]; then
   L1="$(printf '%s' "$LOGS" | head -1)"
@@ -370,14 +370,14 @@ human decisions.strong_model_choice            P0 "qual id vira o critic/judge f
 human decisions.implement_if_no_call_site      P0 "se critic_model_ref nao tiver call site: implementar agora ou registrar divida?"
 human decisions.soft_judges_stay_flash         P1 "T2/T3 ficam flash mesmo?"
 human decisions.max_iterations_desired         P1 "teto de iteracoes do gauntlet"
-human decisions.acceptable_cost_per_run        P1 "gasto aceitavel por run Beelink"
+human decisions.acceptable_cost_per_run        P1 "gasto aceitavel por run <host-local>"
 human decisions.wall_clock_vs_cost             P1 "'sem teto' vale so pra relogio ou tambem pra custo?"
 human decisions.tag_scope                      P1 "paths exatos que entram no commit v1.9.0"
 
 printf ' ok\n' >&2
 
 # =================================================== montagem do JSON =======
-CFPROBE_TS="$TS" CFPROBE_ORACFIT="$ORACFIT" CFPROBE_ORBE="$ORBE" \
+CFPROBE_TS="$TS" CFPROBE_ORACFIT="$ORACFIT" CFPROBE_ORBE="$<repo-cliente>" \
 CFPROBE_HOST="$(uname -srm 2>/dev/null)" CFPROBE_PING="${PING_MODEL:-<none>}" \
 python3 - "$META" "$CAPS" "$OUT_JSON" "$OUT_MD" <<'PY'
 import json, os, sys, collections
@@ -440,7 +440,7 @@ P0_VERDICT = [
     ('G2   artefato APPROVED velho no disco', 'artifacts.stale_approved_present'),
     ('G2   artefato e run-scoped',            'artifacts.path_is_run_scoped'),
     ('G3   mecanismo de feedback',            'gauntlet_engine.feedback_injection_mechanism'),
-    ('G5   run Beelink ainda viva',           'dispatch.beelink_pid'),
+    ('G5   run <host-local> ainda viva',           'dispatch.beelink_pid'),
 ]
 
 lines = []

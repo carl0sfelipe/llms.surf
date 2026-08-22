@@ -46,12 +46,12 @@ verdict APPROVED — ou, inversamente, um T4 com `status: APPROVED` e
 `decision: REJECTED` (se ambos coexistissem) seria aprovado pelo oráculo lendo
 apenas `decision:`.
 
-O próprio agente do run Beelink percebeu a divergência (evento de thinking às
+O próprio agente do run <host-local> percebeu a divergência (evento de thinking às
 00:22 no painel): *"T4-JUDGE approved, but the persisted validation artifact..."*.
 
 ## Causa — camada extra descoberta ao desbloquear o post (2026-08-09 ~21:50)
 
-Investigando o porquê do post do Beelink não estar no blog, descobri que o bug
+Investigando o porquê do post do <host-local> não estar no blog, descobri que o bug
 tem **três camadas empilhadas**, não duas:
 
 5. **Truncamento vem do LLM, não do `_persist_artifact`.** O "Final Answer" do

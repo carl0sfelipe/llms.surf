@@ -1,6 +1,6 @@
 ---
 id: 2026-08-11-migracao-zerou-catalogo-medusa-produto-fora-do-seed-perdido
-titulo: Limpeza de disco recriou volume Postgres — catálogo zerado; seed recuperou 19 produtos; Beelink avulso perdido
+titulo: Limpeza de disco recriou volume Postgres — catálogo zerado; seed recuperou 19 produtos; <host-local> avulso perdido
 data: 2026-08-11
 recorrivel: sim (disco cheio → colima delete → volume novo → seed obrigatório)
 status: corrigido-parcialmente
@@ -14,7 +14,7 @@ interage_com: "docs/handoffs/ESTADO-2026-08-11-v3-e2e.md"
 Após trabalho de infra na madrugada de 2026-08-11, o catálogo Medusa
 (`orbe_prod` no container `infra-postgres-1`) apareceu vazio. O usuário rodou
 `seed-products.ts` e recuperou **19 produtos** — todos com `created_at` no
-mesmo segundo (~21:16 BRT). O **Beelink SER** (criado avulso, fora do seed,
+mesmo segundo (~21:16 BRT). O **<host-local> SER** (criado avulso, fora do seed,
 handle histórico `<host-local>-ser5-max-ryzen7-24gb-500gb`) **não voltou**; outro
 agente está recriando e adicionando ao seed.
 
@@ -41,22 +41,22 @@ Sequência verificada:
 | Container Postgres recriado | `docker ps` → `CreatedAt: 2026-08-11 02:14:16` | 02:14 BRT |
 | Migrations Medusa em DB vazio | `mikro_orm_migrations`: 167 migrations, lote com `executed_at = 2026-08-11 06:01:37 UTC` | ~03:01 BRT |
 | Seed restaurou catálogo | `product`: `min/max(created_at) = 2026-08-12 00:16:32 UTC`, `count = 19` | ~21:16 BRT |
-| Beelink ausente pós-seed | `select handle from product` — 19 handles, nenhum <host-local>* | — |
+| <host-local> ausente pós-seed | `select handle from product` — 19 handles, nenhum <host-local>* | — |
 
 Inventário pré-limpeza (`~/colima-inventory-2026-08-11.txt`) confirma que
 **antes** existia `infra-postgres-1` com **2 weeks ago** e volume
 `infra_postgres_data` — dados antigos foram perdidos com a recriação do Colima,
 não com `medusa db:migrate` em si.
 
-**Por que o Beelink sumiu e os outros não:** os 19 produtos do seed
-(`apps/backend/src/scripts/seed-products.ts`) foram re-aplicados; o Beelink
+**Por que o <host-local> sumiu e os outros não:** os 19 produtos do seed
+(`apps/backend/src/scripts/seed-products.ts`) foram re-aplicados; o <host-local>
 havia sido cadastrado manualmente (`docs/handoffs/START-10-POSTS-HERE.md`: "O produto NÃO
 está no seed-products.ts … mas está vivo na loja") e não tinha backup fora do
 volume.
 
 **Alucinação colateral do content-factory (não causou a perda, mas expôs o
 buraco):** o piloto `cf-<host-local>-radeon680m-v3` exportou post que chama o
-produto de **"Beelink EQR6"** com specs **32 GB / 1 TB** (dados do T1-HUNT de
+produto de **"<host-local> EQR6"** com specs **32 GB / 1 TB** (dados do T1-HUNT de
 anúncio ML), quando o produto real é **SER 6800U 24 GB / 500 GB**. A spec
 citava handle `<host-local>-ser5-max-ryzen7-24gb-500gb`; o post exportado aponta CTA
 para `/produtos/<host-local>-ser-6800u-24gb-500gb` — handle que só passou a existir
@@ -66,7 +66,7 @@ vivo no banco no momento da exportação.
 ## Correção (em andamento / aplicada)
 
 1. **Re-seed** dos 19 produtos canônicos via `medusa exec …/seed.ts` — feito.
-2. **Beelink recriado e adicionado ao seed** (`<host-local>-ser-6800u-24gb-500gb` em
+2. **<host-local> recriado e adicionado ao seed** (`<host-local>-ser-6800u-24gb-500gb` em
    `seed-products.ts`) — outro agente, em curso na sessão.
 3. **Seed como fonte de verdade do catálogo** — produto manual sem entrada no
    seed não sobrevive a recriação de volume.
@@ -160,7 +160,7 @@ $ rg --files -g '*.sql' -g '*.dump' <home-do-dono>/<repo-cliente>.live-imports
 
 `apps/storefront/content/blog/cf-<host-local>-radeon680m-v3.mdx`:
 
-- título/modelo: "Beelink **EQR6**" (produto real: SER 6800U)
-- specs no texto: 32 GB / 1 TB (produto Orbe: 24 GB / 500 GB)
+- título/modelo: "<host-local> **EQR6**" (produto real: SER 6800U)
+- specs no texto: 32 GB / 1 TB (produto <repo-cliente>: 24 GB / 500 GB)
 - CTA: `/produtos/<host-local>-ser-6800u-24gb-500gb` (handle pós-recriação; spec
   original citava `<host-local>-ser5-max-ryzen7-24gb-500gb`)

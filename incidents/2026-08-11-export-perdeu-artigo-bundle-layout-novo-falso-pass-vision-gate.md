@@ -12,7 +12,7 @@ interage_com: "2026-08-11-vision-gate-decorativo-run-passa-com-verdict-rejected"
 
 ## Contexto
 
-Run `24F10F97` do modo `content_factory` (nicho Beelink Radeon 680M v3).
+Run `24F10F97` do modo `content_factory` (nicho <host-local> Radeon 680M v3).
 Pipeline: T1-T4 → export MDX → render → vision_gate → pass.
 
 ## Sintoma

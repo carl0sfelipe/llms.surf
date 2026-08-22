@@ -7,32 +7,32 @@ regra: 43
 status: promovido
 ---
 
-# Conteúdo factualmente enganoso: compara novo da Orbe com usado do ML sem disclosing
+# Conteúdo factualmente enganoso: compara novo da <repo-cliente> com usado do ML sem disclosing
 
 ## Sintoma
 
 O post do blog `<host-local>-ser-6800u-vale-a-pena` (publicado em <repo-cliente>.live ~21:55,
 despublicado às 22:57 após detecção humana) continha uma claim comercialmente
-nociva E factualmente enganosa: comparava o **Beelink SER5 Max 24GB/500GB NOVO
-da Orbe (R$ 4.290)** com anúncios do **Beelink SER5 Max 32GB/1TB USADO no
-Mercado Livre (R$ 3.299-3.599)** e concluía "a Orbe tá cara", **sem disclosing
+nociva E factualmente enganosa: comparava o **<host-local> SER5 Max 24GB/500GB NOVO
+da <repo-cliente> (R$ 4.290)** com anúncios do **<host-local> SER5 Max 32GB/1TB USADO no
+Mercado Livre (R$ 3.299-3.599)** e concluía "a <repo-cliente> tá cara", **sem disclosing
 de que os preços do ML são de unidades usadas (sem caixa)**.
 
 Verificado no MDX publicado (linhas 14, 69, 73, 77, 170, 186, 201):
 
 - **Linha 14 (resposta direta, topo):** *"Entre R$ 3.299,00 e R$ 3.599,00 você
-  encontra o mesmo Beelink SER5 Max com 32GB..."* — sem dizer que é usado.
-- **Linha 69 (tabela):** *"Beelink SER5 Max 32GB/1TB | Mercado Livre | R$ 3.299
+  encontra o mesmo <host-local> SER5 Max com 32GB..."* — sem dizer que é usado.
+- **Linha 69 (tabela):** *"<host-local> SER5 Max 32GB/1TB | Mercado Livre | R$ 3.299
   a R$ 3.599 | [Busca Mercado Livre]"* — link clicável `lista.mercadolivre.com.br/...`.
 - **Linha 73:** *"O mesmo modelo com 32GB e 1TB está entre R$ 691 e R$ 991 mais
-  barato que a versão 24GB/500GB da Orbe."*
+  barato que a versão 24GB/500GB da <repo-cliente>."*
 - **Linha 186 (CTA explícito pro concorrente):** *"Para comprar hoje, pesquise
-  por anúncios do Beelink SER5 Max 32GB/1TB no Mercado Livre e em lojas
+  por anúncios do <host-local> SER5 Max 32GB/1TB no Mercado Livre e em lojas
   nacionais com garantia."*
 
 **Fato confirmado pelo operador (2026-08-09):** os R$ 3.299-3.599 do ML são de
 **mini PCs USADOS, sem caixa** — não novos. O post apresentou isso como prova de
-que "a Orbe tá cara", o que é (a) factualmente enganoso (comparação novo×usado
+que "a <repo-cliente> tá cara", o que é (a) factualmente enganoso (comparação novo×usado
 sem disclosing) e (b) comercialmente nocivo (link + CTA pro concorrente).
 
 O post passou pelo **T4-JUDGE (judge_content_copy)** que aprovou como
@@ -46,7 +46,7 @@ TRÊS camadas, nenhuma coberta por mecanismo:
 
 1. **T4-CONTENT gerou a narrativa enganosa.** O prompt do agente content_copy
    permite comparações de preço sem exigir disclosing de condição (novo/usado)
-   e sem guarda-corpo contra linkar concorrente. O "teste de demanda" do Beelink
+   e sem guarda-corpo contra linkar concorrente. O "teste de demanda" do <host-local>
    (SKU fora de estoque) deu ao agente liberdade pra "ser honesto", e ele
    interpretou isso como "mande pro concorrente".
 
@@ -77,7 +77,7 @@ reporta APPROVED sobre conteúdo enganoso.
 3. **Reescrita do MDX pendente** (próximo passo): remover a comparação
    novo×usado sem disclosing, os links do ML, e o CTA pro concorrente;
    manter a honestidade real (o 24GB/500GB a R$4.290 é caro vs novas opções
-   de 32GB) mas oferecer alternativas DA ORBE primeiro (Beelink SER8,
+   de 32GB) mas oferecer alternativas DA <repo-cliente> primeiro (<host-local> SER8,
    Minisforum, GMKtec que já estão no catálogo).
 
 ## Pode acontecer de novo?
@@ -85,7 +85,7 @@ reporta APPROVED sobre conteúdo enganoso.
 **SIM** — e quase aconteceu de novo nesta sessão (republicamos às 22:47 sem
 notar o problema comercial, só vimos o layout). Sem mecanismo, todo post gerado
 pelo T4-CONTENT pode conter: (a) comparação novo×usado sem disclosing, (b)
-CTA/link pro concorrente, (c) veredito anti-Orbe apresentado como "honestidade".
+CTA/link pro concorrente, (c) veredito anti-<repo-cliente> apresentado como "honestidade".
 O T4-JUDGE não pega isso porque não tem critério comercial/factual. **Este
 incidente DEVE virar regra/mecanismo.**
 
@@ -93,7 +93,7 @@ Candidata a regra (promover):
 
 > TODO CONTEÚDO GERADO PELO CF QUE MENCIONAR PREÇO DE CONCORRENTE DEVE
 > DISCLOSAR A CONDIÇÃO (novo/usado/refurb) E NUNCA LINKAR CONCORRENTE SEM
-> OFERECER ALTERNATIVA DA ORBE PRIMEIRO. Comparação novo×usado sem disclosing
+> OFERECER ALTERNATIVA DA <repo-cliente> PRIMEIRO. Comparação novo×usado sem disclosing
 > é factualmente enganosa. O T4-JUDGE deve ter critério comercial explícito
 > (rejeitar copy que manda cliente embora ou compara conditions diferentes).
 > Mecanismo: gate de revisão comercial pré-publicação (humano ou LLM crítico
