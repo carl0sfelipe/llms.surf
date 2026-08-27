@@ -1119,6 +1119,71 @@
       }
     },
     {
+      "id": "ornith-1.5-35b-a3b",
+      "provider": "vast3090ornith",
+      "tier": "local",
+      "accuracy": null,
+      "latency_ms": null,
+      "context_window": 24576,
+      "rate_limit": "nenhuma (mesma vast.ai 2x3090, porta 8020, experts em RAM)",
+      "best_for": [
+        "agente mecânico rápido",
+        "despachos opencode",
+        "edição multi-arquivo"
+      ],
+      "source": "baixado 2026-08-27 ornith-ai/Ornith-1.5-35B-A3B-GGUF Q4_K_M no nó do dogfooding",
+      "verified_at": "2026-08-27",
+      "quantization": "Q4_K_M (21.7GB), -cmoe (experts na RAM host), dense+atenção em VRAM sobrando ao lado do Flash Next",
+      "cli_hints": {
+        "opencode": "vast3090ornith/ornith-1.5-35b-a3b"
+      },
+      "id_status": "",
+      "verified_by": "",
+      "fallback": [
+        "qwen38-flashnext-125b"
+      ],
+      "measured": {
+        "suite_accuracy": null,
+        "suite_n": 0,
+        "latency_ms": null,
+        "provider_observed": "dedicado full-GPU (decisão do usuário, 27/08): decode 93.4 tok/s, prefill ~1369 tok/s, agregado 2 slots 158 tok/s — vs 17.2 no modo coexistente com Flash Next",
+        "quantization": "Q4_K_M 21.7GB INTEIRO na VRAM (~23GB/48GB usados com KV), -ngl 999 -fa on -ub 2048"
+      }
+    },
+    {
+      "id": "qwen38-flashnext-125b",
+      "provider": "vast3090flash",
+      "tier": "local",
+      "accuracy": null,
+      "latency_ms": null,
+      "context_window": 8192,
+      "rate_limit": "nenhuma (vast.ai 2x3090 alugada — 4 slots concorrentes)",
+      "best_for": [
+        "tradução",
+        "copy mecânica",
+        "docs de crate",
+        "250k ctx via -cmoe (futura sessão)"
+      ],
+      "source": "endpoint permanente vast.ai 3090x2 dogfooding 2026-08-27, llama-server PR ggml-org/llama.cpp#27742",
+      "verified_at": "2026-08-27",
+      "quantization": "Unsloth Dynamic GGUF UD-Q4_K_XL (4 shards, 106.9GB), flags -ngl 999 -ncmoe 36 --fit off -rea off",
+      "cli_hints": {
+        "opencode": "vast3090flash/qwen38-flashnext-125b"
+      },
+      "id_status": "",
+      "verified_by": "",
+      "fallback": [
+        "mistral-small-4-119b-2603"
+      ],
+      "measured": {
+        "suite_accuracy": null,
+        "suite_n": 0,
+        "latency_ms": null,
+        "provider_observed": "decode solo 13.1 tok/s (medido 2026-08-27 via /v1/chat/completions); agregado 4 slots pendente de carga real",
+        "quantization": "UD-Q4_K_XL: dense+~1/3 experts em VRAM (~28GB/49GB), resto em RAM host 188GB"
+      }
+    },
+    {
       "id": "claude-sonnet-5",
       "provider": "anthropic",
       "tier": "paid",
