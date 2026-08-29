@@ -39,7 +39,7 @@ gera_readmes() {  # gera_readmes <inc_badge> <inc_prosa> <versao_badge>
 [![Incidents](https://img.shields.io/badge/incidents%E2%86%92mechanisms-$ib-orange.svg)](incidents/)
 Refuse. **$ip postmortems.** So are $((ip - 2)) others.
 Memory: $ip incident postmortems, 1 models in the registry, 1 modes, 1 test suites.
-That's how the $ip happened. $ip and counting. $ip failures that became permanent protections.
+That's how the $ip in this cut happened. $ip failures that became permanent protections.
 EOF
   cat > "$TMP/docs/README.Detailed.md" <<EOF
 [![Version](https://img.shields.io/badge/version-$vb-brightgreen.svg)](../VERSION)

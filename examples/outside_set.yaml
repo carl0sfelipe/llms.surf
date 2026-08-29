@@ -1,0 +1,11 @@
+id: outside_set
+version: "1"
+name: Outside set
+description: O mesmo esqueleto do glassy em tier medio, com rate_limit_s — a onda maior que merece mais modelo e menos rajada de chamadas.
+stages:
+  - role: run
+    model_ref: tier:mid
+    oracle: true
+    max_attempts: 2
+    rate_limit_s: 2
+on_fail: halt

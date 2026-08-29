@@ -74,7 +74,9 @@ CURATED_DIRS=(incidents scripts)
 # (~2.500 telefones de terceiros) chegou ao repo do produto exatamente por
 # specs/ não ser categoria de lista nenhuma. Incidente:
 # incidents/2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego.md
-PRIVATE_DIRS=(specs docs/handoffs docs/prompts incidents/uso lessons)
+# docs/go-live é ORDEM DE TRABALHO do go-live (decisões, specs de anel,
+# copy de anúncio), não produto — higiene registrada na matriz D8.
+PRIVATE_DIRS=(specs docs/handoffs docs/prompts docs/go-live incidents/uso lessons)
 
 # ------------------------------------------------------------------
 

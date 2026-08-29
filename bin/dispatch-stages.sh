@@ -80,6 +80,14 @@ stages_json=$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" dump "$mode_yaml"
 stage_count=$(printf '%s' "$stages_json" | python3 -c 'import json,sys; print(len(json.load(sys.stdin).get("stages") or []))')
 export ORACFIT_PREFLIGHT_STAGE_COUNT="$stage_count"
 
+# Mesmo invariante do dispatch-mode.sh: o diretório de logs do workdir existe
+# ANTES de qualquer preflight. Specs de smoke afirmam `.dispatch` como único
+# fato garantido de workdir estranho — se o mkdir vier depois do preflight, o
+# check-spec-facts reprova fato verdadeiro e o run nem começa (mecanismo em
+# bin/lib-oracfit-preflight.sh; incidente
+# incidents/2026-07-29-spec-com-dado-inventado-passou-no-gate.md).
+mkdir -p "$(oracfit_inbox_dir)"
+
 # Preflight once on base spec
 set +e
 oracfit_preflight "$spec_file" "$ORACFIT_WORKDIR"

@@ -1,0 +1,10 @@
+id: glassy
+version: "1"
+name: Glassy
+description: Modo de entrada — le a spec, entrega o artefato pedido pela tarefa simples apontada; um stage, tier barato, oraculo vive na spec da task.
+stages:
+  - role: run
+    model_ref: tier:cheap
+    oracle: true
+    max_attempts: 3
+on_fail: halt

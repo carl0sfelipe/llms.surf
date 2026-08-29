@@ -21,7 +21,18 @@ usage_hoje() {  # today's accounting (usage-hub is the sensor; this is the view)
   "$ORACFIT" usage status 2>&1 || echo "  (no usage data yet — run a task first)"
 }
 
-MODES_RECOMMENDED="normal unlock_plan ui_visual_qa"
+# Surf aliases (go-live D2/D7, 2026-08-29): the home shows the wave names —
+# one source of truth is `oracfit alias` (paddle=normal tow=unlock_plan
+# surfcheck=ui_visual_qa). The 17 god modes stay in git and in the CLI
+# (`llms-surf modes` lists all); they are not the default menu here.
+
+surf_lines() {  # prints "★ alias (tree_id)" lines from the alias map
+  local pair
+  while IFS= read -r pair; do
+    [ -n "$pair" ] || continue
+    printf '  ★ %-10s (%s)\n' "${pair%%=*}" "${pair#*=}"
+  done < <("$ORACFIT" alias 2>/dev/null)
+}
 
 modes_ids() { "$ORACFIT" modes 2>/dev/null | grep -oE '^\s+[a-z0-9_]+$' | tr -d ' '; }
 
@@ -33,19 +44,11 @@ nova_tarefa() {
   read -r -p "Task id [task-$(date +%H%M)]: " TASK
   TASK="${TASK:-task-$(date +%H%M)}"
 
-  echo "Modes (★ = recommended start · workdir shadows built-ins):"
-  local lista first=1
-  lista="$(modes_ids)" || lista="normal"
-  local m linha
-  while IFS= read -r m; do
-    [ -n "$m" ] || continue
-    case " $MODES_RECOMMENDED " in *" $m "*) linha="  ★ $m" ;; *) linha="    $m" ;; esac
-    echo "$linha"
-  done <<EOF2
-$lista
-EOF2
-  read -r -p "Mode [normal]: " MODO
-  MODO="${MODO:-normal}"
+  echo "Modes (★ surf aliases — paddle out with one; any mode id also works):"
+  surf_lines
+  echo "    … or type any other mode id (bin/llms-surf modes lists all)"
+  read -r -p "Mode [paddle]: " MODO
+  MODO="${MODO:-paddle}"
   case "$MODO" in
     *[!a-z0-9_]*) echo "✗ invalid mode (only [a-z0-9_])"; return 1 ;;
   esac
@@ -92,11 +95,9 @@ while :; do
   case "$OP" in
     1) nova_tarefa ;;
     2) sep; bold "Today's spend:"; usage_hoje ;;
-    3) echo "Modes (★ recommended):"
-       while IFS= read -r m; do
-         [ -n "$m" ] || continue
-         case " $MODES_RECOMMENDED " in *" $m "*) echo "  ★ $m" ;; *) echo "  - $m" ;; esac
-       done < <(modes_ids) ;;
+    3) echo "Modes (★ surf aliases — the home trio):"
+       surf_lines
+       echo "  god modes stay in git & CLI — bin/llms-surf modes lists everything." ;;
     0|q|quit) break ;;
     *) echo "? $OP is not an option" ;;
   esac
