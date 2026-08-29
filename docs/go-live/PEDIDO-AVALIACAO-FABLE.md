@@ -29,7 +29,7 @@ está lá para corrigir na fonte.
 ## O que foi entregue (tudo com oráculo executável)
 
 **S1 (P0, D1) — a promessa de 2 minutos voltou a ser verdade.**
-- `specs/oracfit-smoke-normal.md` e `specs/oracfit-smoke-unlock-plan.md`
+- `tests/fixtures/oracfit-smoke-normal.md` e `tests/fixtures/oracfit-smoke-unlock-plan.md`
   recriadas do zero (a antiga não estava nem no git). O oráculo falha limpo
   (exit 1, sem stderr) em workdir fresco e passa depois do run — passando nos
   3 gates do preflight em workdir ESTRANHO (o fato `## Dados verificados` é

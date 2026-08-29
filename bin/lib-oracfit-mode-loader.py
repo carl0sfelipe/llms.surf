@@ -21,6 +21,7 @@ ALLOWED_STAGE = {
     "stage_oracle", "oracle_command",  # deterministic post-command stage gate
     "preflight", "preflight_command",  # deterministic pre-attempt gate
     "freshness_targets", "visual_freshness_targets",  # visual artifact targets
+    "owner_question",                # S8: stage may pause for ONE owner question
 }
 ALLOWED_GAUNTLET = {
     "enabled", "until_approved", "safety_ceiling",
@@ -234,6 +235,13 @@ def validate(path):
         if oracle is not None:
             if not (isinstance(oracle, bool) and oracle is True) and not (isinstance(oracle, str) and oracle):
                 print(f"FAIL {p}: oracle must be bool true or non-empty string, got {type(oracle).__name__}: {oracle}", file=sys.stderr)
+                sys.exit(2)
+
+        # S8 owner_question: bool true ou string não-vazia (ex.: once)
+        owner_q = stage.get("owner_question")
+        if owner_q is not None:
+            if not (isinstance(owner_q, bool) and owner_q is True) and not (isinstance(owner_q, str) and owner_q.strip()):
+                print(f"FAIL {p}: owner_question must be bool true or non-empty string, got {type(owner_q).__name__}: {owner_q}", file=sys.stderr)
                 sys.exit(2)
 
         for key in ("stage_oracle", "oracle_command", "preflight", "preflight_command"):

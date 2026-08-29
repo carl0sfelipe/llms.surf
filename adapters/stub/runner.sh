@@ -77,5 +77,23 @@ if [ -n "${ORACFIT_STUB_WRITE:-}" ]; then
   echo "stub runner: also wrote $WD/$ORACFIT_STUB_WRITE"
 fi
 
+# S8 pergunta do dono (só teste): simula o modelo bloqueado em fato que só o
+# dono tem — escreve owner-question.md no artifacts dir do stage.
+# ORACFIT_STUB_QUESTION=1        → pergunta bem-formada (pergunta + garfo >=2)
+# ORACFIT_STUB_QUESTION=malformed → sem garfo (deve ser ignorada pelo runtime)
+if [ -n "${ORACFIT_STUB_QUESTION:-}" ] && [ -n "${ORACFIT_STAGE_ARTIFACTS:-}" ]; then
+  mkdir -p "$ORACFIT_STAGE_ARTIFACTS"
+  if [ "$ORACFIT_STUB_QUESTION" = "malformed" ]; then
+    printf 'pergunta sem garfo de consequencias\n' >"$ORACFIT_STAGE_ARTIFACTS/owner-question.md"
+  else
+    cat >"$ORACFIT_STAGE_ARTIFACTS/owner-question.md" <<'OQ'
+pergunta: qual fonte de verdade o dono quer que eu use neste unlock?
+se a oficial -> sigo o dataset do registry sem consultar terceiros
+se a medição -> recalibro pelo ledger e sigo o número medido
+OQ
+  fi
+  echo "stub runner: wrote owner-question.md ($ORACFIT_STUB_QUESTION)"
+fi
+
 echo "stub runner: wrote $WD/.dispatch/stub-proof"
 exit 0

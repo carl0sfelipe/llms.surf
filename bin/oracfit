@@ -103,6 +103,11 @@ BASE
                                            # link https p/ celular (cloudflared)
   oracfit hitl <target-dir> [--port N]      # calibração: nota real 0-10 por anel
 
+  oracfit resume <run_id> "<mensagem>"   # retoma run terminado/pausado
+                                         # (multi-stage incluso; responde a
+                                         # pergunta do dono — status
+                                         # owner_question, exit 7)
+
 CUSTOM (terreno v1 · runtime multi-stage = v2)
   oracfit modes
   oracfit alias [nome]               # mapa de aliases de surf / resolve um
@@ -344,6 +349,20 @@ with open(sys.argv[1], 'a', encoding='utf-8') as f:
     f.write(json.dumps(entry, ensure_ascii=False) + chr(10))
 " "$inbox_dir/${run_id}.jsonl"
   echo "mensagem gravada, retomando run_id=$run_id..."
+  # S8/P5: run MULTI-STAGE retoma no runtime multi-stage — antes o resume ia
+  # só pro dispatch-mode (1 stage), e a resposta do dono nunca chegava a um
+  # run de unlock_plan/vision_catalog (a pergunta do dono dependia disto).
+  local mode_id mode_yaml stage_n
+  mode_id="$(cat "$inbox_dir/${run_id}.mode-id" 2>/dev/null || true)"
+  mode_yaml="$wd/core/modes/${mode_id}.yaml"
+  [ -f "$mode_yaml" ] || mode_yaml="${ORACFIT_ROOT:-$ROOT}/core/modes/${mode_id}.yaml"
+  stage_n=1
+  if [ -f "$mode_yaml" ]; then
+    stage_n=$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" dump "$mode_yaml" 2>/dev/null | python3 -c 'import json,sys; print(len((json.load(sys.stdin).get("stages") or [])))' 2>/dev/null || echo 1)
+  fi
+  if [ "${stage_n:-1}" -gt 1 ] 2>/dev/null; then
+    exec "$SCRIPT_DIR/dispatch-stages.sh" --resume-run-id "$run_id"
+  fi
   exec "$SCRIPT_DIR/dispatch-mode.sh" --resume-run-id "$run_id"
 }
 
@@ -351,7 +370,7 @@ cmd_first_proof() {
   : "${ORACFIT_ROOT:?set ORACFIT_ROOT to checkout or ~/.oracfit/current}"
   : "${DISPATCH_RUNNER:?set DISPATCH_RUNNER e.g. \$ORACFIT_ROOT/adapters/stub/runner.sh}"
   exec "$SCRIPT_DIR/dispatch-mode.sh" normal \
-    "${ORACFIT_ROOT}/specs/oracfit-smoke-normal.md" \
+    "${ORACFIT_ROOT}/tests/fixtures/oracfit-smoke-normal.md" \
     "${1:-first-proof}"
 }
 

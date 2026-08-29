@@ -1,11 +1,16 @@
 id: outside_set
 version: "1"
 name: Outside set
-description: O mesmo esqueleto do glassy em tier medio, com rate_limit_s — a onda maior que merece mais modelo e menos rajada de chamadas.
+description: Mini tow — the expensive stage unlocks the approach and the cheap stage runs it; teaches unlock plus input from the previous stage.
 stages:
-  - role: run
-    model_ref: tier:mid
+  - role: unlock
+    model_ref: tier:expensive
+    artifacts: unlock/
     oracle: true
-    max_attempts: 2
-    rate_limit_s: 2
+    max_attempts: 3
+  - role: run
+    model_ref: tier:cheap
+    input: prev_stage
+    oracle: true
+    max_attempts: 3
 on_fail: halt

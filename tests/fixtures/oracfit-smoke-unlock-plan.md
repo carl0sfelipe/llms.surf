@@ -46,7 +46,7 @@ se declara, se cria.
 O oráculo precisa falhar pelo motivo certo em workdir vazio, antes de
 despachar (regra 39):
 
-VERIFICACAO: python3 bin/check-oracle.py specs/oracfit-smoke-unlock-plan.md "$(mktemp -d)" --quiet
+VERIFICACAO: python3 bin/check-oracle.py tests/fixtures/oracfit-smoke-unlock-plan.md "$(mktemp -d)" --quiet
 
 Resultado esperado: "oráculo falha (exit 1) e falha pelo motivo certo", exit 0.
 

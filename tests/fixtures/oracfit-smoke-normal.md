@@ -47,7 +47,7 @@ declara, se cria.
 O oráculo precisa falhar pelo motivo certo em workdir vazio, antes de
 despachar qualquer modelo (preflight roda exatamente isto, regra 39):
 
-VERIFICACAO: python3 bin/check-oracle.py specs/oracfit-smoke-normal.md "$(mktemp -d)" --quiet
+VERIFICACAO: python3 bin/check-oracle.py tests/fixtures/oracfit-smoke-normal.md "$(mktemp -d)" --quiet
 
 Resultado esperado: "oráculo falha (exit 1) e falha pelo motivo certo", exit 0.
 

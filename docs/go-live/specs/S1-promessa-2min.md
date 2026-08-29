@@ -3,7 +3,7 @@
 Prioridade ZERO do go-live (D1: nenhum tráfego sobe antes disto verde). O hero do
 site promete "clone in 2 minutes — no API key" e o quickstart termina em
 `bin/llms-surf start`; em HEAD esse comando despachava
-`specs/oracfit-smoke-normal.md`, e `specs/` inteiro ficou fora do corte
+`tests/fixtures/oracfit-smoke-normal.md`, e `specs/` inteiro ficou fora do corte
 público (regra 52). A promessa estava quebrada no produto público.
 
 ## O que fazer
@@ -11,9 +11,9 @@ público (regra 52). A promessa estava quebrada no produto público.
 Estado exigido (já implementado neste corte — esta spec é a ordem de trabalho
 que originou o corte e o oráculo abaixo é o gate de regressão permanente):
 
-1. `specs/oracfit-smoke-normal.md` existe e despacha verde com o stub runner,
+1. `tests/fixtures/oracfit-smoke-normal.md` existe e despacha verde com o stub runner,
    em workdir estranho (temp git, sem nada do checkout).
-2. `specs/oracfit-smoke-unlock-plan.md` existe e despacha verde multi-stage
+2. `tests/fixtures/oracfit-smoke-unlock-plan.md` existe e despacha verde multi-stage
    (o mesmo contrato, para o passo de release do unlock_plan).
 3. Os seis pontos que apontavam para a spec morta apontam para arquivo vivo:
    bin/oracfit (first-proof), bin/test-oracfit-tldr.sh,
@@ -30,8 +30,8 @@ como workaround — o que o oráculo mede é disco, não declaração.
 
 ## Dados verificados
 
-- Existe `specs/oracfit-smoke-normal.md` neste tree.
-- Existe `specs/oracfit-smoke-unlock-plan.md` neste tree.
+- Existe `tests/fixtures/oracfit-smoke-normal.md` neste tree.
+- Existe `tests/fixtures/oracfit-smoke-unlock-plan.md` neste tree.
 - Existe `bin/dispatch-stages.sh` neste tree.
 - Existe `bin/test-oracfit-tldr.sh` neste tree.
 
@@ -39,11 +39,11 @@ como workaround — o que o oráculo mede é disco, não declaração.
 
 Os dois testes que travavam na spec morta passam, e a smoke despacha:
 
-VERIFICACAO: python3 bin/check-oracle.py specs/oracfit-smoke-normal.md /tmp --quiet && bash bin/test-oracfit-tldr.sh
+VERIFICACAO: python3 bin/check-oracle.py tests/fixtures/oracfit-smoke-normal.md /tmp --quiet && bash bin/test-oracfit-tldr.sh
 
 ## Oráculo
 
-- comando: bash bin/check-spec.sh specs/oracfit-smoke-normal.md && bash bin/check-spec.sh specs/oracfit-smoke-unlock-plan.md && python3 bin/check-oracle.py specs/oracfit-smoke-normal.md /tmp --quiet
+- comando: bash bin/check-spec.sh tests/fixtures/oracfit-smoke-normal.md && bash bin/check-spec.sh tests/fixtures/oracfit-smoke-unlock-plan.md && python3 bin/check-oracle.py tests/fixtures/oracfit-smoke-normal.md /tmp --quiet
 - exit esperado: 0 — as duas smokes passam no check-spec e o oráculo da
   smoke normal falha pelo motivo certo em workdir sem trabalho (estado correto
   antes de qualquer dispatch).
