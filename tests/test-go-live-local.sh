@@ -23,7 +23,7 @@ oracle_of() { # imprime a linha `- comando:` da seção ## Oráculo
 }
 
 echo "=== S0: as duas smokes do first-proof passam no check-spec ==="
-for spec in specs/oracfit-smoke-normal.md specs/oracfit-smoke-unlock-plan.md; do
+for spec in tests/fixtures/oracfit-smoke-normal.md tests/fixtures/oracfit-smoke-unlock-plan.md; do
   if [ -f "$spec" ] && bash bin/check-spec.sh "$spec" >/dev/null 2>&1; then
     ok "check-spec $spec"
   else
@@ -59,7 +59,7 @@ git -C "$T" init -q
 git -C "$T" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
 if ORACFIT_ROOT="$ROOT" DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh" \
    ORACFIT_WORKDIR="$T" bash "$ROOT/bin/dispatch-mode.sh" \
-   normal "$ROOT/specs/oracfit-smoke-normal.md" golive-smoke-normal \
+   normal "$ROOT/tests/fixtures/oracfit-smoke-normal.md" golive-smoke-normal \
    >/dev/null 2>&1 && grep -q stub_ok "$T/.dispatch/stub-proof"; then
   ok "stub dispatch normal em workdir estranho (oracle lê o disco)"
 else
@@ -71,7 +71,7 @@ git -C "$T" init -q
 git -C "$T" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
 if ORACFIT_ROOT="$ROOT" DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh" \
    ORACFIT_WORKDIR="$T" bash "$ROOT/bin/oracfit" run unlock_plan \
-   "$ROOT/specs/oracfit-smoke-unlock-plan.md" golive-smoke-tow \
+   "$ROOT/tests/fixtures/oracfit-smoke-unlock-plan.md" golive-smoke-tow \
    >/dev/null 2>&1; then
   ok "stub dispatch multi-stage (unlock_plan) em workdir estranho"
 else
@@ -107,10 +107,43 @@ for y in examples/glassy.yaml examples/outside_set.yaml; do
 done
 
 echo "=== D4: nenhuma linha '- comando:' de oráculo com crase (regra 46) ==="
-if grep -qE '^[-*][[:space:]]*comando:.*`' specs/oracfit-smoke-*.md docs/go-live/specs/S*.md 2>/dev/null; then
+if grep -qE '^[-*][[:space:]]*comando:.*`' tests/fixtures/oracfit-smoke-*.md docs/go-live/specs/S*.md 2>/dev/null; then
   not "crase em linha de oráculo (regra 46)"
 else
   ok "oráculos em texto cru"
+fi
+
+echo "=== D1-residual: smokes em tests/fixtures/ — nenhuma ref viva a specs/ (regra 52) ==="
+if [ -f tests/fixtures/oracfit-smoke-normal.md ] && [ -f tests/fixtures/oracfit-smoke-unlock-plan.md ]; then
+  ok "smokes em tests/fixtures/"
+else
+  not "smokes fora de tests/fixtures/ — o próximo publish-cut re-quebra o start"
+fi
+# [e] quebra o auto-casamento: a própria linha de check contém o padrão como
+# texto — sem isso o gate se reprova (mesma classe que o C3 do check-publico).
+if grep -rn "specs/oracfit-smok[e]" bin/ tests/*.sh >/dev/null 2>&1; then
+  not "referência viva a specs/ em bin/ ou tests/ (bomba-relógio do corte)"
+else
+  ok "nenhuma referência viva a specs/ em bin/ ou tests/"
+fi
+
+echo "=== D1-first-wave: a promessa do anúncio na árvore VIRGEM (clone) ==="
+if bash tests/test-first-wave.sh >/dev/null 2>&1; then
+  ok "clone virgem → start → exit 0 + stub_ok, sem rede"
+else
+  not "first-wave: a promessa do anúncio não se reproduz num clone"
+fi
+
+echo "=== S8: a pergunta do dono no unlock_plan ==="
+if grep -q "owner_question" core/modes/unlock_plan.yaml; then
+  ok "unlock_plan declara owner_question no estágio caro"
+else
+  not "unlock_plan sem owner_question"
+fi
+if bash tests/test-owner-question.sh >/dev/null 2>&1; then
+  ok "pausa (exit 7) → resposta via resume → pass; 1 pergunta/run; malformada ignorada"
+else
+  not "loop da pergunta do dono quebrou"
 fi
 
 echo "=== D5: templates do mode share e da waitlist existem ==="

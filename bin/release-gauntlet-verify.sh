@@ -69,7 +69,7 @@ fi
 
 step "Stub dispatch normal (first-proof)"
 rm -f .dispatch/stub-proof
-if bin/oracfit run normal specs/oracfit-smoke-normal.md release-normal-smoke; then
+if bin/oracfit run normal tests/fixtures/oracfit-smoke-normal.md release-normal-smoke; then
   ok "normal stub dispatch"
 else
   bad "normal stub dispatch"
@@ -77,7 +77,7 @@ fi
 
 step "Stub dispatch unlock_plan (multi-stage P5)"
 rm -f .dispatch/stub-proof
-if bin/oracfit run unlock_plan specs/oracfit-smoke-unlock-plan.md release-unlock-smoke; then
+if bin/oracfit run unlock_plan tests/fixtures/oracfit-smoke-unlock-plan.md release-unlock-smoke; then
   ok "unlock_plan multi-stage stub"
 else
   bad "unlock_plan multi-stage stub"

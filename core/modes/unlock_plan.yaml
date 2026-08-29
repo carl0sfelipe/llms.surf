@@ -11,6 +11,11 @@ stages:
     artifacts: unlock/
     oracle: true
     max_attempts: 3
+    # S8: bloqueado em fato que só o dono tem → UMA pergunta com garfo de
+    # consequências (pergunta: / se A -> / se B ->) em owner-question.md no
+    # artifacts dir; o run pausa (status owner_question, exit 7) em vez de
+    # queimar tentativas caras inventando. Retoma: oracfit resume <run_id>.
+    owner_question: once
   - role: plan
     model_ref: tier:mid
     input: prev_stage

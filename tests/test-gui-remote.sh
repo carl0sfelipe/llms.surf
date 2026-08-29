@@ -60,7 +60,7 @@ printf '{"providers":{"stub":{"plan":"Stub Plan"}}}' > "$FIXROOT/core/usage-limi
 WD="$WORK/wd"
 LOGS="$WD/.dispatch/logs"
 mkdir -p "$LOGS"
-cp "$REPO_ROOT/specs/oracfit-smoke-normal.md" "$WD/smoke.md"
+cp "$REPO_ROOT/tests/fixtures/oracfit-smoke-normal.md" "$WD/smoke.md"
 
 start_server() { # $@ = args extra (auth/dispatch); sets PORT/SERVER_PID/SRV_LOG
   SRV_LOG="$WORK/server-$$.log"

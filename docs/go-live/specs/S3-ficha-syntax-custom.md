@@ -15,7 +15,8 @@ Estado exigido (implementado; oráculo abaixo é gate permanente):
    max_attempts, rate_limit_s.
 2. Os dois exemplos validam E lintam com o loader real:
    `examples/glassy.yaml` (mínimo viável, tier cheap) e
-   `examples/outside_set.yaml` (tier mid + rate_limit_s).
+   `examples/outside_set.yaml` (mini-tow de 2 stages: unlock caro +
+   run barato com input: prev_stage — ensina a composição entre stages).
 3. O oráculo da task vive na SPEC (seção `## Oráculo`, comando cru sem
    crase — regra 46), não no YAML. `oracle: true` só declara que a spec será
    julgada por comando no disco.

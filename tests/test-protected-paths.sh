@@ -11,7 +11,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SPEC="$REPO_ROOT/specs/oracfit-smoke-normal.md"
+SPEC="$REPO_ROOT/tests/fixtures/oracfit-smoke-normal.md"
 pas=0
 falhas=0
 

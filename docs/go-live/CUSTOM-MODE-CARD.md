@@ -63,7 +63,7 @@ o gate funciona; a ficha existe para você não pagar o mesmo pedágio.
 | arquivo | ensina |
 |---|---|
 | `examples/glassy.yaml` | o mínimo viável: 1 stage run, tier cheap, oráculo na spec |
-| `examples/outside_set.yaml` | o mesmo esqueleto em tier mid + `rate_limit_s` |
+| `examples/outside_set.yaml` | mini-tow de 2 stages: unlock caro + run barato com `input: prev_stage` (a composição entre stages) |
 
 Prova (roda em qualquer checkout deste corte):
 

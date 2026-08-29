@@ -17,7 +17,7 @@ export ORACFIT_WORKDIR="$ROOT"
 rm -f "$ROOT/.dispatch/stub-proof"
 
 # Command 2: first successful normal
-"$ROOT/bin/dispatch-mode.sh" normal "$ROOT/specs/oracfit-smoke-normal.md" first-proof
+"$ROOT/bin/dispatch-mode.sh" normal "$ROOT/tests/fixtures/oracfit-smoke-normal.md" first-proof
 
 # Command 3: panel serves (Epic 2) — start, curl, stop
 echo "── step 3 panel ──"

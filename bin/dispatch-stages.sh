@@ -22,10 +22,12 @@ mode_id=""
 spec_file=""
 task_name=""
 workdir_arg=""
+resume_run_id=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --workdir) shift; workdir_arg="${1:?}"; shift ;;
+    --resume-run-id) shift; resume_run_id="${1:?}"; shift ;;
     -*) echo "Unknown: $1" >&2; exit 2 ;;
     *)
       if [ -z "$mode_id" ]; then mode_id="$1"
@@ -38,15 +40,30 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-if [ -z "$mode_id" ] || [ -z "$spec_file" ] || [ -z "$task_name" ]; then
-  echo "Usage: dispatch-stages.sh <mode_id> <spec_file> <task_name> [--workdir DIR]" >&2
-  exit 2
-fi
-
 if [ -n "$workdir_arg" ]; then
   export ORACFIT_WORKDIR="$(cd "$workdir_arg" && pwd -P)"
 else
   export ORACFIT_WORKDIR="$(cd "${ORACFIT_WORKDIR:-$PWD}" && pwd -P)"
+fi
+
+# Resume (S8/P5): oracfit resume <run_id> roteia pra cá quando o modo é
+# multi-stage (bin/oracfit conta os stages). Reconstrói mode/spec/task dos
+# arquivos persistidos no inbox pelo run original; o RUN_ID é reaproveitado
+# — sem isso a resposta do dono chegaria a um run novo que não fez a pergunta.
+if [ -n "$resume_run_id" ]; then
+  _inbox="$(oracfit_inbox_dir)"
+  [ -z "$mode_id" ] && mode_id="$(cat "$_inbox/${resume_run_id}.mode-id" 2>/dev/null || true)"
+  [ -z "$spec_file" ] && spec_file="$(cat "$_inbox/${resume_run_id}.spec-file" 2>/dev/null || true)"
+  [ -z "$task_name" ] && task_name="$(cat "$_inbox/${resume_run_id}.task-name" 2>/dev/null || true)"
+  if [ -z "$mode_id" ] || [ -z "$spec_file" ] || [ -z "$task_name" ]; then
+    echo "ERROR: resume: não achei mode/spec/task persistidos pra run_id $resume_run_id em $_inbox" >&2
+    exit 3
+  fi
+fi
+
+if [ -z "$mode_id" ] || [ -z "$spec_file" ] || [ -z "$task_name" ]; then
+  echo "Usage: dispatch-stages.sh <mode_id> <spec_file> <task_name> [--workdir DIR] | --resume-run-id <run_id>" >&2
+  exit 2
 fi
 
 ROOT="$(oracfit_resolve_root)" || exit 1
@@ -96,6 +113,9 @@ set -e
 [ "$pf" -eq 0 ] || exit "$pf"
 
 RUN_ID="$(oracfit_mint_run_id)"
+if [ -n "$resume_run_id" ]; then
+  RUN_ID="$resume_run_id"
+fi
 export ORACFIT_RUN_ID="$RUN_ID"
 # Thinking no painel: o tee do runner opencode (oracfit-thinking-tee.py) só emite
 # eventos thinking/tool_call com ORACFIT_RUN_ID E ORACFIT_EVENTS_FILE setados.
@@ -206,9 +226,15 @@ for target in targets:
 ")
   art_dir="$ORACFIT_WORKDIR/.dispatch/artifacts/${RUN_ID}/${artifacts:-$role}"
   mkdir -p "$art_dir"
+  # S8: pergunta de vida anterior do run_id não vale — o resume reaproveita o
+  # diretório de artifacts; sem isto o run pausaria na hora, em loop (a
+  # pergunta consumida já está registrada no inbox e não pausa de novo).
+  rm -f "$art_dir/owner-question.md"
   # Stub-friendly: export stage context for runner / oracle helpers
   export ORACFIT_STAGE_ROLE="$role"
   export ORACFIT_STAGE_ARTIFACTS="$art_dir"
+  # S8: o stage pode declarar owner_question (bool true ou string, ex.: once)
+  owner_question_cfg="$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('owner_question'); print('' if not v else ('true' if v is True else str(v)))")"
 
   oracfit_emit_event stage_changed stage="$role" index="$i"
   echo "── stage $((i+1))/$stage_count role=$role model=$model_ref oracle=$oracle ──" >&2
@@ -264,7 +290,12 @@ for target in targets:
       run_attempt_count=$((run_attempt_count + 1))
     fi
     run_spec="$spec_file"
-    if [ -s "$accum" ] || [ -s "$gt" ]; then
+    # S8: pergunta já feita neste run_id? (inbox registra a consumida — uma
+    # pergunta por run; depois disso o oráculo governa)
+    owner_asked=false
+    [ -f "$(oracfit_inbox_dir)/${RUN_ID}.question.md" ] && owner_asked=true
+    inbox_jsonl="$(oracfit_inbox_file "$RUN_ID")"
+    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ]; then
       composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-stage-XXXXXX")"
       {
         cat "$spec_file"
@@ -273,6 +304,24 @@ for target in targets:
         echo "- role: $role"
         echo "- artifacts_dir: \`$art_dir\`"
         echo "- Write stage proof to that directory if you are the stub/builder."
+        if [ -n "$owner_question_cfg" ] && ! $owner_asked; then
+          cat <<'OQ'
+
+## Pergunta do dono (contrato — só se bloqueado em fato que só o dono tem)
+Se você está bloqueado por um fato que só o dono tem, NÃO invente e NÃO
+queime a tentativa adivinhando: escreve owner-question.md no seu
+artifacts_dir com EXATAMENTE este formato:
+
+pergunta: <uma pergunta única, o fato que só o dono tem>
+se <resposta A> -> <o que você faz se A>
+se <resposta B> -> <o que você faz se B>
+
+Mínimo DUAS linhas "se ... -> ..." (o garfo de consequências anexado —
+pergunta sem garfo é ignorada). O run pausa para o dono responder e retoma
+com a resposta injetada aqui. UMA pergunta por run: depois dela, o oráculo
+governa como sempre.
+OQ
+        fi
         if [ -s "$gt" ]; then
           echo ""
           echo "<!-- oracfit-ground-truth -->"
@@ -283,8 +332,29 @@ for target in targets:
           echo ""
           cat "$accum"
         fi
+        if [ -s "$inbox_jsonl" ]; then
+          echo ""
+          echo "## Mensagem do humano (recebida durante a execução, attempt $attempt)"
+          echo ""
+          python3 -c '
+import json, sys
+for line in open(sys.argv[1]):
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        obj = json.loads(line)
+    except Exception:
+        continue
+    print("-", obj.get("text", ""))
+' "$inbox_jsonl"
+        fi
       } >"$composed"
       run_spec="$composed"
+      if [ -s "$inbox_jsonl" ]; then
+        oracfit_emit_event message_consumed attempt="$attempt" count="$(wc -l < "$inbox_jsonl" | tr -d ' ')"
+        : >"$inbox_jsonl"
+      fi
     fi
 
     export ORACFIT_SESSION_FILE="$(oracfit_session_file "$RUN_ID")"
@@ -340,6 +410,42 @@ for target in targets:
     if [ -f "$ORACFIT_WORKDIR/.dispatch/stub-proof" ]; then
       cp "$ORACFIT_WORKDIR/.dispatch/stub-proof" "$art_dir/stub-proof"
       echo "stage_role=$role" >>"$art_dir/stub-proof"
+    fi
+
+    # S8 — a pergunta do dono: checada DEPOIS do runner e ANTES do oráculo.
+    # Pergunta válida (pergunta: + garfo >=2 linhas "se ... -> ...") pausa o
+    # run INTEIRO com status owner_question (exit 7): nenhuma tentativa cara
+    # adicional é queimada preenchendo o buraco com invenção. A pergunta vai
+    # pro inbox; o dono responde com oracfit resume <run_id> "<resposta>" e o
+    # run retoma com a resposta injetada na spec do próximo attempt.
+    if [ -n "$owner_question_cfg" ] && ! $owner_asked && [ -f "$art_dir/owner-question.md" ]; then
+      _oq_forks="$(grep -cE '^se .+ -> ' "$art_dir/owner-question.md" || true)"
+      if grep -q '^pergunta: .' "$art_dir/owner-question.md" && [ "${_oq_forks:-0}" -ge 2 ]; then
+        cp "$art_dir/owner-question.md" "$(oracfit_inbox_dir)/${RUN_ID}.question.md"
+        oracfit_emit_event owner_question stage="$role" attempt="$attempt" file="${RUN_ID}.question.md"
+        t_oq=$(python3 -c 'import time; print(time.time())')
+        dur_oq=$(python3 -c "print(round(float('$t_oq')-float('$t0'), 3))")
+        oracfit_emit_event run_finished status=owner_question stages="$stage_count" duration_s="$dur_oq"
+        oracfit_emit_metric_and_ledger \
+          mode_id="$mode_id" \
+          stage=multi \
+          oracle_exit=7 \
+          attempt="$total_attempt_count" \
+          model_id=multi \
+          flash_work_s="$dur_oq" \
+          frontier_wait_s=0 \
+          estimated_cost=0 \
+          task="$task_name" \
+          status=owner_question || true
+        epilogue_done=1
+        echo "run_id: $RUN_ID"
+        echo "status: owner_question (pausado — pergunta do dono no inbox)"
+        echo "pergunta: $(oracfit_inbox_dir)/${RUN_ID}.question.md"
+        echo "responda: oracfit resume $RUN_ID \"<sua resposta>\""
+        exit 7
+      else
+        echo "owner-question.md malformado (sem linha 'pergunta:' ou garfo < 2 linhas 'se ... -> ...') — ignorado; o oráculo governa" >&2
+      fi
     fi
 
     oracle_log="${gauntlet_dir}/oracle-${attempt}.log"
