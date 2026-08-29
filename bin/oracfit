@@ -24,6 +24,9 @@ Custom (ouro):
   oracfit mode validate <id|path.yaml>
   oracfit mode init <id>
 
+Aliases de surf (mesmos modos, nome de onda): paddle | tow | surfcheck
+  → oracfit alias
+
 Legado equivalente: bin/dispatch-mode.sh <mode> …
 
 ARCH/COPY não são modes — classify recusa modelo.
@@ -41,6 +44,46 @@ Painel não executa stop/rerun. Por enquanto:
 Ver: _bmad-output/planning-artifacts/v1-modes-catalog.md
 EOF
   exit 2
+}
+
+# Aliases de surf (go-live D2, 2026-08-29): os ids do tree ficam — normal,
+# unlock_plan e ui_visual_qa continuam sendo os nomes canônicos em YAML, ledger
+# e testes. A UI (CLI + TUI) também aceita o nome de surf. Mapa ÚNICO; quem
+# quiser um terceiro nome cria alias, nunca um modo-irmão (colisão de id é
+# incidente — ver lint de shadow no loader).
+MODE_ALIASES="paddle=normal tow=unlock_plan surfcheck=ui_visual_qa"
+
+resolve_mode_alias() { # <nome> → imprime o id canônico do tree
+  local pair name="$1"
+  for pair in $MODE_ALIASES; do
+    case "$pair" in "$name="*) printf '%s\n' "${pair#*=}"; return 0 ;; esac
+  done
+  printf '%s\n' "$name"
+}
+
+cmd_alias() {
+  # `oracfit alias` sem arg: imprime o mapa. Com arg: resolve UM nome —
+  # alias conhecido, id de modo existente (root ou workdir), ou erro.
+  local root_dir workdir_dir
+  root_dir="${ORACFIT_ROOT:-$ROOT}/core/modes"
+  workdir_dir="${ORACFIT_WORKDIR:-$PWD}/core/modes"
+  if [ "$#" -eq 0 ]; then
+    local pair
+    for pair in $MODE_ALIASES; do
+      printf '%s\n' "$pair"
+    done
+    return 0
+  fi
+  local name target
+  for name in "$@"; do
+    target="$(resolve_mode_alias "$name")"
+    if [ -f "$workdir_dir/$target.yaml" ] || [ -f "$root_dir/$target.yaml" ]; then
+      printf '%s\n' "$target"
+    else
+      echo "ERROR: unknown mode or alias: $name" >&2
+      return 2
+    fi
+  done
 }
 
 cmd_help() {
@@ -62,9 +105,14 @@ BASE
 
 CUSTOM (terreno v1 · runtime multi-stage = v2)
   oracfit modes
+  oracfit alias [nome]               # mapa de aliases de surf / resolve um
+                                     #   paddle=normal tow=unlock_plan
+                                     #   surfcheck=ui_visual_qa
   oracfit mode validate <id|yaml>
   oracfit mode lint <id|yaml>       # v4: claims→mecanismos + shadow de id
   oracfit mode init <id>
+  oracfit mode add <yaml>           # instala YAML validado no overlay do workdir
+  oracfit mode share <id>           # imprime o YAML p/ postar (mode share)
   # vision_catalog / unlock_plan: YAML shipa; execução map/reduce/unlock → v2
 
 RING (v4 — god mode com mecanismo, não protocolo)
@@ -137,6 +185,14 @@ cmd_modes() {
       echo "  $id"
     fi
   done
+
+  # D2/D7: o CLI lista tudo (god modes inclusive); a TUI e a home mostram só
+  # os aliases de surf. Alias é apelido de UI — o id canônico é o do YAML.
+  echo "surf aliases (same modes, friendlier names — run: oracfit alias):"
+  local pair
+  for pair in $MODE_ALIASES; do
+    echo "  ${pair%%=*} → ${pair#*=}"
+  done
 }
 
 resolve_mode_yaml() { # $1=id|path — imprime caminho ou sai 3
@@ -198,9 +254,60 @@ EOF
   echo "next: oracfit mode validate ${id} && oracfit run ${id} <spec> <task>"
 }
 
+cmd_mode_add() { # S4 (go-live D5): modo público = postar o próprio YAML; mode add
+  # é a porta de ENTRADA — valida com o mesmo loader que o run usa e instala no
+  # overlay do workdir (AD-16). Nada de rede, nada de store central: o YAML que
+  # você recebeu vira modo local, sem tocar o tree.
+  local src="${1:?usage: oracfit mode add <path.yaml>}"
+  [ -f "$src" ] || { echo "ERROR: yaml not found: $src" >&2; exit 3; }
+  python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" validate "$src" || exit $?
+  python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" lint "$src" \
+    --root "${ORACFIT_ROOT:-$ROOT}" --workdir "${ORACFIT_WORKDIR:-$PWD}" || exit $?
+  local id
+  id="$(grep -E '^[[:space:]]*id:' "$src" | head -1 | sed 's/.*id:[[:space:]]*//' | tr -d '"' | tr -d "'")"
+  case "$id" in
+    *[!a-z0-9_]*|"") echo "ERROR: yaml sem id válido [a-z0-9_]+: $src" >&2; exit 2 ;;
+  esac
+  local dir="${ORACFIT_WORKDIR:-$PWD}/core/modes"
+  mkdir -p "$dir"
+  local dest="$dir/${id}.yaml"
+  if [ -e "$dest" ]; then
+    if diff -q "$src" "$dest" >/dev/null 2>&1; then
+      echo "já instalado (idêntico): $dest"
+      return 0
+    fi
+    echo "ERROR: $dest existe com conteúdo DIFERENTE — overlay silencioso é colisão de id (colisão hefesto). Remova ou resolva à mão." >&2
+    exit 3
+  fi
+  cp "$src" "$dest"
+  echo "instalado: $dest"
+  echo "next: oracfit modes  # o id aparece como workdir overlay; rode com: oracfit run ${id} <spec> <task>"
+}
+
+cmd_mode_share() { # S4: a porta de SAÍDA — imprime o YAML pronto para postar.
+  # Privacidade é localização, não campo (D5): nada é enviado a lugar nenhum;
+  # postar é ato seu, num canal público seu (issue do repo).
+  local id="${1:?usage: oracfit mode share <id>}"
+  local file
+  file=$(resolve_mode_yaml "$id")
+  cat <<EOF
+# mode share — cole este YAML inteiro numa issue pública:
+#   https://github.com/carl0sfelipe/llms.surf/issues/new?template=share-your-break.md
+# Quem receber salva o bloco e instala com: oracfit mode add <arquivo>.yaml
+# Antes de postar, leia de novo: YAML é texto público — segredo nenhum deve
+# estar aqui dentro (chave de API mora em env, nunca em model_ref).
+# ─────────────────────────── 8< ───────────────────────────
+EOF
+  cat "$file"
+}
+
 cmd_run() {
   local mode="${1:?usage: oracfit run <mode> <spec|input> <task>}"
   shift
+  # Alias de surf resolve aqui (única porta de entrada da UI): o runtime
+  # (dispatch-mode/dispatch-stages) só vê id canônico — YAML, ledger e eventos
+  # continuam gravando o id do tree (D2).
+  mode="$(resolve_mode_alias "$mode")"
   # P5: multi-stage modes (unlock_plan, vision_catalog, …) use dispatch-stages.sh
   local mode_yaml stage_n
   mode_yaml="${ORACFIT_WORKDIR:-$PWD}/core/modes/${mode}.yaml"
@@ -264,6 +371,7 @@ case "$cmd" in
     exec "$SCRIPT_DIR/oracfit-gui.sh" --target "$target" "$@"
     ;;
   modes) cmd_modes ;;
+  alias) cmd_alias "$@" ;;
   mode)
     sub="${1:-}"
     shift || true
@@ -271,6 +379,8 @@ case "$cmd" in
       validate) cmd_mode_validate "$@" ;;
       lint) cmd_mode_lint "$@" ;;
       init) cmd_mode_init "$@" ;;
+      add) cmd_mode_add "$@" ;;
+      share) cmd_mode_share "$@" ;;
       list|"") cmd_modes ;;
       *) did_you_mean "mode $sub"; exit 2 ;;
     esac

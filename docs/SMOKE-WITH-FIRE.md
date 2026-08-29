@@ -1,90 +1,98 @@
-# Smoke with fire — after llms.surf v1 public
+# Smoke with fire — go-live do llms.surf
 
-> **When:** after the official public v1 of this site is live (DNS + this
-> `site/` deployed), not before. **Who:** Fable (expensive, meta +
-> dogfood), then `llms-surf` dispatching GLM (`core/modes/glm_smart.yaml`)
-> for remaining implementation. **Why:** GLM cannot be trusted with the
-> S25/S26 shotgun without frozen oracles; Fable cannot spend 25% of a
-> plan rewriting Python. This split is the product eating itself.
+> **Quando:** depois do site público v1 estar no ar (DNS + `site/`
+> deployado), não antes. **Quem:** Fable (caro, meta + dogfood) na Phase A;
+> anéis GLM (`core/modes/glm_smart.yaml`) na Phase B. **Por quê:** GLM não
+> recebe a espingarda S25/S26 sem oráculo congelado; Fable não gasta 25% do
+> plano reescrevendo Python. A divisão é o produto comendo a si mesmo.
 
-Nothing in this file is implementation. It is the ring spec.
+Nada neste arquivo é implementação. É a ordem de fogo do go-live.
 
-## Phase A — Fable smokes the live v1 (fire, not screenshot)
+**Gate zero (D1): nenhum passo abaixo roda antes de S1 verde.** A promessa
+de 2 minutos do hero já quebrou uma vez em HEAD (a spec de smoke ficou fora
+do corte público) — a prova de que não quebrou de novo é mecânica:
 
-Fable, in a new session, against the **deployed** origin (not `file://`):
+```bash
+bash bin/check-spec.sh specs/oracfit-smoke-normal.md && \
+bash bin/check-spec.sh specs/oracfit-smoke-unlock-plan.md && \
+bash bin/test-oracfit-tldr.sh && \
+bash tests/test-go-live-local.sh
+```
 
-1. Load `https://llms.surf/` (or the real public host). Fail the ring if
-   the hero, oracle-loop, stats strip, wipeout cards, swell table, and
-   quickstart are not all reachable.
-2. Assert the stats strip numbers still match git HEAD of this repo
-   (`tests/test-site-honesty.sh` green on that commit).
-3. Click every nav link and the four inner pages. Copy-button copies the
-   real clone URL (`carl0sfelipe/llms.surf`).
-4. Confirm Swell still reads **no data yet** unless a measured cell was
-   deliberately added.
-5. Local CLI: `bin/llms-surf start` with the stub runner, then
-   `bin/llms-surf gui` — the panel loads. This is the 2-minute promise.
-6. Write a short `docs/v1-smoke-log.md`: what broke, what was confusing,
-   what a stranger would bounce on. That log is the input to Phase B,
-   not a vibe.
+## Phase A — Fable fumaça o v1 no ar (fogo, não screenshot)
 
-A screenshot of the hero is not a smoke. Behavior is.
+Fable, em sessão nova, contra a **origem deployada** (não `file://`):
 
-## Phase B — llms-surf dispatches GLM (the 99%)
+1. Carregar `https://llms.surf/` (ou o host público real). O anel reprova se
+   o hero, oracle-loop, stats strip, wipeout cards, swell table, tokens e
+   quickstart não estiverem todos alcançáveis.
+2. Assertions dos números do stats strip contra o git HEAD deste repo
+   (`tests/test-site-honesty.sh` verde naquele commit — inclusive os counts,
+   que a seção nova de tokens não inventa; D6).
+3. Clicar todo link de nav e as quatro páginas internas. O copy-button copia
+   a URL real de clone (`carl0sfelipe/llms.surf`). O link da waitlist abre o
+   template `tokens-waitlist.md` (D9).
+4. Confirmar que Swell continua lendo **no data yet** — a seção de tokens
+   diz "nothing for sale" e não tem preço na tela.
+5. CLI local, na ordem da jornada (`docs/go-live/JOURNEY-1H.md`):
+   `bin/llms-surf start` com stub, `bin/llms-surf gui`, wizard com o trio de
+   surf (paddle/tow/surfcheck), `oracfit modes` listando os 20. Esta é a
+   promessa de 2 minutos sendo cumprida na mão.
+6. Escrever `docs/v1-smoke-log.md` curto: o que quebrou, o que confundiu,
+   onde um estranho cairia. Esse log alimenta a próxima Phase B — não é vibe.
 
-Open a ring in the **bestmodel** repo (S25) and, separately, a ring here
-for v1.1. Mode: `glm_smart`. Oracle frozen at ring open. Gauntlet on.
-Safety ceiling 4.
+Screenshot de hero não é smoke. Comportamento é.
 
-### B1 — bestmodel S25 (parity & modality-blind gate)
+## Phase B — anéis GLM = só este pack
 
-Source of direction: `~/Work/bestmodel/docs/direction-2026-08-29.md`.
-GLM does not get to rediscover architecture. It executes:
+O pack é `docs/go-live/specs/S1..S6` — nada além dele. Modo: `glm_smart`.
+Oráculo congelado no ring open (as linhas `- comando:` de cada spec).
+Gauntlet on. Safety ceiling 4.
 
-| story | mechanical oracle (sketch — freeze the real command at ring open) |
-|---|---|
-| S25a ABC inventory | `rg -n "def fetch_" packages/fake-adapters apps/public-api` plus a new test that introspects `DatabaseSession` and instantiates `PostgresSession`; `make test` includes it and it fails if any abstract method is missing on either backend |
-| S25a round-trip | a test writes a video scenario through the session API and reads back `source_class`, `recipe_id`, and video scalars on **both** backends |
-| S25b gate video leg | `make gate` log contains a video-mock POST and an assertion that leaderboard row **count increased** and `source_class` is present |
-| S25c AGENTS.md | `make gate` (or a tiny grep in it) fails if any of `packages/domain-schema`, `packages/fake-adapters`, `apps/public-api`, `apps/intake-worker`, `cli/benchmark-probe`, `infra/migrations` lacks an `AGENTS.md` containing `Change checklist` |
+| story | tema | oráculo (congelar a linha da spec no ring open) |
+|---|---|---|
+| S1 | promessa de 2 minutos (P0, D1) | check-spec das 2 smokes + oráculo falha pelo motivo certo em workdir limpo |
+| S2 | aliases de surf (D2) | `oracfit alias` resolve os 3 e recusa desconhecido; TUI anuncia o trio |
+| S3 | ficha da syntax custom (D3/D4) | validate + lint dos 2 YAMLs no loader real |
+| S4 | mode share / mode add (D5) | round-trip: add instala em workdir temp, share imprime com cabeçalho do post |
+| S5 | god modes fora do default + tokens honestos (D6/D7/D9) | site-honesty verde + seção de tokens na superfície humana e do agente |
+| S6 | higiene do corte (D8) | `docs/go-live` declarado nos 2 gates + `check-publico --oficina` limpo |
 
-If GLM cannot make an oracle green, it files an incident and stops. It
-does not invent a sixth backend.
+`tests/test-go-live-local.sh` roda os seis oráculos em sequência — é o mesmo
+gate que o time de lançamento usa; um anel GLM que reabre qualquer uma dessas
+stories fecha contra o mesmo comando.
 
-### B2 — llms.surf v1.1 from Phase A log
+Se o GLM não conseguir manter um oráculo verde, abre incidente e para. Não
+inventa sétima story.
 
-Only items that Phase A actually observed. Candidates (not a wishlist):
+## O que o Fable continua dono (não vai para GLM)
 
-- broken link, dead copy-button, stats drift, mobile nav, missing PNG
-- README still claiming a number the honesty test would reject
-- deploy/DNS leftovers
+- Qualquer decisão nova de honestidade ou schema (a lição S26 vale aqui).
+- Mudança de licença (D10: `bestmodel.run` fica como está; flip é
+  irreversível e não bloqueia este lançamento).
+- Inventar preço de token, N de waitlist anunciado, ou qualquer número que
+  não venha do tree (D6).
+- Tocar produção de terceiro ou rig alugado.
 
-Oracle: the same `tests/test-site-honesty.sh` plus a curl of the live
-host returning 200 on `/`, `/readme`, `/incidents`, `/v4-plan`.
+## Pré-condições (não é calendário — na ordem, todas exigidas)
 
-### B3 — bestmodel.run launch leftovers
-
-Only after S25 is green. Not in the first GLM ring. Per-user keys (S23)
-and the visual honesty UI (S24) stay on the v2 roadmap. Cloud stays on
-hold (direction D4/D7).
-
-## What Fable still owns (do not give to GLM)
-
-- Any new honesty-tier or schema decision (S26).
-- License change (proprietary vs Lineup-as-OSS). The site currently
-  tells the truth: LICENSE is proprietary. Flipping that is the owner.
-- Inventing a Swell price.
-- Touching production `bestmodel-prod` or a rented rig.
-
-## Preconditions (not a calendar)
-
-- This `site/` is deployed and reachable on a public host.
-- `tests/test-site-honesty.sh` is green on the deployed commit.
-- Owner has a GLM/Zhipu path that `glm_smart` can actually call
-  (`model_ref: zhipuai/glm-5.2-coding-plan`). If that adapter is dark,
-  the ring does not open — we say so, we do not pretend a dispatch.
+- **(a)** O pack S1–S6 realmente no disco E commitado (veredito lido na
+  superfície certa — regra 53: branch revisada tem que ser a branch onde o
+  trabalho vive).
+- **(b)** `tests/test-go-live-local.sh` verde (gate local, A1).
+- **(c)** Host público servindo `/` e `/llms.txt`, com
+  `tests/test-site-honesty.sh` verde no commit deployado.
+- Dono com caminho GLM/Zhipu que o `glm_smart` realmente consiga chamar
+  (`model_ref: zhipuai/glm-5.2-coding-plan`). Adapter escuro = o anel não
+  abre — se diz isso, não se finge um dispatch.
+- Thread **"share your break" APROVADA pelo dono (2026-08-29)**: uma
+  Discussion fixada no lançamento, semeada com os dois YAMLs da ficha
+  (`examples/glassy.yaml`, `examples/outside_set.yaml`). Nunca a thread sem
+  quem responda.
 
 ## Done when
 
-Phase A log exists. S25 oracles green or an incident filed for each
-red. Live site still honest. No new invented number on either product.
+Log da Phase A existe. Os seis oráculos do pack verdes
+(`tests/test-go-live-local.sh`) ou incidente aberto para cada vermelho. Site
+no ar continua honesto. Nenhum número novo inventado em nenhum dos dois
+produtos.

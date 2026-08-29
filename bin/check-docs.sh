@@ -27,7 +27,10 @@ FALHAS=0
 
 # ── fatos derivados da árvore ──────────────────────────────────────────
 VERSAO="$(cat VERSION 2>/dev/null || echo "?")"
-INCIDENTES="$(ls incidents/*.md 2>/dev/null | wc -l | tr -d ' ')"
+# Exclui o índice incidents/README.md da contagem — é sumário, não postmortem
+# (mesma definição do tests/test-site-honesty.sh; o ls cru contava o índice e
+# fabricava um off-by-one contra toda a copy que diz 106).
+INCIDENTES="$(find incidents -maxdepth 1 -name '*.md' ! -name README.md 2>/dev/null | wc -l | tr -d ' ')"
 SUITES="$(ls tests/test-*.sh 2>/dev/null | wc -l | tr -d ' ')"
 MODOS="$(ls core/modes/*.yaml 2>/dev/null | wc -l | tr -d ' ')"
 MODELOS="$(python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))" 2>/dev/null || echo '?')"
@@ -88,8 +91,7 @@ checa_badge_incidentes README.md
 checa README.md "postmortems (negrito)"    '\*\*[0-9]\{1,\} postmortems'        "$INCIDENTES"
 checa README.md "So are N others"          'So are [0-9]\{1,\}'                  "$((INCIDENTES - 2))"
 checa README.md "incident postmortems"     '[0-9]\{1,\} incident postmortems'   "$INCIDENTES"
-checa README.md "the N happened"           'the [0-9]\{1,\} happened'           "$INCIDENTES"
-checa README.md "N and counting"           '[0-9]\{1,\} and counting'           "$INCIDENTES"
+checa README.md "the N happened"           'the [0-9]\{1,\} in this cut happened' "$INCIDENTES"
 checa README.md "incidents/ na tabela"     '[0-9]\{1,\} failures that became permanent protections' "$INCIDENTES"
 checa README.md "test suites"              '[0-9]\{1,\} test suites'            "$SUITES"
 checa README.md "models in the registry"   '[0-9]\{1,\} models in the registry' "$MODELOS"

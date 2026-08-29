@@ -31,7 +31,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Categorias que NUNCA saem da oficina (espelha a política do publish-cut;
 # o gate final — scan cheio no destino — pega drift desta lista).
-PRIVADO=(specs docs/handoffs docs/prompts incidents/uso lessons)
+# docs/go-live = ordem de trabalho do go-live, não produto (D8).
+PRIVADO=(specs docs/handoffs docs/prompts docs/go-live incidents/uso lessons)
 
 # Ruído sem valor de scan em qualquer modo.
 RUIDO=(.git node_modules .dispatch ledger probe ring .opencode .zcode)

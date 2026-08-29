@@ -51,7 +51,29 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 - models in registry: 69
 - modes: 20
 - adapters: 8 + 1 stub
-- test suites: 29
+- test suites: 30
+
+## Surf aliases (the UI names — tree ids stay canonical)
+
+- paddle  -  the normal mode: cheap model sweats, oracle decides
+- tow  -  unlock_plan: the expensive stage tows you to the wave you could not paddle into
+- surfcheck  -  ui_visual_qa: visual judgment on rendered surfaces
+- `oracfit alias` prints the map; the 17 other modes stay in git and in the CLI (`oracfit modes`).
+
+## Modes are YAML you can share
+
+A custom mode is a subset of the shipped loader grammar: zero new schema.
+The oracle lives in the task spec (raw command, no backticks). Privacy is
+location, not a field  -  a mode is private because it lives in your workdir;
+public is only the YAML you post. Share via the `share your break` issue
+template; install someone else's with `oracfit mode add <file.yaml>`.
+
+## Tokens at cost  -  nothing for sale
+
+There is no token, credit or hosted product on sale. A waitlist exists as a
+GitHub issue template; the unlock to sell anything is mechanical: demand read
+from that list and throughput measured in this repo's ledger. Until both
+numbers exist in the tree, no price exists anywhere.
 
 ## Files an agent should read next
 

@@ -3,8 +3,8 @@ id: 2026-08-27-dogfooding-tres-despachos-no-mesmo-workdir-e-veredito-lido-grepa-
 titulo: três dispatchs do mesmo spec sobrepuseram-se no mesmo workdir e o operador leu veredito errado por grep cru no events.jsonl
 data: 2026-08-27
 recorrivel: sim
-regra: -
-status: aberto
+regra: 53
+status: promovido
 repo: eaas-bitcoin (workdir) + operador humano-agente (beelink)
 ---
 

@@ -37,7 +37,7 @@ const DATA = {
     modes: 20,
     adapters: 8,
     adaptersStub: 1,
-    suites: 29,
+    suites: 30,
     version: "3.5.0"
   },
 
