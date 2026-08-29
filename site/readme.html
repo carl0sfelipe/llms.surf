@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>README — llms.surf</title>
-<meta name="description" content="llms.surf README: what it is, the 1%/99% dispatch rule, the mechanical oracle, quickstart, adapters and tiers.">
+<meta name="description" content="llms.surf README: what it is, the 1%/99% dispatch rule, the mechanical oracle, quickstart, and adapters.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0B0E14">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="icon" type="image/png" href="logo.png">
+<link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt — agent surface">
+<script src="journey.js" data-key="llms.surf.journey"></script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css">
@@ -40,6 +42,14 @@
       <a href="incidents.html">incidents/</a>
       <a href="v4-plan.html">docs/v4-plan.md</a>
     </nav>
+    <div class="journey" data-journey-ui>
+      <span class="journey-kicker">who is reading</span>
+      <div class="journey-seg" role="group" aria-label="Choose human or agent journey">
+        <button type="button" class="journey-btn" data-as="human" aria-pressed="false">human</button>
+        <button type="button" class="journey-btn" data-as="agent" aria-pressed="false">agent</button>
+      </div>
+      <a class="journey-llms" href="llms.txt">llms.txt</a>
+    </div>
     <a class="btn btn-sm" href="index.html#quickstart">paddle out</a>
   </div>
 </header>
@@ -58,9 +68,9 @@
     <div class="term-bar">
       <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
       <span class="term-title">~/src</span>
-      <button class="copy-btn" id="copy-btn" type="button">copy</button>
-    </div>
-    <pre class="term-body qs" id="qs"></pre>
+          <button class="copy-btn js-copy-qs" type="button">copy</button>
+        </div>
+        <pre class="term-body qs js-qs"></pre>
   </div>
   <p>The dispatcher boots local against the stub runner. Frontier keys are only added when a task earns them.</p>
 
@@ -73,23 +83,11 @@
   </ul>
 
   <h2>// adapters — the lineup</h2>
-  <div class="chips" id="chips-row"></div>
+  <div class="chips js-chips"></div>
   <p style="margin-top:14px">Eight adapters plus a stub ship in this repository. If your CLI speaks text, it can speak llms.surf.</p>
 
-  <h2>// tiers</h2>
-  <ul>
-    <li><b>Lineup</b> — this repo. Clone and run. License is proprietary (see LICENSE). Not claimed as open source.</li>
-    <li><b>Local Break</b> — self-host. Your machine is the board; tokens cost ~$0 if you own the GPUs.</li>
-    <li><b>Swell</b> — hosted inference. <b>Not live.</b> No invented $/M.</li>
-    <li><b>Saquarema</b> — enterprise / founders. Pricing on request — no invented numbers.</li>
-  </ul>
-
-  <h2>// honesty tiers</h2>
-  <ul>
-    <li><b>measured</b> — reproduced on our rig and signed.</li>
-    <li><b>reported</b> — vendor or README figure, not reproduced here.</li>
-    <li><b>no data yet</b> — we say so.</li>
-  </ul>
+  <h2>// this repo</h2>
+  <p>Clone and run. License is proprietary (see LICENSE) — not claimed as open source. If you own the GPUs, the 99% is local and tokens on that path cost ~$0.</p>
 
   <div class="doc-links">
     <a class="btn btn-ghost" href="index.html">← front page</a>
@@ -110,6 +108,7 @@
       <p class="foot-surf">Built in Saquarema, Brazil — where you never paddle on a guess. Neither do we.</p>
     </div>
     <nav class="foot-links" aria-label="Project links">
+      <a href="llms.txt">llms.txt</a>
       <a href="readme.html">README</a>
       <a href="incidents.html">incidents/</a>
       <a href="v4-plan.html">docs/v4-plan.md</a>

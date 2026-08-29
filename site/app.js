@@ -5,8 +5,7 @@ const DATA = {
     name: "LLMs.surf",
     former: "Oracfit",
     version: "3.5.0",
-    github: "https://github.com/carl0sfelipe/llms.surf",
-    bestmodel: "https://bestmodel.run"
+    github: "https://github.com/carl0sfelipe/llms.surf"
   },
 
   market: {
@@ -41,26 +40,6 @@ const DATA = {
     suites: 29,
     version: "3.5.0"
   },
-
-  cloudLive: false,
-
-  tiers: {
-    measured:  { label: "measured",    desc: "reproduced on our rig, signed" },
-    reported:  { label: "reported",    desc: "vendor or README figure, not reproduced here" },
-    "no-data": { label: "no data yet", desc: "we say so" }
-  },
-  tierOrder: ["measured", "reported", "no-data"],
-
-  tiersProduct: [
-    { name: "Lineup",      tag: "this repo · local",     price: "clone and run · see LICENSE",              accent: "green",
-      body: "the dispatcher, the oracle, every adapter. git clone and paddle out. License is proprietary — not claimed as open source." },
-    { name: "Local Break", tag: "self-host",             price: "$0 tokens on your GPUs",                   accent: "green",
-      body: "your machine is the board. bestmodel.run reads whether a model fits before you commit VRAM." },
-    { name: "Swell",       tag: "hosted inference",      price: "no data yet — we say so",                  accent: "cyan",
-      body: "not live. No invented $/M. When a measured cell exists, it lands in the table with a tier badge." },
-    { name: "Saquarema",   tag: "enterprise · founders", price: "on request — no invented numbers",         accent: "cyan",
-      body: "dedicated ring, incident SLA, a direct line. Pricing when we have it — not before." }
-  ],
 
   mechanisms: [
     { claim: '"done" — exit 0, no work',  mech: "gates read artifact CONTENT on disk",                         cmd: "gate: read files, hash, grep — empty artifact = exit 1" },
@@ -198,69 +177,6 @@ function initHero() {
 
     l = add();
     l.append(el("span", "dim", "math: " + DATA.market.note));
-
-    renderFit(st);
-  }
-
-  function renderFit(st) {
-    const card = $("#fit-card");
-    if (!card) return;
-    card.replaceChildren();
-    const m = DATA.market;
-    const frontPart = st.tokens * m.split[0] * m.frontierOut;
-
-    card.append(el("p", "fit-label", "what actually fits — hosted swell is not live"));
-    card.append(el("p", "fit-ctx", 'for "' + st.task.label + '" · ' + st.week + " tasks/week · " + st.budget.label));
-
-    const fc   = el("div", "forecast");
-    const head = el("div", "fc-head");
-    const dl   = el("dl", "fc-grid");
-    const row  = (k, v, cls) => {
-      const w = el("div", "fc-row");
-      w.append(el("dt", null, k), el("dd", cls || null, v));
-      dl.append(w);
-    };
-
-    if (st.budget.local) {
-      const ml = el("p", "fit-model", "your rig");
-      ml.append(el("span", "fit-quant", "Local Break · no hosted cell"));
-      card.append(ml);
-      const cost = el("p", "fit-cost");
-      cost.append(document.createTextNode("~$0/mo "), el("small", null, "tokens — your board, your break"));
-      card.append(cost);
-      head.textContent = "// surf forecast — your rig · no measurements on file here";
-      row("swell", "no data yet — we say so", "dim");
-      row("period", "bench it: bestmodel.run", "dim");
-      row("wind", "no data yet", "dim");
-      row("tide", "no data yet", "dim");
-      row("budget", "the 99% runs for ~$0 tokens; frontier 1% ≈ " + money(frontPart) + "/mo if you add a key", "");
-      fc.append(head, dl, el("div", "fc-cond cond-flat", "conditions: FLAT"));
-      card.append(fc);
-      card.append(el("p", "fc-foot", "flat means flat — we say so. bestmodel.run reads your sea before you commit."));
-      card.append(el("p", "fit-note", "no invented tok/s on this page"));
-      return;
-    }
-
-    const ml = el("p", "fit-model", "Swell is not live");
-    ml.append(el("span", "fit-quant", "no hosted $/M — we say so"));
-    card.append(ml);
-    const cost = el("p", "fit-cost");
-    cost.append(document.createTextNode(money(st.disp) + "/mo "), el("small", null, "assumed 1%/99% math · not a price list"));
-    card.append(cost);
-    head.textContent = "// surf forecast — hosted window: no data yet";
-    row("swell", "no data yet — we say so", "dim");
-    row("period", "no measured tps on a hosted cell", "dim");
-    row("wind", "no data yet", "dim");
-    row("tide", "run local instead · " + DATA.meta.github.replace("https://", ""), "");
-    if (st.disp <= st.budget.monthly) {
-      row("budget", "assumed dispatch fits " + money(st.budget.monthly) + "/mo — " + money(st.budget.monthly - st.disp) + " headroom", "ok");
-    } else {
-      row("budget", "assumed dispatch over by " + money(st.disp - st.budget.monthly), "warn");
-    }
-    fc.append(head, dl, el("div", "fc-cond cond-flat", "conditions: FLAT"));
-    card.append(fc);
-    card.append(el("p", "fc-foot", "forecast = measured on our rig in the last hour. Until a cell exists, this stays flat."));
-    card.append(el("p", "fit-note", DATA.market.note));
   }
 
   [taskSel, budgetSel].forEach(s => s.addEventListener("change", renderEstimate));
@@ -332,40 +248,12 @@ function buildMechs() {
   });
 }
 
-function buildCloud() {
-  const lg = $("#legend");
-  if (lg) DATA.tierOrder.forEach(k => {
-    const li = el("li", "t-" + k);
-    li.append(el("i"), el("span", null, DATA.tiers[k].label + " — " + DATA.tiers[k].desc));
-    lg.append(li);
-  });
-
-  const tb = $("#cloud-body");
-  if (!tb) return;
-  const tr = el("tr", "no-data");
-  const td = el("td", "c-model", "hosted swell — no data yet — we say so");
-  td.colSpan = 6;
-  tr.append(td);
-  tb.append(tr);
-
-  const wrap = $("#tiers");
-  if (wrap) DATA.tiersProduct.forEach(t => {
-    const c = el("article", "tier-card " + (t.accent === "cyan" ? "accent-cyan" : "accent-green"));
-    c.append(
-      el("h4", "tier-name", t.name),
-      el("p", "tier-tag", t.tag),
-      el("p", "tier-price", t.price),
-      el("p", "tier-body", t.body)
-    );
-    wrap.append(c);
-  });
-}
-
 function buildChips() {
-  const row = $("#chips-row");
-  if (!row) return;
-  DATA.chips.forEach(c => row.append(el("span", "chip", c)));
-  row.append(el("span", "chip chip-adapter", DATA.adapterChip));
+  $$(".js-chips").forEach(row => {
+    row.replaceChildren();
+    DATA.chips.forEach(c => row.append(el("span", "chip", c)));
+    row.append(el("span", "chip chip-adapter", DATA.adapterChip));
+  });
 }
 
 function buildQuotes() {
@@ -379,16 +267,17 @@ function buildQuotes() {
 }
 
 function buildQuickstart() {
-  const qs = $("#qs");
-  if (qs) {
+  $$(".js-qs").forEach(qs => {
+    qs.replaceChildren();
     DATA.quickstart.forEach(c => {
       const line = el("div", "qs-line");
       line.append(el("span", "qs-prompt", "$ "), el("span", "qs-cmd", c));
       qs.append(line);
     });
-  }
-  const btn = $("#copy-btn");
-  if (btn) {
+  });
+  $$(".js-copy-qs").forEach(btn => {
+    if (btn.dataset.bound) return;
+    btn.dataset.bound = "1";
     btn.addEventListener("click", () => {
       const text = DATA.quickstart.join("\n");
       const done = () => {
@@ -408,12 +297,16 @@ function buildQuickstart() {
         navigator.clipboard.writeText(text).then(done).catch(fallback);
       } else fallback();
     });
-  }
+  });
 }
 
 function fillCounts() {
   const f = $("#foot-count");  if (f) f.textContent = DATA.stats.incidents;
   const w = $("#wipe-count");  if (w) w.textContent = DATA.stats.incidents;
+  $$("[data-stat]").forEach(n => {
+    const k = n.getAttribute("data-stat");
+    if (k && DATA.stats[k] != null) n.textContent = DATA.stats[k];
+  });
 }
 
 function buildBathy() {
@@ -544,8 +437,7 @@ buildDividers();
 if ($("#sel-task"))   initHero();
 if ($("#stats-grid")) buildStats();
 if ($("#mech-grid"))  buildMechs();
-if ($("#cloud-body") || $("#tiers") || $("#legend")) buildCloud();
-if ($("#chips-row"))  buildChips();
+if ($$(".js-chips").length) buildChips();
 if ($("#wall-grid"))  buildQuotes();
 buildQuickstart();
 fillCounts();

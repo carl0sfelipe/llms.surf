@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>docs/v4-plan.md — llms.surf</title>
-<meta name="description" content="llms.surf v4 plan: the 4-stage pipeline, the swell roadmap with honesty tiers, and what has no data yet — said so, not invented.">
+<meta name="description" content="llms.surf v4 plan: the 4-stage pipeline that ships in this cut.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0B0E14">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="icon" type="image/png" href="logo.png">
+<link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt — agent surface">
+<script src="journey.js" data-key="llms.surf.journey"></script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css">
@@ -36,80 +38,48 @@
       <span class="logo-word">llms.surf</span>
     </a>
     <nav class="nav-links" aria-label="Site">
-      <a href="index.html#cloud">swell</a>
+      <a href="index.html#adapters">adapters</a>
       <a href="readme.html">README</a>
       <a href="incidents.html">incidents/</a>
     </nav>
+    <div class="journey" data-journey-ui>
+      <span class="journey-kicker">who is reading</span>
+      <div class="journey-seg" role="group" aria-label="Choose human or agent journey">
+        <button type="button" class="journey-btn" data-as="human" aria-pressed="false">human</button>
+        <button type="button" class="journey-btn" data-as="agent" aria-pressed="false">agent</button>
+      </div>
+      <a class="journey-llms" href="llms.txt">llms.txt</a>
+    </div>
     <a class="btn btn-sm" href="index.html#quickstart">paddle out</a>
   </div>
 </header>
 
 <main class="doc">
   <p class="doc-crumb"><a href="index.html">llms.surf</a> / docs / v4-plan.md</p>
-  <h1>v4 plan — read the sea</h1>
-  <p class="doc-sub">measured, reported, or "no data yet — we say so". nothing else.</p>
+  <h1>v4 plan — the pipeline</h1>
+  <p class="doc-sub">what ships in this cut. not a product catalog.</p>
 
   <h2>// the pipeline today</h2>
-  <p>One 4-stage pipeline ships in this cut: <b>spec open → dispatch → oracle → incident</b>. God modes, rings, critic-guard, watchdog, and the usage hub are in the tree. Median ring duration and dollar cost of a typical run are <span class="status-nodata">no data yet on this page</span> — we will not reprint a README anecdote as a live metric.</p>
-
-  <h2>// swell roadmap</h2>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">item</th>
-          <th scope="col">number</th>
-          <th scope="col">tier</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="c-model">Public site (this cut)</td>
-          <td>site/ in v3.5.0 tree</td>
-          <td class="status-mech">measured — files in git</td>
-        </tr>
-        <tr>
-          <td class="c-model">Swell hosted endpoint</td>
-          <td>—</td>
-          <td class="status-nodata">no data yet — we say so</td>
-        </tr>
-        <tr>
-          <td class="c-model">tok/s on a hosted 3090 cell</td>
-          <td>—</td>
-          <td class="status-nodata">no data yet — we say so</td>
-        </tr>
-        <tr>
-          <td class="c-model">Llama-3.3-70B on our rig</td>
-          <td>—</td>
-          <td class="status-nodata">no data yet — we say so</td>
-        </tr>
-        <tr>
-          <td class="c-model">Saquarema dedicated rigs</td>
-          <td>pricing on request — no invented numbers</td>
-          <td class="status-nodata">no data yet — we say so</td>
-        </tr>
-        <tr>
-          <td class="c-model">Does this model fit your GPU?</td>
-          <td><a href="https://bestmodel.run">bestmodel.run</a></td>
-          <td class="status-open">sister product — measured cells live there</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <p>One 4-stage pipeline ships in this cut: <b>spec open → dispatch → oracle → incident</b>. God modes, rings, critic-guard, watchdog, and the usage hub are in the tree.</p>
+  <ul>
+    <li><b>stage 1 — spec open:</b> the oracle is frozen by sha256 at ring open. Goalposts don't move.</li>
+    <li><b>stage 2 — dispatch:</b> 1% frontier thinking / 99% cheap sweat, picked per task.</li>
+    <li><b>stage 3 — oracle:</b> gates read artifact content on disk. <code>exit 0</code> is the only victory.</li>
+    <li><b>stage 4 — incident:</b> every failure becomes an incident; every incident becomes a mechanism.</li>
+  </ul>
 
   <h2>// the discipline</h2>
   <ul>
-    <li>Every roadmap number carries a tier. A number without a tier is an incident waiting to happen.</li>
-    <li>Forecast = measured on our rig in the last hour. Flat means flat — we say so.</li>
-    <li>When a reported figure gets reproduced, it moves to measured. When it doesn't, it gets an incident.</li>
-    <li>After this v1 site is live, the next Fable session dogfoods it (smoke with fire) and dispatches remaining work through <code>llms-surf</code> + <code>glm_smart</code> under frozen oracles. Spec: <code>docs/SMOKE-WITH-FIRE.md</code>.</li>
+    <li>A number on a public page has to match the tree, or it does not ship.</li>
+    <li>Victory is a green oracle — never a model's opinion of itself.</li>
+    <li>A rule without a mechanism is debt, not protection.</li>
   </ul>
 
   <div class="doc-links">
     <a class="btn btn-ghost" href="index.html">← front page</a>
     <a class="btn btn-ghost" href="readme.html">README</a>
     <a class="btn btn-ghost" href="incidents.html">incidents/</a>
-    <a class="btn btn-ghost" href="https://bestmodel.run" rel="noopener">bestmodel.run</a>
+    <a class="btn btn-ghost" href="https://github.com/carl0sfelipe/llms.surf">github</a>
   </div>
 </main>
 
@@ -123,10 +93,11 @@
       <p class="foot-surf">Built in Saquarema, Brazil — where you never paddle on a guess. Neither do we.</p>
     </div>
     <nav class="foot-links" aria-label="Project links">
+      <a href="llms.txt">llms.txt</a>
       <a href="readme.html">README</a>
       <a href="incidents.html">incidents/</a>
       <a href="v4-plan.html">docs/v4-plan.md</a>
-      <a href="https://bestmodel.run" rel="noopener">bestmodel.run</a>
+      <a href="https://github.com/carl0sfelipe/llms.surf">github</a>
     </nav>
   </div>
 </footer>

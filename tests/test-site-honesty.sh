@@ -59,17 +59,30 @@ check adaptersStub "$stub_js" "$stub_disk"
 check suites "$suites_js" "$suites_disk"
 check version "$version_js" "$version_disk"
 
-# Swell must not claim a live price.
-if grep -q 'cloudLive: true' "$APP"; then
-  fail "cloudLive is true — hosted prices need a measured cell first"
+# The landing sells the dispatcher in this repo. It must not advertise a
+# hosted-inference product that does not exist.
+if grep -qiE 'hosted inference is not live|hosted swell|llms\.surf swell' "$ROOT/site/index.html" "$APP" "$ROOT/site/readme.html" "$ROOT/site/v4-plan.html"; then
+  fail "site advertises hosted swell — there is no product yet"
 fi
 if grep -E 'tps: [0-9]' "$APP"; then
-  fail "numeric tps in DATA — only allowed after a measured cell lands"
+  fail "numeric tps in DATA — do not invent a hosted cell"
 fi
 
 # Pages exist.
-for f in index.html readme.html incidents.html v4-plan.html styles.css logo.svg; do
+for f in index.html readme.html incidents.html v4-plan.html styles.css logo.svg app.js journey.js llms.txt; do
   [ -f "$ROOT/site/$f" ] || fail "site/$f missing"
 done
+
+# llms.txt is the agent surface — same counts as DATA.stats, no invented product.
+LLMS="$ROOT/site/llms.txt"
+grep -q "version: $version_disk" "$LLMS" || fail "llms.txt version != VERSION"
+grep -q "incidents: $incidents_disk" "$LLMS" || fail "llms.txt incidents != tree"
+grep -q "models in registry: $models_disk" "$LLMS" || fail "llms.txt models != tree"
+grep -q "modes: $modes_disk" "$LLMS" || fail "llms.txt modes != tree"
+grep -q "adapters: $adapters_disk + $stub_disk stub" "$LLMS" || fail "llms.txt adapters != tree"
+grep -q "test suites: $suites_disk" "$LLMS" || fail "llms.txt suites != tree"
+if grep -qiE 'hosted inference is not live|hosted swell' "$LLMS"; then
+  fail "llms.txt advertises hosted swell — there is no product yet"
+fi
 
 echo "test-site-honesty: ok"
