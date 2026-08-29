@@ -39,7 +39,7 @@ RUIDO=(.git node_modules .dispatch ledger probe ring .opencode .zcode)
 # Superfície que o publish-cut copia SEM curadoria humana.
 # Manter em sincronia com MIRROR_FULL_DIRS + espelho-com-exceção + MIRROR_FULL_FILES
 # de bin/oracfit-publish-cut.sh.
-SUPERFICIE_DIRS=(adapters panel tests fluxos .github core bin)
+SUPERFICIE_DIRS=(adapters panel tests fluxos .github core bin site)
 SUPERFICIE_FILES=(AGENTS.md CLAUDE.md LICENSE NOTICE QWEN.md SKILL.md VERSION
   ZCODE.md install.sh docs/STATE_TEMPLATE.md docs/TELEMETRY.md docs/functions.md
   README.md model-registry.json)
@@ -76,7 +76,7 @@ FONE='(^|[^0-9])\(?[0-9]{2}\)?[ .-]?9[0-9]{4}[ .-]?[0-9]{4}([^0-9]|$)'
 HITS=$(grep -rInE "${EXCL[@]}" \
   --include='*.md' --include='*.json' --include='*.yaml' --include='*.yml' \
   --include='*.txt' --include='*.csv' --include='*.sh' --include='*.py' \
-  --include='*.js' --include='*.ts' \
+  --include='*.js' --include='*.ts' --include='*.html' --include='*.css' \
   "$FONE" "${ALVOS[@]}" 2>/dev/null)
 if [ -n "$HITS" ]; then
   echo "BLOQUEIO C1: telefone pessoal encontrado"
@@ -93,7 +93,7 @@ ALLOW='@([A-Za-z0-9.-]*\.(local|invalid|test)|example\.(com|org|net)|test\.dev|g
 HITS=$(grep -rInoE "${EXCL[@]}" \
   --include='*.md' --include='*.json' --include='*.yaml' --include='*.yml' \
   --include='*.txt' --include='*.csv' --include='*.sh' --include='*.py' \
-  --include='*.js' --include='*.ts' \
+  --include='*.js' --include='*.ts' --include='*.html' --include='*.css' \
   "$EMAIL_RE" "${ALVOS[@]}" 2>/dev/null | grep -vE "$ALLOW")
 if [ -n "$HITS" ]; then
   echo "BLOQUEIO C2: e-mail fora da allowlist"

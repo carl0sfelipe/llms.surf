@@ -33,7 +33,7 @@ if [ ! -d "$DISPATCH_DIR/.git" ] || [ ! -d "$ORACFIT_DIR/.git" ]; then
 fi
 
 # ---- manifesto (evoluir aqui conforme dispatch/ ganha diretorios novos) ----
-MIRROR_FULL_DIRS=(adapters panel tests fluxos .github)
+MIRROR_FULL_DIRS=(adapters panel tests fluxos .github site)
 # docs/ NAO entra aqui de proposito: dispatch/docs/ esta vazio mas
 # oracfit/docs/ tem conteudo real (PUBLIC-CUT.md etc.), promovido a mao de
 # _bmad-output/ no corte anterior. rsync --delete apagaria esses arquivos.

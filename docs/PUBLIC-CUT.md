@@ -1,14 +1,17 @@
-# Public Cut — Oracfit v1.0.0
+# Public Cut — llms.surf v3.5.0
 
-Este repositório é o produto **Oracfit v1.0.0** — despacho por aptidão com oráculo local.
+This repository is the public product **llms.surf** (formerly Oracfit) —
+local dispatch with a mechanical oracle. Marketing surface: `site/`.
 
-## O que está aqui
+## What is here
 
-- Core do framework (classify → mode → runner → oracle → panel)
-- Painel observe-only
-- Modes YAML (schema v1), incluindo `unlock_plan` / `vision_catalog` (runtime v2)
-- Adapters: opencode, Claude Code, Hermes
-- Scripts de bin/, check-saude, smoke tests
+- Core of the framework (classify → mode → runner → oracle → panel)
+- Observe-only panel
+- Mode YAMLs (schema v1), including `unlock_plan` / `vision_catalog`
+- Adapters: opencode, Claude Code, Cursor, Hermes, qwen-code, llama.cpp, zcode, prime-agent, stub
+- `bin/`, `check-saude`, test suites
+- `site/` — public marketing pages (honest DATA, gated by `tests/test-site-honesty.sh`)
+- `incidents/` — the 106 postmortems that shipped in this cut (`uso/` is private and must not ship)
 
 ## O que fica no monorepo de desenvolvimento
 

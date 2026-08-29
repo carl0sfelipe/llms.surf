@@ -17,7 +17,7 @@ Orchestrate work across AI models from the CLIs you already have. Code — not t
 - Your expensive plan does the 1% that needs a brain; free models do the other 99% for cents.
 - Every task carries an **oracle**: a real command that only passes when the work exists.
 - Every run shows where the money went — per-provider token accounting, local, yours.
-- Every failure becomes an incident; every recurring incident becomes code that refuses. **106 postmortems.**
+- Every failure becomes an incident; every recurring incident becomes code that refuses. **106 postmortems in this cut.**
 - Even the AI judge is watched: one write, and code kills it.
 
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
@@ -29,7 +29,7 @@ Orchestrate work across AI models from the CLIs you already have. Code — not t
 ## Try it in 2 minutes — no API key
 
 ```bash
-git clone git@github.com:carl0sfelipe/llms.surf.git
+git clone https://github.com/carl0sfelipe/llms.surf.git
 cd llms.surf
 export ORACFIT_ROOT="$PWD" DISPATCH_RUNNER="$PWD/adapters/stub/runner.sh"
 
@@ -114,8 +114,8 @@ resets. Only real silence dies.
   ledger.
 - **Usage hub** — token/quota tracking from local sources only, so the
   orchestrator picks the cheapest viable model per task.
-- **The memory** — 106 incident postmortems, 67 models in the registry,
-  20 modes, 8 adapters + stub, 28 test suites guarding the guards.
+- **The memory** — 106 incident postmortems in this cut, 69 models in the registry,
+  20 modes, 8 adapters + stub, 29 test suites guarding the guards.
 
 ---
 
@@ -124,10 +124,8 @@ resets. Only real silence dies.
 - **v1–v2** — dispatch + oracles + the anti-hang protocol. Founding incident:
   52 minutes lost to a silent hang a human had to break.
 - **v3** — accountable judges, multi-stage pipelines, mechanical gates. Real
-  run: a 4-stage pipeline researched, wrote, published and visually QA'd a
-  product review in **54 minutes, ~$0 in model cost** — and when web research
-  came back poisoned, the fact gate blocked **98 unverified numbers** from
-  publishing.
+  rings are in `incidents/`. We do not reprint a pipeline-duration anecdote
+  as a live metric on this page (see `docs/v4-plan.md`).
 - **v3.5** — built-in usage hub; the orchestrator stops guessing quota.
 - **v4 (now)** — the night shift. Nine god modes field-tested overnight, each
   with a postmortem; ~90 incidents converged into one spine of fail-closed
@@ -146,7 +144,7 @@ bin/llms-surf gui                        # watch it live, score it after
 ```
 
 Adding your own pipeline is one YAML file (`llms-surf mode init <id>`).
-Every failure you hit: `bin/incident.sh new` — that's how the 106 happened.
+Every failure you hit: `bin/incident.sh new` — that's how the 106 in this cut happened.
 
 ---
 
@@ -157,7 +155,7 @@ Every failure you hit: `bin/incident.sh new` — that's how the 106 happened.
 - A rule without a mechanism is debt, not protection.
 - The critic is read-only because code kills it on the first write — not because the prompt asked nicely.
 - Rejected without naming the biggest gap? That's not rigor, that's a broken contract.
-- Every failure becomes an incident; every incident becomes a mechanism. **106 and counting.**
+- Every failure becomes an incident; every incident becomes a mechanism. **106 in this cut.**
 
 ---
 
@@ -166,10 +164,9 @@ Every failure you hit: `bin/incident.sh new` — that's how the 106 happened.
 | Doc | What's in it |
 |---|---|
 | [SKILL.md](SKILL.md) | The operating manual: rules that survived the purge, scripts, anti-hang protocol |
-| [docs/v4-plan.md](docs/v4-plan.md) | v4: every failure class → the mechanism that closes it |
-| [docs/README.Detailed.md](docs/README.Detailed.md) | The full story: architecture, concepts, war stories, design rules |
-| [docs/README.pt-BR.md](docs/README.pt-BR.md) | Em português |
+| [docs/v4-plan.md](docs/v4-plan.md) | v4: pipeline, swell roadmap, honesty tiers |
+| [docs/SMOKE-WITH-FIRE.md](docs/SMOKE-WITH-FIRE.md) | After v1 is live: Fable smokes the site, then dispatches GLM |
+| [site/](site/) | Public marketing pages |
 | [incidents/](incidents/) | 106 failures that became permanent protections |
-| [CHANGELOG.md](CHANGELOG.md) | History |
 
 Proprietary — all rights reserved · **llms.surf — Carlos Felipe** · pattern: [gauntlet-loop](https://github.com/robonuggets/gauntlet-loop)

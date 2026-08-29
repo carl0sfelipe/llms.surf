@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLMs.surf — your frontier plan thinks. Free models sweat.</title>
+<meta name="description" content="One local dispatcher sends the 1% of tasks that need a brain to your expensive model, the other 99% to cheap ones. No result accepted until a mechanical oracle proves it on disk.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0E14">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="icon" type="image/png" href="logo.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LLMs.surf">
+<meta property="og:title" content="LLMs.surf — your frontier plan thinks. Free models sweat.">
+<meta property="og:description" content="One local dispatcher, a mechanical oracle, and a swell that stays flat until we measure it. Read the task. Pick the wave. Ship on proof.">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LLMs.surf — your frontier plan thinks. Free models sweat.">
+<meta name="twitter:description" content="Ride the cheapest wave that ships the work. Nothing ships on a model's word — not even the judge's.">
+<meta name="twitter:image" content="og.png">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-700.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="ls-mark" viewBox="26 64 158 58">
+      <path d="M32 116 C48 116 58 113 70 102 C82 91 92 76 106 72.5 C118 69.5 128 76 129 85 C129.6 90.5 127 95 123 96.5"
+            fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <path d="M124.5 112.5 C112 117 99.5 110 99.5 99.5 C99.5 89.5 107.5 83 115.5 84.2 C120.5 85 123.5 88 124.6 91.5"
+            fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="135.5" cy="110.5" r="4.6" fill="#3FB950"/>
+      <path d="M145.5 103.5 L153.5 112 L175.5 88.5"
+            fill="none" stroke="#3FB950" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#main">skip to content</a>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="#top" aria-label="llms.surf — home">
+      <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+      <span class="logo-word">llms.surf<span class="caret">_</span></span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#loop">oracle loop</a>
+      <a href="#wipeouts">wipeouts</a>
+      <a href="#cloud">swell</a>
+      <a href="#quickstart">paddle out</a>
+    </nav>
+    <a class="btn btn-sm" href="#quickstart">paddle out</a>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" id="top">
+    <svg id="bathy" class="bathy" aria-hidden="true"></svg>
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">$ llms-surf --version &nbsp;·&nbsp; local dispatch orchestrator &nbsp;·&nbsp; formerly Oracfit &nbsp;·&nbsp; v3.5.0</p>
+        <p class="tagline">// ride the cheapest wave that ships the work.</p>
+        <h1>Your frontier plan thinks.<br><span class="g">Free models sweat.</span></h1>
+        <p class="h2sub">Nothing ships on a model's word — not even the judge's.</p>
+        <p class="lede">One local dispatcher sends the 1% of tasks that need a brain to your expensive model, the other 99% to cheap ones. No result accepted until a mechanical oracle proves it on disk.</p>
+        <div class="hero-cta">
+          <a href="#quickstart" class="btn">paddle out — try it in 2 minutes</a>
+          <a href="#loop" class="btn btn-ghost">watch the oracle loop</a>
+        </div>
+      </div>
+
+      <div class="term hero-term" aria-label="Dispatch cost estimator with assumed market rates">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+          <span class="term-title">llms-surf estimate — assumed rates, not a price list</span>
+        </div>
+        <div class="term-body cfg">
+          <div class="field">
+            <label for="sel-task">I want to ship:</label>
+            <select id="sel-task"></select>
+          </div>
+          <div class="field">
+            <label for="sel-budget">My budget is:</label>
+            <select id="sel-budget"></select>
+          </div>
+          <div class="field">
+            <label for="rng-week">tasks / week: <output id="out-week" for="rng-week">60</output></label>
+            <input type="range" id="rng-week" min="1" max="500" value="60" step="1">
+          </div>
+          <pre class="estimate" id="estimate" aria-live="polite"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+  <section class="section reveal" id="loop">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// live oracle loop</span>
+        <h2>fail → feedback → fix → green</h2>
+        <p>One ring of the dispatcher, replayed client-side as a demo of the shape — not a recorded session. The oracle runs the same command twice: once to reject, once to accept.</p>
+      </div>
+      <div class="term loop-term">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+          <span class="term-title">demo ring · spec/migrate-lib_x-to-lib_y.md</span>
+        </div>
+        <div class="term-body loop-body" id="loop-body"></div>
+      </div>
+      <p class="caption">Failure becomes structured feedback. Victory is a green exit code — never a model's opinion of itself.</p>
+    </div>
+  </section>
+
+  <section class="stats reveal" id="stats" aria-label="The ledger">
+    <div class="wrap">
+      <div class="stats-grid" id="stats-grid"></div>
+      <p class="stats-src">every number above is counted from this git tree by tests/test-site-honesty.sh — nothing is decorative.</p>
+    </div>
+  </section>
+
+  <section class="statement nob reveal">
+    <div class="wrap">
+      <p class="statement-kicker">$ cat /etc/llms-surf/mission</p>
+      <p class="statement-text">This isn't another orchestrator. It's the operating system for honest AI work.</p>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+  <section class="section reveal" id="wipeouts">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// wipeouts → mechanisms</span>
+        <h2>Wipeouts. <span class="g" id="wipe-count">106</span> in this cut. Five that changed the code:</h2>
+        <p>Each card is a failure that actually happened, and the code that now makes it structurally impossible. No prompt engineering in the enforcement path.</p>
+      </div>
+      <div class="mech-grid" id="mech-grid"></div>
+      <div class="cta-pair">
+        <a class="btn btn-ghost" href="incidents.html">open the ledger → incidents/</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section nob reveal" id="cloud">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker kicker-cyan">// llms.surf swell</span>
+        <h2 class="h2-long">Hosted inference is not live. No invented $/M. We say so.</h2>
+        <p>The table stays empty until a cell is measured on our rig and signed. Compatibility of a model with <em>your</em> machine is a different product.</p>
+      </div>
+
+      <ul class="legend" id="legend"></ul>
+
+      <div class="table-wrap">
+        <table id="cloud-table">
+          <thead>
+            <tr>
+              <th scope="col">model</th>
+              <th scope="col">quant</th>
+              <th scope="col" class="num">tps on our rig</th>
+              <th scope="col" class="num">cloud $/M out</th>
+              <th scope="col" class="num">market $/M out</th>
+              <th scope="col">tier</th>
+            </tr>
+          </thead>
+          <tbody id="cloud-body"></tbody>
+        </table>
+      </div>
+
+      <div class="fit" id="fit-card" aria-live="polite"></div>
+
+      <div class="cta-pair">
+        <a class="btn" href="#quickstart">paddle out — run local</a>
+        <a class="btn btn-ghost" href="https://bestmodel.run" rel="noopener">does it fit your machine? → bestmodel.run</a>
+      </div>
+      <p class="cross-sell">Wondering if a model runs on your own machine? <a href="https://bestmodel.run" rel="noopener">bestmodel.run</a> answers that with measured cells. If it doesn't — wait for Swell; we will not invent a price.</p>
+
+      <h3 class="tiers-head">// pick your break — four tiers, one dispatcher</h3>
+      <div class="tiers" id="tiers"></div>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+  <section class="section reveal" id="adapters">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// adapters — the lineup is in this repo</span>
+        <h2>plugs into the CLI you already run</h2>
+        <p>The dispatcher sits between your agent CLI and the models. One adapter, one YAML. Eight adapters plus a stub ship in this cut.</p>
+      </div>
+      <div class="chips" id="chips-row"></div>
+    </div>
+  </section>
+
+  <section class="section reveal" id="quickstart">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// paddle out</span>
+        <h2>try it in 2 minutes — no API key</h2>
+        <p>Clone, point the stub runner, start. That's the whole install. Frontier keys are only added when a task earns them.</p>
+      </div>
+      <div class="term qs-term">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+          <span class="term-title">~/src</span>
+          <button class="copy-btn" id="copy-btn" type="button">copy</button>
+        </div>
+        <pre class="term-body qs" id="qs"></pre>
+      </div>
+      <div class="cta-pair">
+        <a class="btn btn-ghost" href="readme.html">read the README</a>
+        <a class="btn btn-ghost" href="v4-plan.html">read the sea → docs/v4-plan.md</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section nob reveal" id="wall">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// the wall</span>
+        <h2>rules that run as code</h2>
+      </div>
+      <div class="wall-grid" id="wall-grid"></div>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a class="logo" href="#top" aria-label="llms.surf — back to top">
+        <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+        <span class="logo-word">llms.surf</span>
+      </a>
+      <p class="foot-meta">formerly Oracfit · Lineup: this repo (proprietary — see LICENSE) · Swell &amp; Saquarema: not live</p>
+      <p class="foot-tag">Every failure becomes an incident; every incident becomes a mechanism. <span class="g" id="foot-count"></span> in this cut.</p>
+      <p class="foot-surf">Built in Saquarema, Brazil — where you never paddle on a guess. Neither do we.</p>
+    </div>
+    <nav class="foot-links" aria-label="Project links">
+      <a href="readme.html">README</a>
+      <a href="incidents.html">incidents/</a>
+      <a href="v4-plan.html">docs/v4-plan.md</a>
+      <a href="https://github.com/carl0sfelipe/llms.surf">github</a>
+      <a href="https://bestmodel.run" rel="noopener">bestmodel.run</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>

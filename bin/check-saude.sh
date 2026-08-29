@@ -44,6 +44,7 @@ checar "sem dívida de incidente"          bash bin/incident.sh audit
 # superfície exportável sem telefone/e-mail de terceiro/caminho de máquina —
 # incidents/2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego.md
 checar "superfície pública sem dado pessoal" bash bin/check-publico.sh --oficina
+checar "site público: números honestos"   bash tests/test-site-honesty.sh
 
 echo ""
 echo "── Sintaxe ───────────────────────────────────────────"
