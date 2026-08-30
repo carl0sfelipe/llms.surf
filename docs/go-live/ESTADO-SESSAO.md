@@ -137,8 +137,11 @@
 ## DIALS PARCIAIS DO DONO (2026-08-31)
 
 - Naming do programa de pontos do llms.surf: **"The Lineup"** (aprovado).
-- Tiers: linha sarcástica de **"The Haul" até "The Legend"** — BLOQUEADOS
-  (dono fecha depois).
+- Tiers: **de "Haole" até "The Legend"** — BLOQUEADOS no meio (dono fecha
+  depois). CORREÇÃO do dono (2026-08-31): é HAOLE — o outsider havaiano
+  que chega sem conhecer as regras do surf; a jornada da fila é haole →
+  legend, e a moeda é contribuição. Tiers do meio: com o Fable na copy
+  (sementes, não decisão: Grom → Local → ...).
 - **bestmodel terá gamificação PRÓPRIA, profissional** (menos sarcástica) —
   desenho/nome separados, depois.
 - **Copy do The Lineup nos sites: BLOQUEADA para modelos flash** — dono
