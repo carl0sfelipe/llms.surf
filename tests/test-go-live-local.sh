@@ -40,13 +40,31 @@ for spec in "$ROOT"/docs/go-live/specs/S*.md; do
   fi
 done
 
-echo "=== S1..S6: os seis oráculos de 1 linha estão verdes no disco ==="
-for spec in "$ROOT"/docs/go-live/specs/S*.md; do
+# Specs congeladas (S7, S9 — dogfood: oráculo vermelho é o estado CORRETO
+# até implementar; ao implementar, mova para IMPLEMENTED). Ver
+# docs/go-live/RECONCILIACAO-AS-BUILT.md.
+IMPLEMENTED_SPECS="S1-promessa-2min S2-aliases-surf S3-ficha-syntax-custom S4-mode-share-add S5-god-modes-tokens S6-higiene-corte S8-owner-question"
+FROZEN_SPECS="S7-single-flight-status S9-ntfy-run-notify"
+
+echo "=== stories implementadas: oráculos VERDES no disco ==="
+for nome in $IMPLEMENTED_SPECS; do
+  spec="$ROOT/docs/go-live/specs/${nome}.md"
   cmd="$(oracle_of "$spec")"
   if [ -n "$cmd" ] && eval "$cmd" >/dev/null 2>&1; then
-    ok "oracle verde: $(basename "$spec")"
+    ok "oracle verde: $nome"
   else
-    not "oracle vermelho: $(basename "$spec")"
+    not "oracle vermelho: $nome (implementada — vermelho é regressão)"
+  fi
+done
+
+echo "=== stories congeladas: oráculos VERMELHOS até implementar (regra 53) ==="
+for nome in $FROZEN_SPECS; do
+  spec="$ROOT/docs/go-live/specs/${nome}.md"
+  cmd="$(oracle_of "$spec")"
+  if [ -n "$cmd" ] && ! eval "$cmd" >/dev/null 2>&1; then
+    ok "congelada vermelha (correto): $nome"
+  else
+    not "congelada verde ANTES da implementação: $nome — spec mentindo ou implementada sem atualizar o gate"
   fi
 done
 
