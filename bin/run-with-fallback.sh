@@ -33,7 +33,13 @@ if [[ "$MODEL" == tier:* ]]; then
   # O loop de baixo continua sendo quem pula morto (id_status) e quem desvia
   # em rate limit/saldo real (exit 2/4 → usage-hub), que é o desvio
   # dirigido por evento — a copy pública NUNCA diz "quota-aware" (R3).
-  CADEIA=$(REG="$REGISTRY" MODEL="$MODEL" ROOT="$REPO_ROOT" python3 -c '
+  #
+  # E5-M5/D4: entrada keyless=false só entra se o provider tem credencial em
+  # ARQUIVO (auth.json / opencode.json via lib-free-credentials — leitora
+  # única). Env herdada NUNCA é consultada: é o vetor do incidente E5.
+  # shellcheck source=lib-free-credentials.sh
+  source "$REPO_ROOT/bin/lib-free-credentials.sh"
+  CHAIN_META=$(REG="$REGISTRY" MODEL="$MODEL" ROOT="$REPO_ROOT" CATALOG="${FREE_CATALOG:-$REPO_ROOT/data/free-catalog.json}" python3 -c '
 import json, os, subprocess, sys
 out = subprocess.run(
     [sys.executable, os.environ["ROOT"] + "/bin/lib-oracfit-mode-loader.py",
@@ -49,9 +55,32 @@ try:
                 for m in json.load(open(os.environ["REG"]))["models"]}
 except Exception:
     statuses = {}
+meta = {}
+try:
+    for m in json.load(open(os.environ["CATALOG"]))["models"]:
+        meta[m.get("ref", "")] = (m.get("provider") or "", bool(m.get("keyless")))
+except Exception:
+    pass
 for r in refs:
-    print(r + "\t" + statuses.get(r, ""))
+    prov, keyless = meta.get(r, ("", True))
+    print("\t".join((r, statuses.get(r, ""), prov, "1" if keyless else "0")))
 ') || { echo "✖ cadeia do $MODEL vazia — nada despachado" >&2; exit 2; }
+
+  CADEIA=""
+  while IFS="$(printf '\t')" read -r REF ST PROVIDER KEYLESS; do
+    [ -n "$REF" ] || continue
+    if [ "$KEYLESS" != "1" ] && [ -n "$PROVIDER" ]; then
+      if ! free_cred_has_provider "$PROVIDER"; then
+        echo "  ↳ pulando $REF — provider '$PROVIDER' sem credencial em arquivo (E5-M5: env herdada não conta)" >&2
+        continue
+      fi
+    fi
+    CADEIA+="${REF}"$'\t'"${ST}"$'\n'
+  done <<< "$CHAIN_META"
+  if [ -z "$CADEIA" ]; then
+    echo "✖ cadeia do $MODEL vazia após gate de credencial — nada despachado (configura a chave do provider em 'opencode auth login' ou use a perna keyless)" >&2
+    exit 2
+  fi
 else
   CADEIA=$(MODEL="$MODEL" REG="$REGISTRY" python3 -c '
 import json, os, sys
