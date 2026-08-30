@@ -187,6 +187,20 @@
   denúncia de run irreal (mecânica fake pego, 5 pts); (3) rebuild da
   imagem prod-api (S23/S27 dentro); (4) B2.
 
+## ESCALADA-4 entregue pelo Fable (2026-08-31) — dials fechados por ele (veto barato)
+
+- docs/go-live/PROMPT-CLAUDE-DESIGN-2-SITES.md: prompt-mestre (EN), 4
+  rodadas com auto-auditoria, não-negociáveis testáveis (mobile-first sem
+  gating min-width; régua de honestidade com whitelist de fatos medidos;
+  HTML/CSS/JS puro, paths relativos no Pages, cleanUrls no Vercel).
+- Dials fechados por ele (dono pode trocar barato): jornada do Lineup
+  **Haole → Grom → Local → The Legend**, First Wave = PRÊMIO (top 25 por
+  pontos, política D6/D9), não tier; bestmodel = **Track Record**,
+  níveis Contributor → Replicator → Auditor (zero léxico de surf).
+- Verificações dele: min-width 1024 confirmado nos 3 protótipos;
+  gen-seo.mjs gera m/, p/ e sitemap.xml (proibido colar por cima);
+  âncoras de copy extraídas verbatim.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
