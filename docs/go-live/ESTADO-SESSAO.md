@@ -370,3 +370,26 @@ Veredito do Fable em docs/go-live/DECISIONS-E6-FABLE-FECHAMENTO.md
 4. Colar copies nos sites (docs/go-live/COPY-*.md e LAUNCH-POST-*.md já
    verbatim do veredito; dial já commitado no mesmo espírito anti-drift).
 5. "dns setado" → Phase A com cronômetro.
+
+## S29 — REDE DE CAPTURA (2026-08-31, noite): o produto é a rede
+
+- Zip do Claude Design (round 1) AVALIADO com a régua: non-negotiables
+  quase todos passam (mobile-first ✓, marca ✓, dados 100% de JSON ✓,
+  modal de denúncia ✓), mas o dono REPROVOU como substituição (o skin
+  dele é melhor — narrativa em cenas vs formulário) e o zip veio com
+  3 defeitos (contribuidor falso @exemplo, fontes ausentes, metade
+  llms.surf com dial VELHO). Zip = referência de mecanismo, não substituto.
+- **S29 API NO PROD** (bestmodel cc213c1): `run_claim.source_url` — o
+  link do reddit/twitter/github onde o run foi achado (migration 0016
+  aplicada no gate e no prod, imagem refeita 3ª vez; validação
+  http(s) 422; testes 16/16; GATE PASS).
+- **PROMPT round 2** (llms.surf f6329d6):
+  docs/go-live/PROMPT-CLAUDE-DESIGN-S29-REDE-DE-CAPTURA.md — as 4
+  páginas da rede (Mural /claims, detail /claim, funnel /submit,
+  perfil /u) com design law = site do dono (theme.css anexo, cenas),
+  UX LAW (intent × máquina × quantização NUNCA no mesmo controle — a
+  reclamação do dono virou cláusula), contratos /v1 verbatim
+  (source_url herói da Mural), estados vazios obrigatórios (prod tem
+  ZERO contribuidores hoje — nunca inventar comunidade).
+- Dev 8088 = protótipo do dono INTACTO (o melhor skin); zip servido em
+  8087 para comparação.
