@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="26 64 158 58" role="img" aria-label="llms.surf">
+  <path d="M32 116 C48 116 58 113 70 102 C82 91 92 76 106 72.5 C118 69.5 128 76 129 85 C129.6 90.5 127 95 123 96.5"
+        fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+  <path d="M124.5 112.5 C112 117 99.5 110 99.5 99.5 C99.5 89.5 107.5 83 115.5 84.2 C120.5 85 123.5 88 124.6 91.5"
+        fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="135.5" cy="110.5" r="4.6" fill="#3FB950"/>
+  <path d="M145.5 103.5 L153.5 112 L175.5 88.5"
+        fill="none" stroke="#3FB950" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLMs.surf — agent-first local dispatcher</title>
+<meta name="description" content="Local dispatcher with a mechanical oracle. Agent-first: fetch llms.txt, or open ?as=agent. Humans get the visual tour at ?as=human.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0E14">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt — agent surface">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LLMs.surf">
+<meta property="og:title" content="LLMs.surf — agent-first local dispatcher">
+<meta property="og:description" content="One local dispatcher and a mechanical oracle. Agents read llms.txt. Humans get the tour. Nothing ships on a model's word.">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LLMs.surf — agent-first local dispatcher">
+<meta name="twitter:description" content="Nothing ships on a model's word — not even the judge's.">
+<meta name="twitter:image" content="og.png">
+<script src="journey.js" data-key="llms.surf.journey"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-700.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="ls-mark" viewBox="26 64 158 58">
+      <path d="M32 116 C48 116 58 113 70 102 C82 91 92 76 106 72.5 C118 69.5 128 76 129 85 C129.6 90.5 127 95 123 96.5"
+            fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <path d="M124.5 112.5 C112 117 99.5 110 99.5 99.5 C99.5 89.5 107.5 83 115.5 84.2 C120.5 85 123.5 88 124.6 91.5"
+            fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="135.5" cy="110.5" r="4.6" fill="#3FB950"/>
+      <path d="M145.5 103.5 L153.5 112 L175.5 88.5"
+            fill="none" stroke="#3FB950" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#main">skip to content</a>
+<noscript class="noscript">JS off. Humans: the tour is below. Agents: <a href="llms.txt">llms.txt</a>.</noscript>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="index.html" aria-label="llms.surf — home">
+      <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+      <span class="logo-word">llms.surf<span class="caret">_</span></span>
+    </a>
+    <nav class="nav-links for-human" aria-label="Human tour">
+      <a href="#quickstart">paddle out</a>
+      <a href="#loop">oracle loop</a>
+      <a href="#wipeouts">wipeouts</a>
+      <a href="#adapters">adapters</a>
+      <a href="#tokens">tokens</a>
+    </nav>
+    <nav class="nav-links for-agent" aria-label="Agent surface">
+      <a href="#agent-install">install</a>
+      <a href="#agent-contract">contract</a>
+      <a href="#agent-files">files</a>
+      <a href="llms.txt">llms.txt</a>
+    </nav>
+    <div class="journey" data-journey-ui>
+      <span class="journey-kicker">who is reading</span>
+      <div class="journey-seg" role="group" aria-label="Choose human or agent journey">
+        <button type="button" class="journey-btn" data-as="human" aria-pressed="false">human</button>
+        <button type="button" class="journey-btn" data-as="agent" aria-pressed="false">agent</button>
+      </div>
+      <a class="journey-llms" href="llms.txt">llms.txt</a>
+    </div>
+    <a class="btn btn-sm for-human" href="#quickstart">paddle out</a>
+    <a class="btn btn-sm for-agent" href="#agent-install">install</a>
+  </div>
+</header>
+
+<div class="for-ask" id="ask">
+  <div class="wrap ask-wrap">
+    <p class="ask-kicker">// agent-first · we did not guess</p>
+    <h1 class="ask-h">Who is reading?</h1>
+    <p class="ask-lede">Not enough deterministic signal to tell a human browser from an agent. URL, a saved choice, a known agent user-agent, or a chat-product referrer would have been enough. None of those fired — so you pick.</p>
+    <p class="ask-how js-journey-how"></p>
+    <div class="ask-doors">
+      <button type="button" class="ask-door" data-as="human">
+        <span class="ask-door-k">for humans</span>
+        <span class="ask-door-t">paddle out</span>
+        <span class="ask-door-d">clone in 2 minutes — no API key. then the tour.</span>
+      </button>
+      <button type="button" class="ask-door ask-door-agent" data-as="agent">
+        <span class="ask-door-k">for agents</span>
+        <span class="ask-door-t">install, then the contract</span>
+        <span class="ask-door-d">clone, oracle rules, file map. same facts as <code>llms.txt</code>.</span>
+      </button>
+    </div>
+    <p class="ask-foot">This control stays in the header. Wrong door: switch. Agents that skip HTML: <a href="llms.txt">llms.txt</a>.</p>
+  </div>
+</div>
+
+<main id="main" class="for-human">
+
+  <section class="hero" id="top">
+    <svg id="bathy" class="bathy" aria-hidden="true"></svg>
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">$ llms-surf --version &nbsp;·&nbsp; local dispatch orchestrator &nbsp;·&nbsp; formerly Oracfit &nbsp;·&nbsp; v3.5.0</p>
+        <p class="tagline">// paddle out first. 2 minutes. no API key.</p>
+        <h1>Your frontier plan thinks.<br><span class="g">Free models sweat.</span></h1>
+        <p class="h2sub">Nothing ships on a model's word — not even the judge's.</p>
+        <p class="lede">Clone, point the stub runner, start. That's the whole install. Frontier keys are only added when a task earns them. Then a mechanical oracle proves the work on disk.</p>
+        <div class="hero-cta">
+          <a href="#loop" class="btn btn-ghost">already cloned? watch the loop</a>
+        </div>
+      </div>
+
+      <div class="term hero-term qs-term" id="quickstart" aria-label="Clone and start with the stub runner — no API key">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+          <span class="term-title">~/src · 5 lines · no API key</span>
+          <button class="copy-btn js-copy-qs" type="button">copy</button>
+        </div>
+        <pre class="term-body qs js-qs"></pre>
+        <p class="hero-qs-foot">then the tour — oracle loop, wipeouts, adapters. assumed-rate math is further down, optional.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+  <section class="section reveal" id="loop">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// live oracle loop</span>
+        <h2>fail → feedback → fix → green</h2>
+        <p>One ring of the dispatcher, replayed client-side as a demo of the shape — not a recorded session. The oracle runs the same command twice: once to reject, once to accept.</p>
+      </div>
+      <div class="term loop-term">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+          <span class="term-title">demo ring · spec/migrate-lib_x-to-lib_y.md</span>
+        </div>
+        <div class="term-body loop-body" id="loop-body"></div>
+      </div>
+      <p class="caption">Failure becomes structured feedback. Victory is a green exit code — never a model's opinion of itself.</p>
+    </div>
+  </section>
+
+  <section class="stats reveal" id="stats" aria-label="The ledger">
+    <div class="wrap">
+      <div class="stats-grid" id="stats-grid"></div>
+      <p class="stats-src">every number above is counted from this git tree by tests/test-site-honesty.sh — nothing is decorative.</p>
+    </div>
+  </section>
+
+  <section class="statement nob reveal">
+    <div class="wrap">
+      <p class="statement-kicker">$ cat /etc/llms-surf/mission</p>
+      <p class="statement-text">This isn't another orchestrator. It's the operating system for honest AI work.</p>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+  <section class="section reveal" id="wipeouts">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// wipeouts → mechanisms</span>
+        <h2>Wipeouts. <span class="g" id="wipe-count">106</span> in this cut. Five that changed the code:</h2>
+        <p>Each card is a failure that actually happened, and the code that now makes it structurally impossible. No prompt engineering in the enforcement path.</p>
+      </div>
+      <div class="mech-grid" id="mech-grid"></div>
+      <div class="cta-pair">
+        <a class="btn btn-ghost" href="incidents.html">open the ledger → incidents/</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+  <section class="section reveal" id="adapters">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// adapters — the lineup is in this repo</span>
+        <h2>plugs into the CLI you already run</h2>
+        <p>The dispatcher sits between your agent CLI and the models. One adapter, one YAML. Eight adapters plus a stub ship in this cut.</p>
+      </div>
+      <div class="chips js-chips"></div>
+    </div>
+  </section>
+
+  <section class="section reveal" id="assumed-rates">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// assumed rates — optional</span>
+        <h2>what the 1%/99% split costs if public-API ballparks hold</h2>
+        <p>Not a price list. Assumed market rates, labeled as such. Clone first — this math is for after you have the dispatcher running.</p>
+      </div>
+      <div class="term" aria-label="Dispatch cost estimator with assumed market rates">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+          <span class="term-title">llms-surf estimate — assumed rates, not a price list</span>
+        </div>
+        <div class="term-body cfg">
+          <div class="field">
+            <label for="sel-task">I want to ship:</label>
+            <select id="sel-task"></select>
+          </div>
+          <div class="field">
+            <label for="sel-budget">My budget is:</label>
+            <select id="sel-budget"></select>
+          </div>
+          <div class="field">
+            <label for="rng-week">tasks / week: <output id="out-week" for="rng-week">60</output></label>
+            <input type="range" id="rng-week" min="1" max="500" value="60" step="1">
+          </div>
+          <pre class="estimate" id="estimate" aria-live="polite"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section nob reveal" id="tokens">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// tokens at cost — not yet, and honestly so</span>
+        <h2>no tokens for sale. a waitlist exists; <span class="g">a number doesn't.</span></h2>
+        <p>Someday: dispatch credits at cost, for people who'd rather not hold their own keys. The unlock is mechanical, not marketing: demand read from the waitlist itself and throughput measured in this repo's ledger — numbers counted from the tree, the same way every stat on this page is. Until both measurements exist, there is nothing to buy and no price to show. That's the whole section.</p>
+      </div>
+      <div class="cta-pair">
+        <a class="btn btn-ghost" href="https://github.com/carl0sfelipe/llms.surf/issues/new?template=tokens-waitlist.md">join the waitlist (GitHub issue) →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section nob reveal" id="wall">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// the wall</span>
+        <h2>rules that run as code</h2>
+      </div>
+      <div class="wall-grid" id="wall-grid"></div>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+</main>
+
+<main class="for-agent agent-page" id="agent" aria-label="Agent surface">
+  <div class="wrap agent-wrap">
+    <p class="agent-kicker">// agent surface · twin of <a href="llms.txt">llms.txt</a> · <span class="js-journey-how"></span></p>
+    <h1>llms.surf</h1>
+    <p class="agent-lede">Local dispatcher. Mechanical oracle. Formerly Oracfit. Public cut <span data-stat="version">3.5.0</span>. LICENSE is proprietary. Nothing ships on a model's word — not even the judge's.</p>
+
+    <section id="agent-install">
+      <h2>// install — no API key</h2>
+      <div class="term qs-term">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+          <span class="term-title">clone · stub runner · start</span>
+          <button class="copy-btn js-copy-qs" type="button">copy</button>
+        </div>
+        <pre class="term-body qs js-qs"></pre>
+      </div>
+      <p>Then <code>source adapters/&lt;name&gt;/env.sh</code> for a real CLI. Dispatch: <code>bin/llms-surf run normal spec.md my-task</code>.</p>
+    </section>
+
+    <section id="agent-contract">
+      <h2>// contract</h2>
+      <ul class="agent-list">
+        <li>Oracle is a shell command. It fails before the work exists and passes after.</li>
+        <li>Oracle is frozen by sha256 at ring open. Goalposts do not move mid-run.</li>
+        <li>Gates read artifact <b>content</b> on disk. Empty artifact = exit 1. The model's report is irrelevant.</li>
+        <li>Watchdog kills real silence. Timeout kills the process tree.</li>
+        <li>Critic-guard: first write from a “read-only” critic kills the dispatch, exit 5, incident filed.</li>
+        <li>Victory is exit 0. “I tried 8 times” is not victory.</li>
+        <li>There is no hosted inference product here. Do not invent $/M or tok/s.</li>
+      </ul>
+    </section>
+
+    <section id="agent-counts">
+      <h2>// counts from this git tree</h2>
+      <p class="agent-counts">
+        <span><b data-stat="incidents">106</b> incidents</span>
+        <span><b data-stat="models">69</b> models</span>
+        <span><b data-stat="modes">20</b> modes</span>
+        <span><b data-stat="adapters">8</b> adapters + <b data-stat="adaptersStub">1</b> stub</span>
+        <span><b data-stat="suites">34</b> test suites</span>
+        <span>v<b data-stat="version">3.5.0</b></span>
+      </p>
+      <p class="agent-note">Gated by tests/test-site-honesty.sh. A decorative count is a bug.</p>
+    </section>
+
+    <section id="agent-adapters">
+      <h2>// adapters in this cut</h2>
+      <div class="chips js-chips"></div>
+    </section>
+
+    <section id="agent-files">
+      <h2>// read next</h2>
+      <ul class="agent-list">
+        <li><a href="https://github.com/carl0sfelipe/llms.surf/blob/main/SKILL.md">SKILL.md</a> — operating manual after clone</li>
+        <li><a href="https://github.com/carl0sfelipe/llms.surf/blob/main/fluxos/dispatch/SKILL.md">fluxos/dispatch/SKILL.md</a> — how to dispatch</li>
+        <li><a href="incidents.html">incidents/</a> — the ledger</li>
+        <li><a href="readme.html">readme.html</a> — human README, same facts</li>
+        <li><a href="https://github.com/carl0sfelipe/llms.surf">github.com/carl0sfelipe/llms.surf</a></li>
+      </ul>
+    </section>
+
+    <section id="agent-dont">
+      <h2>// do not</h2>
+      <ul class="agent-list">
+        <li>Invent a number that is not in the tree.</li>
+        <li>Skip the oracle. Skip critic-guard. Edit the oracle mid-ring.</li>
+        <li>Write if you were sent as a read-only critic.</li>
+        <li>Call this open source. See LICENSE.</li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<footer class="footer for-settled">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a class="logo" href="index.html" aria-label="llms.surf — back to top">
+        <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+        <span class="logo-word">llms.surf</span>
+      </a>
+      <p class="foot-meta">formerly Oracfit · this repo · proprietary — see LICENSE · agent-first</p>
+      <p class="foot-tag">Every failure becomes an incident; every incident becomes a mechanism. <span class="g" id="foot-count"></span> in this cut.</p>
+      <p class="foot-surf">Built in Saquarema, Brazil — where you never paddle on a guess. Neither do we.</p>
+    </div>
+    <nav class="foot-links" aria-label="Project links">
+      <a href="llms.txt">llms.txt</a>
+      <a href="readme.html">README</a>
+      <a href="incidents.html">incidents/</a>
+      <a href="v4-plan.html">docs/v4-plan.md</a>
+      <a href="https://github.com/carl0sfelipe/llms.surf">github</a>
+      <a href="https://bestmodel.run" rel="noopener">bestmodel.run</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>

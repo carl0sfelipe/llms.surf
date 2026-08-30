@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>docs/v4-plan.md — llms.surf</title>
+<meta name="description" content="llms.surf v4 plan: the 4-stage pipeline that ships in this cut.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0E14">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt — agent surface">
+<script src="journey.js" data-key="llms.surf.journey"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-600.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="ls-mark" viewBox="26 64 158 58">
+      <path d="M32 116 C48 116 58 113 70 102 C82 91 92 76 106 72.5 C118 69.5 128 76 129 85 C129.6 90.5 127 95 123 96.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <path d="M124.5 112.5 C112 117 99.5 110 99.5 99.5 C99.5 89.5 107.5 83 115.5 84.2 C120.5 85 123.5 88 124.6 91.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="135.5" cy="110.5" r="4.6" fill="#3FB950"/>
+      <path d="M145.5 103.5 L153.5 112 L175.5 88.5" fill="none" stroke="#3FB950" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="index.html" aria-label="llms.surf — home">
+      <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+      <span class="logo-word">llms.surf</span>
+    </a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="index.html#adapters">adapters</a>
+      <a href="readme.html">README</a>
+      <a href="incidents.html">incidents/</a>
+    </nav>
+    <div class="journey" data-journey-ui>
+      <span class="journey-kicker">who is reading</span>
+      <div class="journey-seg" role="group" aria-label="Choose human or agent journey">
+        <button type="button" class="journey-btn" data-as="human" aria-pressed="false">human</button>
+        <button type="button" class="journey-btn" data-as="agent" aria-pressed="false">agent</button>
+      </div>
+      <a class="journey-llms" href="llms.txt">llms.txt</a>
+    </div>
+    <a class="btn btn-sm" href="index.html#quickstart">paddle out</a>
+  </div>
+</header>
+
+<main class="doc">
+  <p class="doc-crumb"><a href="index.html">llms.surf</a> / docs / v4-plan.md</p>
+  <h1>v4 plan — the pipeline</h1>
+  <p class="doc-sub">what ships in this cut. not a product catalog.</p>
+
+  <h2>// the pipeline today</h2>
+  <p>One 4-stage pipeline ships in this cut: <b>spec open → dispatch → oracle → incident</b>. God modes, rings, critic-guard, watchdog, and the usage hub are in the tree.</p>
+  <ul>
+    <li><b>stage 1 — spec open:</b> the oracle is frozen by sha256 at ring open. Goalposts don't move.</li>
+    <li><b>stage 2 — dispatch:</b> 1% frontier thinking / 99% cheap sweat, picked per task.</li>
+    <li><b>stage 3 — oracle:</b> gates read artifact content on disk. <code>exit 0</code> is the only victory.</li>
+    <li><b>stage 4 — incident:</b> every failure becomes an incident; every incident becomes a mechanism.</li>
+  </ul>
+
+  <h2>// the discipline</h2>
+  <ul>
+    <li>A number on a public page has to match the tree, or it does not ship.</li>
+    <li>Victory is a green oracle — never a model's opinion of itself.</li>
+    <li>A rule without a mechanism is debt, not protection.</li>
+  </ul>
+
+  <div class="doc-links">
+    <a class="btn btn-ghost" href="index.html">← front page</a>
+    <a class="btn btn-ghost" href="readme.html">README</a>
+    <a class="btn btn-ghost" href="incidents.html">incidents/</a>
+    <a class="btn btn-ghost" href="https://github.com/carl0sfelipe/llms.surf">github</a>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a class="logo" href="index.html" aria-label="llms.surf — home">
+        <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+        <span class="logo-word">llms.surf</span>
+      </a>
+      <p class="foot-surf">Built in Saquarema, Brazil — where you never paddle on a guess. Neither do we.</p>
+    </div>
+    <nav class="foot-links" aria-label="Project links">
+      <a href="llms.txt">llms.txt</a>
+      <a href="readme.html">README</a>
+      <a href="incidents.html">incidents/</a>
+      <a href="v4-plan.html">docs/v4-plan.md</a>
+      <a href="https://github.com/carl0sfelipe/llms.surf">github</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>README — llms.surf</title>
+<meta name="description" content="llms.surf README: what it is, the 1%/99% dispatch rule, the mechanical oracle, quickstart, and adapters.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0E14">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt — agent surface">
+<script src="journey.js" data-key="llms.surf.journey"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-600.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="ls-mark" viewBox="26 64 158 58">
+      <path d="M32 116 C48 116 58 113 70 102 C82 91 92 76 106 72.5 C118 69.5 128 76 129 85 C129.6 90.5 127 95 123 96.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <path d="M124.5 112.5 C112 117 99.5 110 99.5 99.5 C99.5 89.5 107.5 83 115.5 84.2 C120.5 85 123.5 88 124.6 91.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="135.5" cy="110.5" r="4.6" fill="#3FB950"/>
+      <path d="M145.5 103.5 L153.5 112 L175.5 88.5" fill="none" stroke="#3FB950" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="index.html" aria-label="llms.surf — home">
+      <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+      <span class="logo-word">llms.surf</span>
+    </a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="index.html#loop">oracle loop</a>
+      <a href="incidents.html">incidents/</a>
+      <a href="v4-plan.html">docs/v4-plan.md</a>
+    </nav>
+    <div class="journey" data-journey-ui>
+      <span class="journey-kicker">who is reading</span>
+      <div class="journey-seg" role="group" aria-label="Choose human or agent journey">
+        <button type="button" class="journey-btn" data-as="human" aria-pressed="false">human</button>
+        <button type="button" class="journey-btn" data-as="agent" aria-pressed="false">agent</button>
+      </div>
+      <a class="journey-llms" href="llms.txt">llms.txt</a>
+    </div>
+    <a class="btn btn-sm" href="index.html#quickstart">paddle out</a>
+  </div>
+</header>
+
+<main class="doc">
+  <p class="doc-crumb"><a href="index.html">llms.surf</a> / README</p>
+  <h1>README — llms.surf</h1>
+  <p class="doc-sub">local AI dispatch orchestrator · formerly Oracfit · public cut v3.5.0 · built in Saquarema, Brazil</p>
+
+  <h2>// what it is</h2>
+  <p>llms.surf is a <b>local dispatcher</b> that sits between your agent CLI and the models. It sends the <b>1%</b> of tasks that need a brain to your expensive frontier model and the other <b>99%</b> to cheap local ones. No result is accepted until a <b>mechanical oracle</b> — a real command, run on disk — proves it.</p>
+  <p>The rule in one line: <b>nothing ships on a model's word — not even the judge's.</b></p>
+
+  <h2>// quickstart — 2 minutes, no API key</h2>
+  <div class="term qs-term">
+    <div class="term-bar">
+      <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+      <span class="term-title">~/src</span>
+          <button class="copy-btn js-copy-qs" type="button">copy</button>
+        </div>
+        <pre class="term-body qs js-qs"></pre>
+  </div>
+  <p>The dispatcher boots local against the stub runner. Frontier keys are only added when a task earns them.</p>
+
+  <h2>// the pipeline</h2>
+  <ul>
+    <li><b>stage 1 — spec open:</b> the oracle is frozen by sha256 at ring open. Goalposts don't move.</li>
+    <li><b>stage 2 — dispatch:</b> 1% frontier thinking / 99% cheap sweat, picked per task.</li>
+    <li><b>stage 3 — oracle:</b> gates read artifact content on disk. <code>exit 0</code> is the only victory.</li>
+    <li><b>stage 4 — incident:</b> every failure becomes an incident; every incident becomes a mechanism. <span id="wipe-count">106</span> in this cut.</li>
+  </ul>
+
+  <h2>// adapters — the lineup</h2>
+  <div class="chips js-chips"></div>
+  <p style="margin-top:14px">Eight adapters plus a stub ship in this repository. If your CLI speaks text, it can speak llms.surf.</p>
+
+  <h2>// this repo</h2>
+  <p>Clone and run. License is proprietary (see LICENSE) — not claimed as open source. If you own the GPUs, the 99% is local and tokens on that path cost ~$0.</p>
+
+  <div class="doc-links">
+    <a class="btn btn-ghost" href="index.html">← front page</a>
+    <a class="btn btn-ghost" href="incidents.html">incidents/</a>
+    <a class="btn btn-ghost" href="v4-plan.html">docs/v4-plan.md</a>
+    <a class="btn btn-ghost" href="https://github.com/carl0sfelipe/llms.surf">github</a>
+    <a class="btn btn-ghost" href="https://bestmodel.run" rel="noopener">bestmodel.run</a>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a class="logo" href="index.html" aria-label="llms.surf — home">
+        <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+        <span class="logo-word">llms.surf</span>
+      </a>
+      <p class="foot-surf">Built in Saquarema, Brazil — where you never paddle on a guess. Neither do we.</p>
+    </div>
+    <nav class="foot-links" aria-label="Project links">
+      <a href="llms.txt">llms.txt</a>
+      <a href="readme.html">README</a>
+      <a href="incidents.html">incidents/</a>
+      <a href="v4-plan.html">docs/v4-plan.md</a>
+      <a href="https://bestmodel.run" rel="noopener">bestmodel.run</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>
