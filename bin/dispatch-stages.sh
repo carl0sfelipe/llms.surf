@@ -68,6 +68,13 @@ fi
 
 ROOT="$(oracfit_resolve_root)" || exit 1
 export ORACFIT_ROOT="$ROOT"
+
+# S7 (regra 53, mecanismo 1): single-flight por workdir ANTES de qualquer
+# preflight/persistência (mesmo contrato do dispatch-mode.sh — lock em um
+# entrypoint só não sobreviveria ao exec do cmd_run). Lock: .dispatch/.run-lock.
+oracfit_run_lock_acquire
+lock_rc=$?
+[ "$lock_rc" -eq 0 ] || exit "$lock_rc"
 mode_yaml="$ORACFIT_WORKDIR/core/modes/${mode_id}.yaml"
 [ -f "$mode_yaml" ] || mode_yaml="$ROOT/core/modes/${mode_id}.yaml"
 [ -f "$mode_yaml" ] || { echo "ERROR: mode yaml missing: $mode_id" >&2; exit 3; }
@@ -165,9 +172,9 @@ oracfit_stages_emergency_epilogue() {
   echo "status: fail"
   return 0
 }
-trap 'oracfit_stages_emergency_epilogue' EXIT
-trap 'oracfit_stages_emergency_epilogue; exit 143' TERM
-trap 'oracfit_stages_emergency_epilogue; exit 130' INT
+trap 'oracfit_stages_emergency_epilogue; oracfit_run_lock_release' EXIT
+trap 'oracfit_stages_emergency_epilogue; oracfit_run_lock_release; exit 143' TERM
+trap 'oracfit_stages_emergency_epilogue; oracfit_run_lock_release; exit 130' INT
 
 on_fail="$(grep -E '^\s*on_fail:' "$mode_yaml" | head -1 | awk '{print $2}' || true)"
 on_fail="${on_fail:-halt}"
