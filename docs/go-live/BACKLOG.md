@@ -50,3 +50,22 @@
 
 *(novos itens: mesmo formato — status, gatilho medido, tensões, piso de
 segurança. Item sem gatilho é desejo, não backlog.)*
+
+---
+
+## B2 — dispatch passa `tier:*` cru ao runner (incidente 2026-08-30, sem promote)
+
+- **Status:** backlog · **Incidente:**
+  `incidents/2026-08-30-unlock-plan-passa-tier-ao-runner-sem-res.md`
+  (aberto, recorrível, halt pedido pelo dono — sem correção no turno).
+- **Sintoma medido:** `llms-surf run tow` (S25 do bestmodel) não rodou —
+  `dispatch-stages.sh` e `dispatch-mode.sh` passam `model_ref` cru
+  (`tier:cheap`, `tier:expensive`…) ao runner, que espera ID do registry.
+  O stub-proof do smoke já mostrava `model_id=tier:cheap` (sinal visível
+  desde a S1, ignorado porque stub não liga).
+- **Gatilho de prioridade:** qualquer dispatch com runner REAL em modo com
+  tiers (stub esconde; production expõe).
+- **Mecanismo proposto:** resolver tier→id no ENTRYPOINT (os dois), via
+  `lib-oracfit-mode-loader.py resolve-tier` (existe e não é chamado);
+  irredutível → exit 3 falha-fechada (contrato do runner: quem chama passa
+  id válido). Teste: dispatch stub com assert de id resolvido no proof.
