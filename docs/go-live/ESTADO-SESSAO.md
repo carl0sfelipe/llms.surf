@@ -32,24 +32,25 @@
   pra era agêntica; L01 consome como crate.
 - A2: híbrido — Ollama automático E llama.cpp manual.
 
-## EM VOO — scaffold do repo do otimizador (PRÓXIMO PASSO, não iniciado)
+## FEITO — scaffold do repo do otimizador (2026-08-30)
 
-- Nomes no crates.io (checados com UA correto): **argonaut OCUPADO**;
-  LIVRES: argos-opt, optik-rs, surfopt, goodhist, argminim. Nome final é do
-  dono; trabalhar com nome provisório marcado.
-- Plano v0 (desenho fechado na sessão): crate Rust com TPE-lite (split
-  good/bad por quantil γ, KDE por dimensão, n candidatos, argmax
-  log p_good/p_bad), dims contínua/inteira/categórica, RNG próprio PCG32
-  seedado (deps: só serde/serde_json), budget max_evals first-class,
-  TrialLog JSON resumível (estado sobrevive à sessão), CommandObjective =
-  objetivo como subprocesso cujo EXIT CODE é o oráculo (stdout parse f64;
-  não-zero = falha) — o DNA llms.surf portado pra otimização.
-- Entrega: spec S1 congelada ANTES do código (oracle: cargo test + demo
-  esfera com auto-assert de erro < limiar), README creditando argmin
-  (copythief ético), AGENTS.md, LICENSE PENDENTE DO DONO (proposta dual
-  MIT/Apache-2.0 como argmin). Local: ~/Work/<nome>. NÃO criar repo remoto
-  sem ordem.
-- L01 (bestmodel CLI v2) destravado depois disso (A1–A3 todas decididas).
+- Repo local: `~/Work/argos-opt` (main `0eb65bf`, 2 commits, tree limpa;
+  SEM remote — criação de repo remoto só com ordem do dono).
+- Nome PROVISÓRIO `argos-opt` (livre no crates.io junto com optik-rs,
+  surfopt, goodhist, argminim; argonaut ocupado). Licença PENDENTE
+  (proposta dual MIT/Apache-2.0); Cargo.toml com publish=false.
+- Disciplina respeitada: spec S1 congelada e commitada ANTES do código
+  (3aea764, check-spec verde, oráculo vermelho por design) → implementação
+  (0eb65bf, oráculo verde: suíte 23/23 + demo esfera com auto-assert).
+- 4 ajustes de algoritmo MEDIDOS registrados na spec (uniforme puro
+  4.6e-1 / n_startup=5 lock-in / sem piso de largura freeze terminal /
+  sem exclusão de repetidos re-propõe eterno). Curva esfera 3D seed 42:
+  60→3.6e-1, 120→3.7e-2, 300→2.6e-3; demo assera < 5.3e-3.
+- Contrato: CommandObjective (exit code = oráculo; imparsável = Broken
+  gritando), max_evals exato, TrialLog resumível, PCG32 próprio,
+  deps só serde/serde_json.
+- L01 (bestmodel CLI v2) destravado: consumir como crate quando o dono
+  bater o martelo de nome/licença.
 
 ## Fila de decisões do dono (pendentes)
 
