@@ -293,3 +293,12 @@ ORDEM DE IMPLEMENTAÇÃO (mim) — **CUMPRIDA 2026-08-31** (ver seção E5 FECHA
    para flash por decisão do dono).
 4. Claude Design: bestmodel-ONLY redesign → dono cola resultado.
 5. Botão de denúncia no front do bestmodel (chega com o redesign).
+
+## ESCALADA-6 PRONTA (f7296cd) — última chamada cara
+
+- docs/go-live/ESCALADA-6-FABLE-VALIDACAO-E-COPIA.md: validação E5+S28+B2
+  por bloco, 3 ratificações (D2 feed=provider JSON, allowlist, moderator),
+  decisões 4.1-4.6, e as COPIES destravadas (The Lineup, Track Record,
+  2 posts de lançamento + tabela falta-pra-lançar). Esqueleto de veredito
+  ingerível; checagens só locais; proibido rede/opencode models.
+  DONO: colar o arquivo no Fable (pull para 409879c antes).
