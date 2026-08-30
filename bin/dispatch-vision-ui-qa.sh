@@ -170,7 +170,8 @@ descrever() {
   esac
 
   local b64
-  b64=$(base64 -b 0 -i "$pequena")
+  # BSD base64: -b 0 -i file; GNU: sem -b (wrap 76) — stdin + tr é portátil
+  b64=$(base64 <"$pequena" | tr -d '\n')
   local req="$TMP_BASE/req_${idx}.json"
   jq -n --arg prompt "$PROMPT" --arg b64 "$b64" --arg model "$MODEL" '{
     model: $model,

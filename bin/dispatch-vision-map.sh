@@ -73,7 +73,8 @@ descrever_uma() {
   local pequena="$TMP_BASE/img_${idx}.jpg"
   sips -Z 768 "$foto" --out "$pequena" >/dev/null 2>&1 || return 1
   local b64 nome
-  b64=$(base64 -b 0 -i "$pequena")
+  # BSD base64: -b 0 -i file; GNU: sem -b (wrap 76) — stdin + tr é portátil
+  b64=$(base64 <"$pequena" | tr -d '\n')
   nome=$(basename "$foto")
   local req="$TMP_BASE/req_${idx}.json"
   # MONTA JSON COM jq -n (seguro contra escapes); data-url inline
