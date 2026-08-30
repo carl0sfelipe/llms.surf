@@ -89,6 +89,22 @@
   gamificação viral da whitelist (indique e suba, tiers, badges, neuro)
   + plano dos 2 go-lives baratos. Colar no Fable JUNTO com a ESCALADA-2.
 
+## ESCALADA-3 do Fable — ingerida no canônico (2026-08-30, noite)
+
+- main `53aba44`: PLANO-LINEUP-2-GOLIVES.md ("The Lineup") +
+  DECISIONS-E2-MODELO-POR-TASK.md + specs S10-S12 congeladas
+  (check-spec 3/3 verde; oráculos 127-por-design até os testes existirem).
+- **Pego no ingest**: os 5 arquivos estavam UNTRACKED no checkout do
+  Fable (~/llms.surf) — origin/main não tinha nada (classe incidente
+  dois-checkouts). Copiados, revalidados e commitados daqui.
+- .fable-local-drafts/ dele: 8/8 idênticos ou VELHOS vs main (S4 draft é
+  pré-D5) — pode morrer no próximo passe dele.
+- Sequência E2-D5: S11 primeiro (100% local) → S10 com stub → mecânica
+  do Lineup (template referred-by, Action do lineup.json, copy tiers/
+  badges) → S12 BLOQUEADA no veto do Vast.
+- Dials do dono ainda abertos: naming (default A = The Lineup), tabela
+  de pontos, cadência de drops, 30 dias de conta indicada, DNS.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
