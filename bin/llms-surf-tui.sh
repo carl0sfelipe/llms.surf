@@ -42,10 +42,21 @@ surf_lines() {  # prints "★ alias (tree_id)" lines from the alias map
 modes_ids() { "$ORACFIT" modes 2>/dev/null | grep -oE '^\s+[a-z0-9_]+$' | tr -d ' '; }
 
 # ── flow: new task (task → mode → adapter → budget → dispatch) ──────────────
+FIRST_PROOF_SPEC="$ORACFIT_ROOT/tests/fixtures/oracfit-smoke-normal.md"
+
 nova_tarefa() {
   sep
-  read -r -p "Spec path (.md file with ## Oracle): " SPEC
+  read -r -p "Spec path [enter = the 2-minute first proof]: " SPEC
+  SPEC="${SPEC:-$FIRST_PROOF_SPEC}"
   [ -f "$SPEC" ] || { echo "✗ spec not found: $SPEC"; return 1; }
+  # Re-provar do zero: se a spec é a first-proof e a prova do stub já existe
+  # (ex.: você rodou bin/llms-surf start antes), o gate de frescor recusaria
+  # "oracle already passes". A prova do stub é artefato descartável — o próprio
+  # bin/test-oracfit-tldr.sh faz este mesmo rm antes de re-provar.
+  if [ "$SPEC" = "$FIRST_PROOF_SPEC" ] && [ -f "${ORACFIT_WORKDIR:-$PWD}/.dispatch/stub-proof" ]; then
+    rm -f "${ORACFIT_WORKDIR:-$PWD}/.dispatch/stub-proof"
+    echo "— first proof: previous stub proof removed, proving the loop again"
+  fi
   read -r -p "Task id [task-$(date +%H%M)]: " TASK
   TASK="${TASK:-task-$(date +%H%M)}"
 
@@ -60,7 +71,7 @@ nova_tarefa() {
 
   echo "Adapters (sources env.sh before the run):"
   local ADAPTERS=() a
-  for e in "$ORACFIT"/../adapters/*/env.sh; do
+  for e in "$ORACFIT_ROOT"/adapters/*/env.sh; do
     [ -f "$e" ] && ADAPTERS+=("$(basename "$(dirname "$e")")")
   done
   for a in "${ADAPTERS[@]}"; do echo "  - $a"; done
@@ -87,8 +98,15 @@ nova_tarefa() {
   bold "Post-run accounting:"
   usage_hoje
   sep
-  [ "$rc" -eq 0 ] && echo "✓ task $TASK: oracle green" \
-                   || echo "✗ task $TASK: exit $rc (see events above)"
+  if [ "$rc" -eq 0 ]; then
+    echo "✓ task $TASK: oracle green"
+    echo "  next: your own task = a .md with an ## Oracle section —"
+    echo "  the whole format is one block in the README ('The one idea')."
+  else
+    echo "✗ task $TASK: exit $rc (see events above)"
+    echo "  common causes: 'oracle already passes' (that proof is done — pick a new task);"
+    echo "  'oracle QUEBRADO/exit 2' (fix the ## Oracle command in your spec)."
+  fi
   return "$rc"
 }
 
