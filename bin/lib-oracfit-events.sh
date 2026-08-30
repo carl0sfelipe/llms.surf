@@ -46,6 +46,27 @@ for arg in sys.argv[3:]:
 json.dump(obj, sys.stdout, ensure_ascii=False)
 print()
 " "$ORACFIT_RUN_ID" "$type" "$@" >> "$events_file"
+
+  # S9 (go-live): o grito da praia — estados terminais avisam o dono no
+  # celular (opt-in via ORACFIT_NTFY_TOPIC; ver bin/oracfit-notify.sh).
+  # Hook ÚNICO no funil: qualquer caminho que emita run_finished/owner_question
+  # avisa, sem tocar os scripts de dispatch. Best-effort de verdade: falha de
+  # rede nunca muda o exit de quem emitiu (regra 12: curl com teto interno;
+  # regra 13: advisory desacoplado de validação/commit). Corpo terso — só
+  # run_id/task/status; conteúdo do workdir não sai da máquina.
+  case "$type" in
+    run_finished|owner_question)
+      local _notify _kv _n_status="" _n_task=""
+      _notify="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/oracfit-notify.sh"
+      for _kv in "$@"; do
+        case "$_kv" in
+          status=*) _n_status="${_kv#status=}" ;;
+          task=*) _n_task="${_kv#task=}" ;;
+        esac
+      done
+      [ -x "$_notify" ] && "$_notify" "$ORACFIT_RUN_ID" "$_n_task" "$_n_status" >/dev/null 2>&1 || true
+      ;;
+  esac
 }
 
 oracfit_inbox_dir() {

@@ -43,8 +43,8 @@ done
 # Specs congeladas (S7, S9 — dogfood: oráculo vermelho é o estado CORRETO
 # até implementar; ao implementar, mova para IMPLEMENTED). Ver
 # docs/go-live/RECONCILIACAO-AS-BUILT.md.
-IMPLEMENTED_SPECS="S1-promessa-2min S2-aliases-surf S3-ficha-syntax-custom S4-mode-share-add S5-god-modes-tokens S6-higiene-corte S8-owner-question"
-FROZEN_SPECS="S7-single-flight-status S9-ntfy-run-notify"
+IMPLEMENTED_SPECS="S1-promessa-2min S2-aliases-surf S3-ficha-syntax-custom S4-mode-share-add S5-god-modes-tokens S6-higiene-corte S8-owner-question S9-ntfy-run-notify"
+FROZEN_SPECS="S7-single-flight-status"
 
 echo "=== stories implementadas: oráculos VERDES no disco ==="
 for nome in $IMPLEMENTED_SPECS; do
