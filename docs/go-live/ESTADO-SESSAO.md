@@ -79,6 +79,16 @@
   como porta; contribuição como escalada). Toda copy futura de cloud passa
   por esta decisão (bestmodel docs/backlog.md, cb5d7d2).
 
+## ESCALADA-3 pronta (2026-08-30, noite)
+
+- Pesquisa compilada: `docs/go-live/pesquisa-gamificacao-whitelist.md`
+  (8 pilares com fonte: Hamari, Schmitt/Skiera/VdB, Antin/Churchill,
+  Nunes/Drèze, Robinhood/Monzo/Harry's, lado escuro de leaderboards,
+  Schultz/Berridge, Octalysis×Hooked).
+- Briefing: `docs/go-live/ESCALADA-3-FABLE-WHITLIST-GAMIFICADA.md` —
+  gamificação viral da whitelist (indique e suba, tiers, badges, neuro)
+  + plano dos 2 go-lives baratos. Colar no Fable JUNTO com a ESCALADA-2.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
