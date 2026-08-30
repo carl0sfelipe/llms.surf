@@ -171,6 +171,19 @@
 - Gate DB @5434: 36 runs (34 measured_signed, 2 derived). Os 626 vêm do
   pool do dono (perguntar onde está o pool.json / a fonte).
 
+## POOL ENCONTRADO (dono acertou: estava no CanIRunIt) — 2026-08-31
+
+- `/home/beelink/Work/CanIRunIt/canirunit-web/data/derived/pool.json`:
+  **1310 células** (rigKey, modelSlug, bits, n, tokSOutMedian,
+  tokSPrefillMedian, ttftMsMedian, peakVramGbMedian, maxContextTested,
+  engines), snapshot 2026-08-13. É a fonte pro import S28 no prod.
+- Próximo passo S28: (1) casar o schema do pool com os importadores
+  existentes (import_localmaxxing.py / import_lab_export.py) — dry-run
+  primeiro, --apply depois, classe `reported`, proveniência = "CanIRunIt
+  pool snapshot 2026-08-13" + rigKey; (2) endpoint + tabela + botão de
+  denúncia de run irreal (mecânica fake pego, 5 pts); (3) rebuild da
+  imagem prod-api (S23/S27 dentro); (4) B2.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
