@@ -127,6 +127,13 @@
   cadência, 30 dias) → copy The Lineup nos 2 sites → S12 segue
   BLOQUEADA no veto do Vast.
 
+## B-L01 IMPLEMENTADO (bestmodel main 47d7b72, S27) — 2026-08-31
+
+- export por-contribuidor verde nos 2 backends + GATE PASS; script
+  fail-loud escreve data/contributor-export.json (formato exato que o
+  workflow lineup do llms.surf consome). Primeiro export REAL nasce
+  quando existir a primeira run assinada validada com usuário.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
