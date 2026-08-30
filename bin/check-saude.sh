@@ -44,6 +44,9 @@ checar "sem dívida de incidente"          bash bin/incident.sh audit
 # E5-M5/D4: credencial de provider na cadeia de dispatch só via
 # lib-free-credentials.sh (por ARQUIVO) — env herdada virou o default pago.
 checar "credencial só pela lib (E5-M5)"   bash bin/check-free-credential-exclusivity.sh
+# E5-D5: caminho free íntegro de ponta a ponta (envs pagas envenenadas não
+# vazam; provider_efetivo ∈ allowlist; feed morto não sobrescreve snapshot).
+checar "caminho free íntegro (E5-D5)"     bash bin/test-free-path.sh
 # superfície exportável sem telefone/e-mail de terceiro/caminho de máquina —
 # incidents/2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego.md
 checar "superfície pública sem dado pessoal" bash bin/check-publico.sh --oficina

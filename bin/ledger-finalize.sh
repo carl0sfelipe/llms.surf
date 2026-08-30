@@ -18,7 +18,8 @@ TASK_NAME="${1:?Uso: ledger-finalize.sh <task_name>}"
 META_FILE="$PID_DIR/dispatch-${TASK_NAME}.meta"
 PID_FILE="$PID_DIR/dispatch-${TASK_NAME}.pid"
 LOG_FILE="$LOG_DIR/dispatch-${TASK_NAME}.log"
-LEDGER_DIR="$(cd "$(dirname "$0")/.." && pwd)/ledger"
+# LEDGER_DIR sobrejável só para teste (sandbox do D5); default = repo/ledger.
+LEDGER_DIR="${LEDGER_DIR:-$(cd "$(dirname "$0")/.." && pwd)/ledger}"
 LEDGER_FILE="$LEDGER_DIR/ledger.jsonl"
 
 [ -f "$META_FILE" ] || exit 0
@@ -131,7 +132,8 @@ ALLOWLIST_STATUS="fora-do-escopo"
 if [ -f "$EFETIVO_FILE" ]; then
   IFS=$'\t' read -r REF_EFETIVO PROVIDER_EFETIVO < "$EFETIVO_FILE"
   if [ -n "$PROVIDER_EFETIVO" ]; then
-    ALLOWLIST_FILE="$BIN_DIR/../data/free-provider-allowlist.json"
+    # FREE_PROVIDER_ALLOWLIST sobrejável só para teste (perna adulterada do D5).
+    ALLOWLIST_FILE="${FREE_PROVIDER_ALLOWLIST:-$BIN_DIR/../data/free-provider-allowlist.json}"
     if [ -f "$ALLOWLIST_FILE" ] && python3 - "$ALLOWLIST_FILE" "$PROVIDER_EFETIVO" <<'PYALLOW'
 import json, sys
 al = json.load(open(sys.argv[1], encoding="utf-8"))

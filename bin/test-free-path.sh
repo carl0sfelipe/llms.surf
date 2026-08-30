@@ -1,0 +1,221 @@
+#!/bin/bash
+# test-free-path.sh — D5 (APERTADO, veredito do Fable): o gate que prova o
+# fim do incidente E5 ("free path" servia id morto e credencial herdada
+# virava provider pago sem ninguém pedir).
+#
+# Pernas:
+#   1. catálogo carimbado válido (schema + ref ∈ registry)
+#   2. resolve-tier tier:cheap >= 3 refs VIVOS, keyless primeiro
+#   3. catálogo ausente = exit 2 LOUD (nunca degrada)
+#   4. R2: feed morto NUNCA sobrescreve o snapshot bom
+#   5. exclusividade de credencial (gate estrutural, 3 anéis)
+#   6. R5: consumidores do ledger não re-resolvem id via registry
+#   7. DESPACHO COM ENVS PAGAS ENVENENADAS (isca prova imunidade — ambiente
+#      limpo só prova ausência): dispatch stub tier:cheap com baits em
+#      AWS_*/OPENROUTER/GROQ/NVIDIA/DEEPSEEK; o run fecha com
+#      provider_efetivo ∈ allowlist, allowlist_status=ok e NENHUMA isca lida
+#   8. allowlist ADULTERADA → run marcado violado (gate não mente verde)
+#
+# Sem rede real de modelo: runner stub. Exit 0 = caminho free íntegro.
+
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+pass=0
+fail=0
+ok() { echo "  PASS: $1"; pass=$((pass + 1)); }
+not_() { echo "  FAIL: $1"; fail=$((fail + 1)); }
+
+echo "=== test-free-path (E5-D5 apertado) ==="
+
+# ── 1. catálogo carimbado ────────────────────────────────────────────────────
+python3 - "$ROOT/data/free-catalog.json" "$ROOT/model-registry.json" <<'PY1'
+import json, sys
+cat = json.load(open(sys.argv[1], encoding="utf-8"))
+assert cat.get("kind") == "free-catalog/1" and cat.get("stamped_at")
+reg_ids = {m["id"] for m in json.load(open(sys.argv[2], encoding="utf-8"))["models"]}
+assert all(m["ref"] in reg_ids for m in cat["models"]), "ref fora do registry"
+PY1
+[ $? -eq 0 ] && ok "catálogo carimbado válido" || not_ "catálogo inválido"
+
+# ── 2. resolve-tier: >=3 vivos, keyless primeiro ─────────────────────────────
+REFS=$(python3 "$ROOT/bin/lib-oracfit-mode-loader.py" resolve-tier tier:cheap 2>/dev/null)
+N_REFS=$(printf '%s\n' "$REFS" | grep -c . || true)
+if [ "$N_REFS" -ge 3 ]; then ok "resolve-tier devolve $N_REFS refs (>=3)"; else not_ "só $N_REFS refs"; fi
+FIRST=$(printf '%s\n' "$REFS" | head -1)
+KEYLESS_FIRST=$(python3 - "$ROOT/data/free-catalog.json" "$FIRST" <<'PY2'
+import json, sys
+cat = json.load(open(sys.argv[1], encoding="utf-8"))
+m = next(m for m in cat["models"] if m["ref"] == sys.argv[2])
+print("1" if m["keyless"] else "0")
+PY2
+)
+[ "$KEYLESS_FIRST" = "1" ] && ok "primeiro da fila é keyless ($FIRST)" || not_ "primeiro não é keyless: $FIRST"
+DEAD_IN_REFS=$(python3 - "$ROOT/model-registry.json" <<'PY3'
+import json, sys
+reg = {m["id"]: (m.get("id_status") or "") for m in json.load(open(sys.argv[1]))["models"]}
+refs = [l.strip() for l in """$REFS""".splitlines() if l.strip()]
+bad = [r for r in refs if any(d in reg.get(r, "") for d in ("FANTASMA", "NAO-ENCONTRADO", "NAO-VERIFICADO"))]
+print(",".join(bad))
+PY3
+)
+[ -z "$DEAD_IN_REFS" ] && ok "nenhum ref morto na lista (M2)" || not_ "refs mortos na lista: $DEAD_IN_REFS"
+
+# ── 3. catálogo ausente = exit 2 ─────────────────────────────────────────────
+RC=0
+python3 "$ROOT/bin/lib-oracfit-mode-loader.py" resolve-tier tier:cheap --catalog /tmp/free-catalog-fantasma-$$.json >/dev/null 2>&1 || RC=$?
+rm -f /tmp/free-catalog-fantasma-$$.json
+[ "$RC" -eq 2 ] && ok "catálogo ausente reprova loud (exit 2)" || not_ "catálogo ausente devolveu $RC"
+
+# ── 4. R2: feed morto mantém snapshot ────────────────────────────────────────
+SHA_BEFORE=$(shasum -a 256 "$ROOT/data/free-catalog.json" | cut -d' ' -f1)
+OR_FEED_ENDPOINT="http://127.0.0.1:1/models" bash "$ROOT/bin/sync-free-catalog.sh" >/dev/null 2>&1
+SHA_AFTER=$(shasum -a 256 "$ROOT/data/free-catalog.json" | cut -d' ' -f1)
+if [ "$SHA_BEFORE" = "$SHA_AFTER" ]; then ok "R2: feed morto mantém snapshot"; else not_ "R2: snapshot SOBRESCRITO"; fi
+
+# ── 5. exclusividade de credencial ───────────────────────────────────────────
+if bash "$ROOT/bin/check-free-credential-exclusivity.sh" >/dev/null 2>&1; then
+  ok "gate de exclusividade (3 anéis) verde"
+else
+  not_ "gate de exclusividade reprova"
+fi
+
+# ── 6. R5: ledger autossuficiente ────────────────────────────────────────────
+RE_RESOLVE=$(grep -l "model-registry\|MODEL_REGISTRY" \
+  "$ROOT/bin/ledger.sh" "$ROOT/bin/ledger-finalize.sh" \
+  "$ROOT"/bin/poll-status.sh "$ROOT/bin/oracfit" 2>/dev/null || true)
+if [ -z "$RE_RESOLVE" ]; then ok "R5: consumidores do ledger não re-resolvem registry"; else not_ "re-resolução em: $RE_RESOLVE"; fi
+
+# ── 7. DESPACHO COM ENVS PAGAS ENVENENADAS ───────────────────────────────────
+WD=$(mktemp -d /tmp/free-path-d5-XXXXXX)
+trap 'rm -rf "$WD"' EXIT
+git -C "$WD" init -q
+git -C "$WD" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+
+SPEC="$WD/spec-free-d5.md"
+cat > "$SPEC" <<'EOS'
+# spec: free-path-d5 — caminho free sob env paga envenenada (stub)
+
+Fixture do D5: mede o CAMINHO (tier → catálogo → cadeia → ledger), não
+capacidade de modelo.
+
+## Tarefa
+
+Crie o arquivo `.dispatch/stub-proof` com exatamente 3 linhas:
+
+    stub_ok
+    model_id=<o identificador do modelo com que você foi lançado>
+    spec=<o nome desta spec>
+
+## Regras
+
+Nao invente outro caminho, numero, prazo ou fato alem do listado abaixo.
+Nao use declare const como workaround — artefato inexistente nao se
+declara, se cria.
+
+## Dados verificados
+
+- Existe `.dispatch` no workdir — o dispatcher cria o diretório antes de
+  qualquer preflight, em todo run.
+
+## Oráculo
+
+- comando: test -f .dispatch/stub-proof && grep -q stub_ok .dispatch/stub-proof
+- exit esperado: 0 — antes do run, exit 1 sem stderr é o estado correto.
+EOS
+
+export LOG_DIR="$WD/logs" PID_DIR="$WD/pids" DB_PATH="$WD/sem-db.sqlite"
+export LEDGER_DIR="$WD/ledger"
+export DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh"
+export ORACFIT_ROOT="$ROOT"
+mkdir -p "$LOG_DIR" "$PID_DIR"
+
+# As ISCAS: valores falsos em credenciais pagas. Se QUALQUER código do
+# caminho free ler env herdada, a isca vaza num artefato e a perna reprova.
+# (cd "$WD": o dispatch usa $PWD como workdir do run — sem isso o stub
+# escreveria .dispatch/stub-proof na RAIZ deste repo e o run seguinte
+# reprovaria em "oráculo já passa". Foi exatamente o que aconteceu.)
+export AWS_ACCESS_KEY_ID='BAIT-AWS-7f3a' AWS_SECRET_ACCESS_KEY='BAIT-AWS-7f3a' \
+  AWS_SESSION_TOKEN='BAIT-AWS-7f3a' OPENROUTER_API_KEY='BAIT-OR-91cd' \
+  OR_API_KEY='BAIT-OR-91cd' GROQ_API_KEY='BAIT-GROQ-22ab' \
+  NVIDIA_API_KEY='BAIT-NV-55ee' DEEPSEEK_API_KEY='BAIT-DS-88bc'
+( cd "$WD" && bash "$ROOT/bin/dispatch.sh" tier:cheap "$SPEC" d5-envenenado ) > "$WD/dispatch-out.log" 2>&1
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN \
+  OPENROUTER_API_KEY OR_API_KEY GROQ_API_KEY NVIDIA_API_KEY DEEPSEEK_API_KEY
+
+# Espera o finalizador gravar a linha do ledger (teto 60s).
+LEDGER_LINE=""
+for i in $(seq 1 60); do
+  LEDGER_LINE=$(grep -F '"task_name": "d5-envenenado"' "$LEDGER_DIR/ledger.jsonl" 2>/dev/null | head -1)
+  [ -n "$LEDGER_LINE" ] && break
+  sleep 1
+done
+if [ -n "$LEDGER_LINE" ]; then ok "dispatch envenenado fechou com linha no ledger"; else
+  not_ "linha do ledger não apareceu em 60s — dispatch-out.log:"
+  sed 's/^/    /' "$WD/dispatch-out.log" 2>/dev/null | head -15
+fi
+
+ALLOW_OK=$(printf '%s' "$LEDGER_LINE" | python3 -c '
+import json, sys
+try:
+    r = json.loads(sys.stdin.read())
+    print(r.get("allowlist_status", ""), r.get("provider_efetivo", ""), r.get("provider_efetivo_ref", ""))
+except Exception:
+    print("parse-erro")
+')
+ALLOW_STATUS=$(echo "$ALLOW_OK" | cut -d' ' -f1)
+PROV_EF=$(echo "$ALLOW_OK" | cut -d' ' -f2)
+REF_EF=$(echo "$ALLOW_OK" | cut -d' ' -f3)
+if [ "$ALLOW_STATUS" = "ok" ]; then ok "allowlist_status=ok no run envenenado"; else not_ "allowlist_status=$ALLOW_STATUS (esperado ok)"; fi
+if printf '%s\n' "$REFS" | grep -qF "$REF_EF"; then
+  ok "provider_efetivo_ref ($REF_EF) veio da lista do tier"
+else
+  not_ "provider_efetivo_ref ($REF_EF) fora da lista do tier"
+fi
+
+VAZOU=0
+grep -rq "BAIT-AWS\|BAIT-OR\|BAIT-GROQ\|BAIT-NV\|BAIT-DS" "$LOG_DIR" "$LEDGER_DIR" "$WD/pids" 2>/dev/null && VAZOU=1
+if [ "$VAZOU" -eq 0 ]; then
+  ok "nenhuma isca vazou em log/ledger/efetivo (imunidade a env herdada)"
+else
+  not_ "ISCA VAZOU — código do caminho free leu credencial de env"
+fi
+
+# ── 8. allowlist adulterada → violado ────────────────────────────────────────
+TAMPER="$WD/allowlist-tampered.json"
+cat > "$TAMPER" <<'EOT'
+{"kind": "free-provider-allowlist/1", "updated": "2026-08-31", "note": "teste", "providers": ["provider-inexistente"]}
+EOT
+export FREE_PROVIDER_ALLOWLIST="$TAMPER"
+LEDGER_BEFORE=$(wc -l < "$LEDGER_DIR/ledger.jsonl" 2>/dev/null || echo 0)
+# Oráculo volta a vermelho: o proof da perna 7 faria o preflight recusar
+# ("oráculo já passa não mede nada") — mesma regra da porta, outro run.
+rm -f "$WD/.dispatch/stub-proof"
+export AWS_ACCESS_KEY_ID='BAIT-XX-0000'
+( cd "$WD" && bash "$ROOT/bin/dispatch.sh" tier:cheap "$SPEC" d5-tamper ) > "$WD/dispatch-tamper.log" 2>&1
+unset AWS_ACCESS_KEY_ID
+TAMPER_LINE=""
+for i in $(seq 1 60); do
+  TAMPER_LINE=$(tail -n +"$((LEDGER_BEFORE + 1))" "$LEDGER_DIR/ledger.jsonl" 2>/dev/null | grep -F '"task_name": "d5-tamper"' | head -1)
+  [ -n "$TAMPER_LINE" ] && break
+  sleep 1
+done
+TAMPER_STATUS=$(printf '%s' "$TAMPER_LINE" | python3 -c '
+import json, sys
+try:
+    print(json.loads(sys.stdin.read()).get("allowlist_status", ""))
+except Exception:
+    print("parse-erro")
+')
+if [ "$TAMPER_STATUS" = "violado" ]; then
+  ok "allowlist adulterada → allowlist_status=violado (gate não mente verde)"
+else
+  not_ "allowlist adulterada devolveu '$TAMPER_STATUS' (esperado violado)"
+fi
+
+echo ""
+echo "=== RESULTADO: $pass pass, $fail fail ==="
+if [ "$fail" -gt 0 ]; then
+  exit 1
+fi
+echo "FREE PATH ÍNTEGRO — D5 apertado fechado (envs pagas envenenadas não vazam; allowlist assertiona)"
+exit 0
