@@ -11,7 +11,7 @@
    completo dos DOIS produtos — todas as páginas, responsive (mobile
    first), design de UX profissional, tom de cada marca:
    - llms.surf: sarcástico, afiado ("Victory is a green oracle — not 'I
-     tried 8 times'"), The Lineup com tiers The Haul → The Legend.
+     tried 8 times'"), The Lineup com a jornada de tiers **Haole → (meio com você: sementes Grom, Local) → The Legend** — haole = o outsider havaiano que chega sem conhecer as regras do surf; a fila transforma haole em lenda, e a moeda é contribuição.
    - bestmodel.run: profissional, sóbrio,Gamificação própria (nome e
      desenho dele), botão "denunciar run irreal" em cada linha da
      leaderboard, badges de source-class visíveis.
