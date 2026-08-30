@@ -1,0 +1,52 @@
+# Backlog — automação (ordem de trabalho, não produto)
+
+> Itens que NÃO estão na fila ativa do go-live. Prioridade de um item só
+> sobe quando o gatilho escrito nele acontece de verdade (custo de
+> wall-clock medido, não antecipação).
+
+---
+
+## B1 — controle remoto dos runs/sessões pelo celular do dono
+
+- **Status:** backlog · **Pedido do dono:** 2026-08-29 ("achei que ia
+  implementar também uma forma de eu controlar vocês pelo WhatsApp").
+- **Gatilho de prioridade:** um modo "vai vai vai" (autônomo, sem parar)
+  TRAVAR de verdade com o dono longe do terminal e o tempo morto custar
+  wall-clock — como a medição de 2026-08-29 (13 min de trabalho, ~2h até
+  ser descoberto) que motivou a S9, mas na direção COMANDO, não aviso.
+- **O que falta hoje:** a S9 deu o PUSH (run terminou/pausou → celular).
+  Falta o PULL-COMANDO: despachar de longe um "retoma", "interrompe",
+  "responde a pergunta da S8" ou "mata a sessão travada". O painel
+  autenticado (`oracfit gui-tunnel`) já cobre parte pelo navegador do
+  celular (interrupt via POST /api/message + `oracfit resume`), mas exige
+  o túnel no ar e não é um botão de bolso.
+- **⚠️ Tensão registrada — WhatsApp está VETADO como dependência**
+  (decisão do PRÓPRIO dono, 2026-08-29, gravada na spec S9 "para ninguém
+  reabrir"): a ponte nhermes falhou de forma repetida e medida. O dono
+  reabrindo o próprio veto é legítimo — mas quem implementar TEM de
+  responder antes: o que mudou desde as falhas medidas? Sem resposta para
+  isso, os candidatos abaixo vêm primeiro.
+- **Candidatos (ordem de preferência atual):**
+  1. **Tópico ntfy de COMANDO** — mesma ferramenta que a S9 já shipa, zero
+     dependência nova: dono posta no tópico, um watcher local traduz em
+     `oracfit resume` / arquivo de interrupt. Piso de segurança: tópico é
+     bearer secret — para COMANDO isso é mais fraco que para aviso (quem
+     adivinhar o tópico controla o agente); exige tópico longo exclusivo,
+     auditoria de cada comando no ledger e denylist de comandos destrutivos.
+  2. **Webhook autenticado no túnel existente** (`gui-tunnel` já tem token)
+     — comando vira POST /api/message, caminho que já existe.
+  3. **Telegram bot** — NÃO vetado (o veto é WhatsApp), API estável,
+     mas dependência nova.
+  4. **WhatsApp** — só depois de resolvida a tensão do veto acima.
+- **Piso de segurança inegociável (regra 47 e família 53):** arquivos de
+  controle FORA do workdir do modelo; comando remoto nunca ensina/remete
+  mecanismo de parada em texto legível pelo agente; todo comando remoto
+  gravado no ledger (quem, quando, o quê); single-flight da S7 vale para
+  comando remoto também — ele é um dispatcher como outro qualquer.
+- **Escala:** começa pelo dispatcher (runs); sessão de agente interativa
+  (ZCode/Cursor) é camada seguinte, com mecanismo próprio de interrupt.
+
+---
+
+*(novos itens: mesmo formato — status, gatilho medido, tensões, piso de
+segurança. Item sem gatilho é desejo, não backlog.)*
