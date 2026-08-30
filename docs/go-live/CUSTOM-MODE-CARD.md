@@ -1,97 +1,124 @@
-# Ficha — syntax custom de modo (D3: subconjunto do loader, zero schema novo)
+# Name your break — custom modes in 5 minutes
 
-> Ordem de trabalho do go-live, não produto. Entra no PRIVATE_DIRS do
-> publish-cut antes do próximo corte (D8).
+> The lineup has three waves (`paddle`, `tow`, `surfcheck`). The rest of the
+> ocean is yours: a custom mode is the break you find and name. One file,
+> one validate, one run, one oracle. A stranger should read this card in
+> 2 minutes. Zero schema changes — everything below validates against the
+> loader shipped in this tree (`bin/lib-oracfit-mode-loader.py`).
 
-**Decisão D3 em uma linha:** a syntax custom de modo não é uma gramática nova —
-é um SUBCONJUNTO documentado do loader que já existe
-(`bin/lib-oracfit-mode-loader.py`). Zero mudança de schema, zero parser novo,
-zero superfície de ataque nova. Quem escreve `core/modes/meu-modo.yaml` no
-workdir está usando o mesmo contrato que os 20 modos do tree usam.
-
-## A gramática do subconjunto (1ª onda)
+## The whole grammar
 
 ```yaml
-id: meu_modo              # [a-z0-9_]+ — TEM que bater com o nome do arquivo
+id: my_break            # [a-z0-9_]+ — name your break
 version: "1"
-name: Meu modo            # linha de exibição
-description: >            # campo de MÁQUINA: lint procura claims aqui (ver abaixo)
-  O que o modo faz, uma frase.
-stages:
-  - role: run             # run é o papel do subconjunto (unlock/plan/map/reduce
-    model_ref: tier:cheap #   existem no loader; entram em ficha própria)
-    oracle: true          # o oráculo vem da SPEC da task, não daqui
+name: my break
+description: one honest line (no claims you cannot back with code)
+stages:                 # 1..N sections of the wave, run in order
+  - role: run           # unlock | plan | run | map | reduce
+    model_ref: tier:cheap   # tier:cheap | tier:mid | tier:expensive | tier:vision
+    oracle: true        # the gate comes from your task spec (see below)
     max_attempts: 3
-    rate_limit_s: 2       # opcional — segundos entre chamadas
-on_fail: halt             # pare quando o oráculo não fecha
+  # a stage can also be mechanical — no model at all:
+  # - role: run
+  #   command: bash scripts/build.sh
+gauntlet:               # optional: retry loop that injects oracle feedback
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5     # hard stop — no infinite paddling
+on_fail: halt           # a red stage never starts the next one
 ```
 
-Campos do loader **fora** do subconjunto da 1ª onda (existem, não entram na
-ficha: `preflight`, `gauntlet`, `publish`, `run_attempt_budget`, `command`,
-`json_schema`, `input`, `prompt_template`, `tools`, `loop_target`,
-`stage_oracle`, `freshness_targets`). Nada te impede de usá-los — o loader
-aceita — mas a ficha não promete o que não foi ensaiado (lição demiurgo:
-mentir a classe da proteção é incidente).
+Rules of the water:
 
-## As três regras que a ficha ensina junto
+1. **The oracle is a real command on disk, and it decides — not the model.**
+   It lives in your task spec under `## Oraculo`, as a raw line:
+   `- comando: grep -q stub_ok .dispatch/stub-proof` —
+   **never wrap it in backticks** (they become command substitution in the
+   eval and die with a phantom exit 127 — incident 2026-08-10).
+2. **Private by default.** Your mode is a file in *your* workdir
+   (`core/modes/my_break.yaml`); it shadows built-ins and never leaves your
+   machine unless you post it.
+3. **Public = the file.** `oracfit mode share my_break` prints the canonical
+   YAML; a friend runs `oracfit mode add my_break.yaml` and it installs only
+   if `validate` + `lint` pass.
+4. Keys outside the grammar above exist (`command:`, `input: prev_stage`,
+   `artifacts:`, budgets) — `oracfit mode validate` will tell you if you
+   step outside the schema. Anything truly new requires a schema extension
+   plus a loader test: that is a cost decision, not a YAML edit.
 
-**1. O oráculo vive na spec da task, não no YAML (D4).** O modo diz COMO trabalhar
-(modelo, tentativas, limite); a spec da task diz O QUE É PRONTO, na seção
-`## Oráculo` — comando cru, **sem crase** (regra 46: crase na linha
-`- comando:` vira substituição no eval e mata o run com exit 127 fantasma).
-O YAML com `oracle: true` só declara que a spec vai ser julgada por um
-comando no disco.
+## The three commands
 
-**2. Privacidade é localização, não campo (D5).** Não existe campo `private:`
-nem `secret:`. O que torna um modo privado é ONDE ele mora: `core/modes/` do
-SEU workdir nunca sai da sua máquina. Público é só o que VOCÊ postar —
-`oracfit mode share <id>` imprime o YAML pronto para colar numa issue, e
-`oracfit mode add <arquivo.yaml>` instala o YAML de outra pessoa no seu
-overlay do workdir, depois de validar e lintar com o MESMO loader que o `run`
-usa. Antes de postar: segredo nenhum dentro do YAML (chave mora em env;
-`model_ref` referencia tier ou id de modelo, nunca credencial).
+```bash
+llms-surf mode init my_break      # writes the scaffold to your workdir
+llms-surf mode validate my_break  # schema says yes/no, with the reason
+llms-surf run my_break task.md t1 # dispatch; the oracle closes it
+```
 
-**3. Claim sem mecanismo não registra (o lint cobra).** A `description` é
-campo de máquina: palavras como "watchdog", "ledger", "gate visual",
-"mecânico" disparam exigência de `# mecanismo(<classe>): <caminho>` apontando
-para executável que EXISTE. Foi o lint que reprovou a primeira versão dos
-exemplos desta ficha ("ledger" na description, classe ring sem mecanismo) —
-o gate funciona; a ficha existe para você não pagar o mesmo pedágio.
+## Example 1 — `glassy`: your own paddle
 
-## Os dois exemplos que acompanham (validam e lintam neste tree)
+Clone of `normal`. Same pipeline, your break, your oracle. The oracle
+command is per-task (in the spec), so this one file covers every mechanical
+chore you throw at it.
 
-| arquivo | ensina |
-|---|---|
-| `examples/glassy.yaml` | o mínimo viável: 1 stage run, tier cheap, oráculo na spec |
-| `examples/outside_set.yaml` | mini-tow de 2 stages: unlock caro + run barato com `input: prev_stage` (a composição entre stages) |
+```yaml
+id: glassy
+version: "1"
+name: glassy
+description: clean conditions — one cheap rider, your spec oracle decides
+stages:
+  - role: run
+    model_ref: tier:cheap
+    oracle: true
+    max_attempts: 3
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+on_fail: halt
+```
 
-Prova (roda em qualquer checkout deste corte):
+## Example 2 — `outside_set`: a two-stage mini tow
 
-    python3 bin/lib-oracfit-mode-loader.py validate examples/glassy.yaml
-    python3 bin/lib-oracfit-mode-loader.py lint    examples/glassy.yaml
-    python3 bin/lib-oracfit-mode-loader.py validate examples/outside_set.yaml
-    python3 bin/lib-oracfit-mode-loader.py lint    examples/outside_set.yaml
+An outside set is too big to paddle into: an expensive model reads the wave
+(and must pass its own oracle before anyone drops in), then a cheap model
+rides it. A red unlock never starts the run.
 
-## Ciclo completo de um modo custom (o caminho do estranho viciado)
+```yaml
+id: outside_set
+version: "1"
+name: outside set
+description: expensive reads the wave, cheap rides it, red never drops in
+stages:
+  - role: unlock
+    model_ref: tier:expensive
+    artifacts: unlock/
+    oracle: true
+    max_attempts: 2
+  - role: run
+    model_ref: tier:cheap
+    input: prev_stage
+    oracle: true
+    max_attempts: 3
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 4
+on_fail: halt
+```
 
-    oracfit mode init meu_modo        # scaffold honesto no SEU workdir
-    $EDITOR core/modes/meu_modo.yaml  # subconjunto acima
-    oracfit mode validate meu_modo    # schema
-    oracfit mode lint meu_modo        # claims → mecanismos + shadow de id
-    oracfit run meu_modo spec.md t1   # o run resolve workdir → root (AD-16)
-    oracfit mode share meu_modo       # quando valer a pena, poste
+Both examples were validated against the current loader in this session
+(`validate` + `lint` green, no schema delta).
 
-Validação por baixo dos panos é literalmente o mesmo binário do `run`
-(`dispatch-mode.sh` chama `validate` antes de qualquer modelo) — o que você
-valida é o que roda. Sem drift entre "o YAML que passou no check" e "o YAML
-que o runtime leu", porque são a mesma leitura.
+## The light game (no XP, no leaderboard)
 
-## Por que subset e não DSL nova
-
-- **Schema zero-mudança:** todo YAML da ficha já é aceito hoje; todo modo dos
-  20 do tree continua válido. Nada de migração, nada de feature flag.
-- **Um só loader:** colisão de id, shadow de workdir, claim sem mecanismo —
-  os incidentes que viraram lint valem igual para modo custom e modo nativo,
-  porque passam pelo mesmo código.
-- **Superfície de confiança:** "mode share" circula YAML, e YAML só é
-  executável como configuração do MESMO schema auditado — não como script.
+- **First wave** — a green oracle within the first hour (the stub proves the
+  path with zero tokens).
+- **Your own break** — first custom mode that passes `validate` + `lint`
+  and closes a run with a green oracle.
+- **Share the break** — post the YAML (never a key, never a secret; the
+  file has neither by construction).
+- **Wipeouts are already real** — 106 incident postmortems in this cut.
+  That ledger is the score; we do not invent a second one.

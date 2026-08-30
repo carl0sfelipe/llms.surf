@@ -1,27 +1,36 @@
-# Copy do go-live — aprovada pelo dono
+# Launch copy — honest by construction
 
-> Ordem de trabalho do go-live, não produto (D8). A frase de anúncio é a
-> confirmada pelo dono; as linhas de bio seguem o mesmo contrato de
-> honestidade do site (nenhum número que não venha do tree, nenhum produto
-> que não exista).
+> Nothing below claims: open source, tok/s, $/M, hosted inference, Swell,
+> marketplace. All of that either does not exist or is not measured.
+> LICENSE is proprietary and stays out of the ad entirely.
 
-## Anúncio (1 linha)
+## Ad — one line (single CTA: the clone command)
 
-**Cheap AI models do the work. A mechanical oracle proves it shipped. Clone it — 2 minutes, no API key.**
+> Cheap AI models do the work. A mechanical oracle proves it shipped.
+> Clone it — 2 minutes, no API key.
 
-## Bio (3 linhas)
+Variant for replies (same promise, casual register):
 
-1. **Local dispatcher: cheap models sweat the 99%, your frontier plan thinks the 1% — and nothing ships on a model's word.**
-2. **Every task ends in a shell command on disk: exit 0 ships, anything else becomes an incident that becomes code.**
-3. **Formerly Oracfit. Built in Saquarema, where you never paddle on a guess — neither does your AI.**
+> Stop trusting the model's "done ✅". Clone llms.surf, run one task, and
+> watch a real command on disk decide. 2 minutes, no API key.
 
-## Regras desta copy (o que NÃO dizer)
+## Bio / repo — three lines
 
-- Nenhum número de contagem solto em anúncio (counts viram stats do site,
-  contadas do tree pelo teste de honestidade — nunca decorativas).
-- Nenhuma menção a modelo hospedado, token à venda, preço ou fila (D6:
-  existe a waitlist, não existe número dela em copy).
-- "Open source" nunca (D10: LICENSE é proprietary e o site já diz isso).
-- A promessa "2 minutes" é mecânica: o stub fecha em segundos
-  (`bin/test-oracfit-tldr.sh`). Se um dia ela quebrar de novo, a copy quebra
-  junto — S1 é o gate zero (D1).
+> Local dispatcher for AI coding agents: 1% of tasks go to a frontier
+> model, 99% to cheap ones. Nothing ships on a model's word — a real
+> command must exit 0 on disk. Clone and ride your first wave in
+> 2 minutes: no API key, no signup.
+
+## What the first scroll must cash (ads-promise = site)
+
+1. The clone command with a copy button (CTA único).
+2. "No API key" visibly true (stub runner is the default path).
+3. The three waves + "name your break" custom card.
+
+## Forbidden in any ad, reply or bio
+
+- "open source" / "OSS" for llms.surf (LICENSE is proprietary; the OSS
+  magnet is bestmodel.run, which may say it).
+- Any number not in the git tree: tok/s, $/M, model counts from memory.
+- "hosted", "Swell", "inference at cost is live" — the token pool has a
+  waitlist and unlock criteria, not a price.
