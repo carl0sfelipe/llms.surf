@@ -144,6 +144,20 @@
 - **Copy do The Lineup nos sites: BLOQUEADA para modelos flash** — dono
   leva ao Fable (copy é crítica demais). Máquina (S13) não espera copy.
 
+## PROD bestmodel: 0013 aplicada + QUADRO REAL DE DADOS (2026-08-31)
+
+- Migração 0013 aplicada e verificada no DB de produção (docker exec no
+  bestmodel-prod-api-1): signing_key + signature_key_id existem; runs
+  legacy seguem válidas (D2 opt-in).
+- **QUADRO REAL**: prod tem só **2 runs e 1 usuário** — os 626 runs
+  classificados NÃO estão no prod (estão no harvest local/banco do gate).
+  Dono queria lançar sem cold start: caminho honesto = importar dado OU
+  dogfood assinado (ele registra chave S23 e assina runs da frota — cada
+  uma vale 2 pontos no handle dele).
+- **Pendência de deploy**: a imagem do prod-api é ANTERIOR a S23/S27 —
+  não tem fetch_contributor_points nem rotas de signing key. Rebuild +
+  restart do container é pré-requisito do export real.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
