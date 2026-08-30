@@ -115,7 +115,7 @@ resets. Only real silence dies.
 - **Usage hub** — token/quota tracking from local sources only, so the
   orchestrator picks the cheapest viable model per task.
 - **The memory** — 106 incident postmortems in this cut, 69 models in the registry,
-  20 modes, 8 adapters + stub, 33 test suites guarding the guards.
+  20 modes, 8 adapters + stub, 34 test suites guarding the guards.
 
 ---
 

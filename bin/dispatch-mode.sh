@@ -112,6 +112,15 @@ fi
 
 ROOT="$(oracfit_resolve_root)" || exit 1
 
+# S7 (regra 53, mecanismo 1): single-flight por workdir ANTES de qualquer
+# preflight/persistência — segundo dispatch com run vivo no mesmo workdir é
+# recusado (exit 6) em vez de sobrepor. Lock: .dispatch/.run-lock (mkdir
+# atômico + pid, em bin/lib-oracfit-root.sh). Liberação em TODO caminho de saída.
+oracfit_run_lock_acquire
+lock_rc=$?
+[ "$lock_rc" -eq 0 ] || exit "$lock_rc"
+trap 'oracfit_run_lock_release' EXIT
+
 # Resume (v1, 2026-08-01): oracfit resume <run_id> "<msg>" chama a gente com
 # --resume-run-id e SEM mode_id/spec_file/task_name — busca os 3 nos arquivos
 # persistidos pelo dispatch original (ver bloco de persistência perto do

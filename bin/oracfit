@@ -16,6 +16,7 @@ Oracfit (ex-Dispatch) — '$1' não é subcomando conhecido.
 Uso base:
   oracfit start | first-proof
   oracfit run normal <spec> <task>
+  oracfit status --task <nome>   # veredito canônico (regra 53)
   oracfit panel
 
 Custom (ouro):
@@ -94,6 +95,8 @@ BASE
   oracfit start                         # first-proof (stub se DISPATCH_RUNNER=stub)
   oracfit first-proof
   oracfit run normal <spec> <task>      # modo base Flash-class
+  oracfit status --task <nome>          # veredito canônico do último run da
+                                        #   task neste workdir (JSON, regra 53)
   oracfit batch <batch_file>            # N itens (spec|task|dir[|model]) com
                                         # checkpoint+rollback — NUNCA loop à mão
                                         # (incidente 2026-08-11-hand-rolled-loop)
@@ -327,6 +330,70 @@ cmd_run() {
   exec "$SCRIPT_DIR/dispatch-mode.sh" "$mode" "$@"
 }
 
+cmd_status() {  # S7 (regra 53, mecanismo 2): a superfície CANÔNICA de veredito.
+  # Um JSON do run MAIS RECENTE com esse task name neste workdir, lido dos
+  # arquivos que o dispatcher já grava (inbox/<run_id>.task-name +
+  # logs/events.jsonl). Grep cru em events.jsonl deixa de ser caminho de
+  # decisão — foi assim que um pass de run ANTERIOR foi lido como veredito
+  # (incidente 2026-08-27, regra 53).
+  local task="${1:?uso: oracfit status --task <nome>}"
+  local wd="${ORACFIT_WORKDIR:-$PWD}"
+  python3 - "$task" "$wd" <<'PY'
+import json, os, sys
+task, wd = sys.argv[1], sys.argv[2]
+inbox = os.path.join(wd, ".dispatch", "logs", "inbox")
+events = os.path.join(wd, ".dispatch", "logs", "events.jsonl")
+best = None
+try:
+    for name in os.listdir(inbox):
+        if not name.endswith(".task-name"):
+            continue
+        rid = name[:-len(".task-name")]
+        path = os.path.join(inbox, name)
+        try:
+            with open(path, encoding="utf-8") as f:
+                if f.read() != task:
+                    continue
+        except OSError:
+            continue
+        mtime = os.path.getmtime(path)
+        if best is None or mtime > best[0]:
+            best = (mtime, rid)
+except FileNotFoundError:
+    pass
+if best is None:
+    print(json.dumps({"task": task, "status": "not_found"}, ensure_ascii=False))
+    sys.exit(3)
+rid = best[1]
+out = {"task": task, "run_id": rid, "status": "unknown"}
+attempts = 0
+last_oracle_exit = None
+try:
+    with open(events, encoding="utf-8") as f:
+        for line in f:
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("run_id") != rid:
+                continue
+            t = obj.get("type")
+            if t == "oracle_result":
+                attempts += 1
+                if "exit" in obj:
+                    last_oracle_exit = obj["exit"]
+            elif t == "run_finished":
+                out["status"] = obj.get("status", "unknown")
+                if "oracle_exit" in obj:
+                    last_oracle_exit = obj["oracle_exit"]
+except FileNotFoundError:
+    pass
+out["attempts"] = attempts
+out["last_oracle_exit"] = last_oracle_exit
+print(json.dumps(out, ensure_ascii=False))
+PY
+}
+
 cmd_resume() {
   # resume (v1, 2026-08-01): retoma um dispatch JA TERMINADO com uma
   # mensagem nova do humano, reaproveitando a mesma sessao do opencode
@@ -410,7 +477,17 @@ case "$cmd" in
   resume) cmd_resume "$@" ;;
   usage) exec python3 "$SCRIPT_DIR/usage-hub.py" "$@" ;;
   batch) exec "$SCRIPT_DIR/dispatch-batch.sh" "$@" ;;
-  stop|rerun|switch|status|follow|ps) lifecycle_reserved "$cmd" ;;
+  status)
+    # S7: status --task é o veredito canônico (regra 53) — não é mais
+    # lifecycle reservado. Sem --task, continua apontando o reservado.
+    if [ "${1:-}" = "--task" ] && [ -n "${2:-}" ]; then
+      shift
+      cmd_status "$1"
+    else
+      lifecycle_reserved "status (use: status --task <nome>)"
+    fi
+    ;;
+  stop|rerun|switch|follow|ps) lifecycle_reserved "$cmd" ;;
   normal)
     # leigo: oracfit normal spec task → run normal
     cmd_run normal "$@"
