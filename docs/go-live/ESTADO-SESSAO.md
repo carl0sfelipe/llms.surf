@@ -69,11 +69,22 @@
   (mesmo contrato: JSON no stdin, tok/s no stdout, exit≠0 = falha) — o
   loop não muda (é o L02).
 
+## REVOGAÇÃO DO "SOBE" (dono, 2026-08-30, noite)
+
+- **Nada sobe no Vast por enquanto** — decisão do dono ANTES de criar
+  instância (zero gasto; credit intacto $2.2283, 0 instâncias). O bench
+  real do L02A fica bloqueado; L03A segue no stub SIM.
+- **Cloud na superfície pública SÓ como whitelist gamificada** — auditado:
+  llms.surf site e bestmodel.run já cumprem (sem preço/data/opções; issue
+  como porta; contribuição como escalada). Toda copy futura de cloud passa
+  por esta decisão (bestmodel docs/backlog.md, cb5d7d2).
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
-2. Cloud bestmodel: teto diário Vast (US$X), token a custo × margem.
-3. Gatilho "sobe" a rig 3090 (destrava o bench real do L03A/L02).
+2. Cloud bestmodel: teto diário Vast (US$X), token a custo × margem
+   (moot enquanto o Vast estiver suspenso).
+3. ~~Gatilho "sobe"~~ RESPONDIDO: SUSPENSO pelo dono (2026-08-30 noite).
 4. Colar ESCALADA-2 no Fable (5 decisões dele).
 5. Janela do B2 (tier cru — trava dispatch tow; conserto ~30min).
 
