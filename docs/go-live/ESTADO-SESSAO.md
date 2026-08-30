@@ -341,3 +341,32 @@ Veredito do Fable em docs/go-live/DECISIONS-E6-FABLE-FECHAMENTO.md
   quando a cloud existir; a prioridade já é sua".
 - Ordem de lançamento do Fable: smoke autenticado (dono) ANTES do
   Claude Design congelar UI.
+
+## SESSÃO AUTÔNOMA (2026-08-31/09-01) — onda 2 do E6, commits 2c4f417..48ffe50
+
+- bestmodel: `fetch_contributor_timeline` (da375bb, ADDITIVE ao S27;
+  coluna real é submitted_at — created_at não existe em benchmark_run) +
+  **botão 'report unreal' no console** (3b38199: detail da claim, form
+  com categorias fechadas, 409 tratado; Vercel redespede o web do push →
+  botão nasce no prod). Push até 3b38199.
+- llms.surf: **4.5 atrás de dial** (48ffe50) — referral_conversion.mode
+  em data/lineup-points.json ('any_contribution' hoje; dono ratifica →
+  'first_signed_run_within' + window_days=30); lineup-build lê o bloco
+  timeline do export; test-lineup-machine 4 casos (T4: 9d converte, 45d
+  não) e o teste usa FIXTURE de points própria — máquina não depende do
+  dial vivo (assert antigo fixava 'pending-owner' e quebrou; dial é dial).
+- test-free-path 15/15; check-saude 20/20; GATE bestmodel PASS (a falha
+  única na perna de polling do leaderboard foi a corrida conhecida).
+
+## Quando o dono voltar (nesta ordem)
+
+1. Ratificar ou vetar: 4.4 (standings 2 semanas event-driven), 4.5
+   (flip do dial para first_signed_run_within/30), 4.6 (manter argos-opt
+   — recomendação do Fable).
+2. Smoke autenticado: bestmodel.run/console → sign in (passkey) → abrir
+   uma claim da pool → ⚑ report unreal → confirmar no ledger.
+3. Canário 4.2 (chave OpenRouter free + dispatch tier:cheap → ledger
+   provider_efetivo=openrouter) → libera o anúncio da perna free-key.
+4. Colar copies nos sites (docs/go-live/COPY-*.md e LAUNCH-POST-*.md já
+   verbatim do veredito; dial já commitado no mesmo espírito anti-drift).
+5. "dns setado" → Phase A com cronômetro.
