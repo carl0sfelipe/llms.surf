@@ -11,10 +11,23 @@
   },
   "tiers": {
     "_comment": "PROPOSTA do Fable (E6 4.3) — não são fatos medidos; o dono gira aqui.",
-    "journey": ["Haole", "Grom", "Local", "The Legend"],
-    "haole": { "threshold_points": 1 },
-    "grom": { "threshold_points": 5, "requires": "1+ signed run" },
-    "local": { "threshold_points": 20, "requires": "3+ signed runs ou 1+ reproduction" },
+    "journey": [
+      "Haole",
+      "Grom",
+      "Local",
+      "The Legend"
+    ],
+    "haole": {
+      "threshold_points": 1
+    },
+    "grom": {
+      "threshold_points": 5,
+      "requires": "1+ signed run"
+    },
+    "local": {
+      "threshold_points": 20,
+      "requires": "3+ signed runs ou 1+ reproduction"
+    },
     "the_legend": {
       "threshold_points": 50,
       "requires": "1+ confirmed fake caught ou 3+ reproductions"
@@ -25,5 +38,9 @@
       "rule": "top-25 por pontos",
       "prize": "prioridade na fila de cloud QUANDO ela existir (nada de GPU/data prometida)"
     }
+  },
+  "referral_conversion": {
+    "mode": "any_contribution",
+    "_comment": "E6 4.5: dono ratificar → mode='first_signed_run_within', window_days=30. Modo atual (any_contribution): indicação converte se o indicado contribuiu com qualquer ponto (comportamento v0 congelado na S13). Modo novo: converte só se o 1º SIGNED RUN do indicado ocorrer em ≤ window_days da criação da conta (join não converte)."
   }
 }

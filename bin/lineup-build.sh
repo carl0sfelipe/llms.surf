@@ -32,10 +32,42 @@ python3 - "$ISSUES" "$EXPORT" "$POINTS" "$OUT" <<'PY'
 import json, re, sys
 
 issues_f, export_f, points_f, out_f = sys.argv[1:5]
-points = json.load(open(points_f, encoding="utf-8"))["points"]
+points_doc = json.load(open(points_f, encoding="utf-8"))
+points = points_doc["points"]
 export = json.load(open(export_f, encoding="utf-8"))
 contrib = {str(c["handle"]).lstrip("@"): int(c.get("points", 0))
            for c in export.get("contributors", [])}
+
+# E6 4.5: janela de conversão de referral atrás de dial. Modo default
+# (any_contribution) = comportamento v0 da S13. Modo proposed pelo Fable
+# (first_signed_run_within): converte só se o 1º signed run do indicado
+# ocorrer em <= window_days da criação da conta. Determinístico: compara
+# só timestamps que VÊM dos inputs (nada de relógio aqui).
+conv = points_doc.get("referral_conversion") or {}
+conv_mode = str(conv.get("mode", "any_contribution"))
+conv_window = conv.get("window_days")
+timeline = {str(x["handle"]).lstrip("@").lower(): x
+            for x in export.get("timeline") or []}
+
+
+def _referral_converts(referred_handle):
+    origin = by_handle.get(referred_handle)
+    if origin is None or origin["contribution_points"] <= 0:
+        # v0: indicado precisa existir na fila E ter contribuído
+        return False, "no-origin"
+    if conv_mode == "first_signed_run_within" and conv_window:
+        t = timeline.get(referred_handle)
+        if not t or not t.get("first_signed_run_at") or not t.get("account_created_at"):
+            return False, "no-signed-run"
+        from datetime import datetime
+
+        def _ts(v):
+            return datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+        delta_days = (_ts(t["first_signed_run_at"]) - _ts(t["account_created_at"])).total_seconds() / 86400
+        if delta_days <= float(conv_window):
+            return True, f"signed run em {delta_days:.1f}d"
+        return False, f"signed run fora da janela ({delta_days:.1f}d > {conv_window}d)"
+    return True, "any contribution"
 
 REF_RE = re.compile(r"referred by:\s*@([A-Za-z0-9-]+)", re.I)
 entries = []
@@ -74,13 +106,13 @@ for e in entries:
     total = join_p + e["contribution_points"]
     ref = e.get("referred_by")
     if ref and ref != e["handle"].lower():
-        origin = by_handle.get(ref)
         # anti-sockpuppet: o indicado precisa existir E ter contribuído
-        if origin and origin["contribution_points"] > 0:
+        # (e, com o dial first_signed_run_within, dentro da janela)
+        converted, reason = _referral_converts(ref)
+        e["referral_converted"] = converted
+        e["referral_note"] = reason
+        if converted:
             total += ref_p
-            e["referral_converted"] = True
-        else:
-            e["referral_converted"] = False
     else:
         e["referral_converted"] = None
     e["points_total"] = total
