@@ -264,3 +264,32 @@ ORDEM DE IMPLEMENTAÇÃO (mim) — **CUMPRIDA 2026-08-31** (ver seção E5 FECHA
 - PRÓXIMOS NA FILA: S28 (import pool.json 1310 células + botão denúncia
   + rebuild prod-api), push pendente, dials do dono (allowlist default já
   setada: opencode+openrouter — R4 dial, dono pode trocar).
+
+## S28 ENTREGA COMPLETA no prod (2026-08-31, madrugada de 09/01)
+
+- bestmodel main `604e7c2` pushado. Migration 0014 aplicada no PROD
+  (run_report + run_claim.provenance). As 551 claims localmaxxing com
+  proveniência carimbada E VERIFICADA: 550/550 métricas idênticas ao
+  snapshot 2026-08-13 (CanIRunIt/localmaxxing.com) — evidência, não
+  presumição. Dry-run do pool: 551 existing, 0 novas, 411 nomodel
+  (backlog catálogo), 348 multigpu (fora do escopo).
+- Denúncia de run irreal NO AR: POST /v1/run-claims/{id}/reports e
+  /v1/runs/{id}/reports (auth), moderação GET /v1/reports + confirm/
+  dismiss (MODERATOR_HANDLES, default carl0sfelipe — DIAL do dono no
+  compose). Confirmar = claim refuted + 5 pontos ao denunciante
+  (fake pego; fetch_contributor_points em lockstep nos 3 backends).
+- Imagem prod-api REFEITA (S23/S27/S28 dentro) + worker; containers
+  healthy; smoke público verde (401 sem auth, 404 na rota inexistente).
+  Falta: dono testar autenticado (passkey dele) e o botão no front
+  (Claude Design).
+- Commits: e8423d9 (spec) → 61be0b6 (implementação, GATE PASS x2) →
+  604e7c2 (deploy + dial).
+
+## Fila restante (pós-S28)
+
+1. Dono: smoke autenticado da denúncia no prod (passkey) — 2min.
+2. Dono: "dns setado" → Phase A com cronômetro + smoke log.
+3. Fable: copy The Lineup + Track Record + post de lançamento (bloqueado
+   para flash por decisão do dono).
+4. Claude Design: bestmodel-ONLY redesign → dono cola resultado.
+5. Botão de denúncia no front do bestmodel (chega com o redesign).
