@@ -105,6 +105,28 @@
 - Dials do dono ainda abertos: naming (default A = The Lineup), tabela
   de pontos, cadência de drops, 30 dias de conta indicada, DNS.
 
+## S11 + S10 + S13 IMPLEMENTADAS (dono: "vai" — 2026-08-30, madrugada de 31)
+
+- main `91b8466`, pushado, tree limpa. Sequência E2-D5 cumprida:
+  - **S11** (b2ff5d1): lint recusa `tuned/` fantasma (4 casos) + higiene
+    de contagem (incidents 107 — B2 de ontem nunca contado — e suites).
+  - **S10** (a31b016): `bin/tuned-measure.sh` — 5 specs × 2 lados via
+    DISPATCH_MODEL_REF, 10/10 rodadas conferidas no ledger por run_id +
+    model_id; run fantasma reprova; `docs/registry-tuned-entries.md`
+    congela o formato (NENHUMA entrada criada — GPU espera o "sobe").
+  - **S13** (91b8466): máquina do The Lineup — `bin/lineup-build.sh`
+    (byte-determinístico, fingerprint dos inputs, anti-sockpuppet:
+    indicação só converte se indicado contribuiu), workflow cron 6h
+    (identidade do bot via repo variable **BOT_EMAIL** — C2 recusa
+    literal de e-mail e allowlist só com decisão humana), template da
+    waitlist com `referred by:` + checkbox A3, `data/lineup.json`
+    commitado VAZIO.
+- Gates: check-spec 4/4 (S10-S13), gate local 43 pass, honesty verde.
+- **FILA DO PRÓXIMO PASSO**: B-L01 no bestmodel (export por-contribuidor
+  no contrato congelado na S13) → dials do dono (naming A, tabela,
+  cadência, 30 dias) → copy The Lineup nos 2 sites → S12 segue
+  BLOQUEADA no veto do Vast.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
