@@ -68,12 +68,15 @@ location, not a field  -  a mode is private because it lives in your workdir;
 public is only the YAML you post. Share via the `share your break` issue
 template; install someone else's with `oracfit mode add <file.yaml>`.
 
-## Tokens at cost  -  nothing for sale
+## Models per task  -  the pick is the product
 
-There is no token, credit or hosted product on sale. A waitlist exists as a
-GitHub issue template; the unlock to sell anything is mechanical: demand read
-from that list and throughput measured in this repo's ledger. Until both
-numbers exist in the tree, no price exists anywhere.
+Every task rides the model shaped for it: chosen per mode and per stage from
+the registry, measured in this repo's ledger. Custom modes bring their own
+domain and the pick respects it. Next: domain-tuned models served on demand,
+at cost, from the project's own GPU - gated by the waitlist, unlocked by
+measurements in the tree (demand read from the list, throughput read from
+the ledger). Until those numbers exist, there is no price, no tps and
+nothing for sale anywhere on this site.
 
 ## Files an agent should read next
 
