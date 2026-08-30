@@ -68,15 +68,17 @@ location, not a field  -  a mode is private because it lives in your workdir;
 public is only the YAML you post. Share via the `share your break` issue
 template; install someone else's with `oracfit mode add <file.yaml>`.
 
-## Models per task  -  the pick is the product
+## Most economical models per dev task  -  the llms-surf cloud
 
-Every task rides the model shaped for it: chosen per mode and per stage from
-the registry, measured in this repo's ledger. Custom modes bring their own
-domain and the pick respects it. Next: domain-tuned models served on demand,
-at cost, from the project's own GPU - gated by the waitlist, unlocked by
-measurements in the tree (demand read from the list, throughput read from
-the ledger). Until those numbers exist, there is no price, no tps and
-nothing for sale anywhere on this site.
+Every development task rides the most economical model that passes its
+oracle: chosen per mode and per stage, cost-measured run by run in this
+repo's ledger. Custom modes bring their own domain and the pick respects it.
+The llms-surf cloud - those same models served on demand from the project's
+own GPUs - is the door being built now; the waitlist decides when it opens.
+How we pick, tune and serve is the closed-source side of this enterprise:
+the repo is public, the license is proprietary, the core stays ours. Until
+the cloud is live and measured, there is no price, no tps and nothing for
+sale anywhere on this site.
 
 ## Files an agent should read next
 
