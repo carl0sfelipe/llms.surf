@@ -1,5 +1,5 @@
 {
-  "stamped_at": "2026-08-30T18:42:13Z",
+  "stamped_at": "2026-08-30T20:15:29Z",
   "kind": "free-catalog/1",
   "source": {
     "kind": "sync-free-catalog.sh",
@@ -8,14 +8,14 @@
         "provider": "opencode",
         "keyless": true,
         "endpoint": "local: `opencode models`",
-        "synced_at": "2026-08-30T18:42:13Z",
+        "synced_at": "2026-08-30T20:15:29Z",
         "models_total": 2
       },
       {
         "provider": "openrouter",
         "keyless": false,
         "endpoint": "https://openrouter.ai/api/v1/models",
-        "synced_at": "2026-08-30T18:42:13Z",
+        "synced_at": "2026-08-30T20:15:29Z",
         "models_total": 9,
         "free_criterion": "pricing.prompt == 0 and pricing.completion == 0 medido no feed"
       }
