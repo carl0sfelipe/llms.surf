@@ -392,6 +392,31 @@ def _lint(path, root=None, workdir=None, strict=False):
         failures.append("description diz 'mecânico' mas o yaml não declara nenhum "
                         "`# mecanismo(...): <path>` (regra 32: mecanismo ou dívida)")
 
+    # (6) binding tuned/: model_ref fantasma reprova antes de qualquer run
+    # (S11 / E2-D2 — a proveniência mora no registry; a lint recusa fantasma)
+    tuned_refs = sorted({str(s.get("model_ref", "")) for s in _find_stages(data)
+                         if str(s.get("model_ref", "")).startswith("tuned/")})
+    if tuned_refs:
+        reg_file = root / "model-registry.json"
+        if not reg_file.exists():
+            failures.append(
+                f"model_ref {tuned_refs[0]} exige model-registry.json e ele não "
+                f"existe em {reg_file} — fantasma sem registry reprova mais alto ainda")
+        else:
+            try:
+                known = {str(m.get("id", "")) for m in
+                         json.loads(reg_file.read_text(encoding="utf-8")).get("models", [])}
+            except (json.JSONDecodeError, OSError) as e:
+                known = None
+                failures.append(f"model-registry.json ilegível ({e}) — lint não pode "
+                                f"validar {tuned_refs[0]}: fail loud, não passaquieto")
+            if known is not None:
+                for ref in tuned_refs:
+                    if ref not in known:
+                        failures.append(
+                            f"model_ref '{ref}' não existe no model-registry.json "
+                            f"(binding tuned/ fantasma — E2-D2: proveniência no registry)")
+
     for w in warnings:
         print(f"LINT WARN {p}: {w}", file=sys.stderr)
     if failures:
