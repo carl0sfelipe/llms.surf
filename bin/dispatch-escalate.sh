@@ -80,10 +80,13 @@ fi
 # catálogo do opencode — model id inválido imprime o help do yargs e sai em
 # ~0s, e o loop escalava tier achando "modelo travado". IDs abaixo verificados
 # com `opencode models` (2026-08-12) e registrados no model-registry.json.
+# E5-M3 (2026-08-31): opencode/deepseek-v4-flash-free morreu do catálogo do
+# opencode (hint FANTASMA stampado; id removido do registry) — L1 agora é o
+# free vivo, verificado em `opencode models` e no audit.
 case "$MODE" in
-  1) TIERS=("opencode/deepseek-v4-flash-free") ;;
-  2) TIERS=("opencode/deepseek-v4-flash-free" "opencode/deepseek-v4-pro") ;;
-  3) TIERS=("opencode/deepseek-v4-flash-free" "opencode/deepseek-v4-pro" "claude:opus") ;;
+  1) TIERS=("opencode/nemotron-3-ultra-free") ;;
+  2) TIERS=("opencode/nemotron-3-ultra-free" "opencode/deepseek-v4-pro") ;;
+  3) TIERS=("opencode/nemotron-3-ultra-free" "opencode/deepseek-v4-pro" "claude:opus") ;;
   *) echo "mode inválido: $MODE (use 1, 2 ou 3)" >&2; exit 3 ;;
 esac
 # Incidente 2026-08-11-dispatch-batch-v2-2-hardcoded-tiers-open: tiers eram fixos
@@ -396,7 +399,8 @@ Reply ONLY one JSON object (no markdown fences, no praise):
 pick must be oracle|ours|bar. must_fix max 5 short imperative lines."
       # Mesmo id morto do incidente do call site cru; e crítico sem teto já
       # pendurou stage inteiro (incidente 2026-08-11-critic-sem-teto-…).
-      CRITIC_MODEL="${DISPATCH_CRITIC_MODEL:-opencode/deepseek-v4-flash-free}"
+      # E5-M3: o critic default morreu com o hint — agora é o free vivo.
+      CRITIC_MODEL="${DISPATCH_CRITIC_MODEL:-opencode/nemotron-3-ultra-free}"
       REFINEMENT=$(bash "$REPO_ROOT/bin/with-timeout.sh" "${DISPATCH_CRITIC_TIMEOUT:-300}" \
         opencode run --auto --model "$CRITIC_MODEL" -- "$REFINE_PROMPT" 2>/dev/null | grep -v "^>" | grep -v "^$" | head -40 || true)
       if [ -n "$REFINEMENT" ]; then

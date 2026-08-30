@@ -17,8 +17,8 @@ Isso exporta `DISPATCH_RUNNER` (aponta para `adapters/opencode/runner.sh`),
 
 ```
 bin/pre-dispatch-check.sh nvidia
-bin/smoke-test.sh deepseek-v4-flash-free
-bin/dispatch.sh deepseek-v4-flash-free specs/minha-tarefa.md minha-task
+bin/smoke-test.sh nemotron-3-ultra-free
+bin/dispatch.sh nemotron-3-ultra-free specs/minha-tarefa.md minha-task
 ```
 
 `bin/dispatch.sh` chama `$DISPATCH_RUNNER` (`adapters/opencode/runner.sh`) em
@@ -28,8 +28,8 @@ background, que por sua vez monta `opencode run --model "$MODEL_ID" --format jso
 ## Fork de sessão
 
 ```
-BASE=$(bin/new-session.sh mistral-small-4-119b-2603 specs/mapeamento.md)
-bin/parallel-dispatch.sh "$BASE" specs/tasks.txt mistral-small-4-119b-2603
+BASE=$(bin/new-session.sh nemotron-3-ultra-free specs/mapeamento.md)
+bin/parallel-dispatch.sh "$BASE" specs/tasks.txt nemotron-3-ultra-free
 ```
 
 `runner.sh` traduz `--session ID --fork` para `opencode run --session ID --fork`.

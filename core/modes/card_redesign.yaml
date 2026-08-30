@@ -7,7 +7,7 @@ description: >
   Reprova visual injeta biggest_gap e volta pro run (loop_target).
 stages:
   - role: run
-    model_ref: deepseek-v4-flash-free
+    model_ref: tier:cheap
     oracle: true
     max_attempts: 2
   - role: render
@@ -54,6 +54,6 @@ gauntlet:
   until_approved: true
   safety_ceiling: 4
   loop_target: run
-  critic_model_ref: deepseek/deepseek-v4-flash-direct
+  critic_model_ref: tier:mid
 run_attempt_budget: 4
 on_fail: halt

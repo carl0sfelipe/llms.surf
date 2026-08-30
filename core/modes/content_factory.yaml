@@ -78,7 +78,7 @@ gauntlet:
   until_approved: true
   safety_ceiling: 4
   loop_target: export
-  critic_model_ref: deepseek/deepseek-v4-flash-direct
+  critic_model_ref: tier:mid
 run_attempt_budget: 4
 publish: human_approval
 on_fail: halt

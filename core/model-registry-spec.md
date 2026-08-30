@@ -58,4 +58,4 @@ provider=Venice    quant=fp8      ctx=256000
 
 Provider, quantização **e** contexto diferem sob o mesmo nome. `suite_accuracy` sem esses campos compara coisas distintas e explica variação entre rodadas.
 
-**Limite:** o Zen (opencode) não publica quantização — para `deepseek-v4-flash-free` os dois campos são `unknown`. Ausência silenciosa é proibida; `unknown` é a resposta honesta.
+**Limite:** o Zen (opencode) não publica quantização — para `nemotron-3-ultra-free` os dois campos são `unknown`. Ausência silenciosa é proibida; `unknown` é a resposta honesta.

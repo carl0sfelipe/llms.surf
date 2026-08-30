@@ -4,7 +4,7 @@
  "wait_pct": 85,
  "providers": {
   "opencode": {
-   "plan": "OpenCode Zen Free (deepseek-v4-flash-free, laguna, nemotron, gemini-3.6-flash…)",
+   "plan": "OpenCode Zen Free (nemotron-3-ultra-free, mimo-v2.5-free, gemini-3.6-flash…)",
    "calibration_note": "Calibrado 2026-08-12. Zen NAO publica teto oficial (opencode.ai/docs/zen; issues #16844/#15585: cap diario, reset 00:00 local, estimativas de terceiros ~0.3-0.5M/dia NAO batem com esta conta). Medicao propria: 4.293.366 tokens no dia 2026-08-12 SEM FreeUsageLimitError — so 429 transiente (ja vetado por observacao). Numero de teto continua desconhecido: day fica null ate o cap real ser observado (grave-o com limits --set quando 'Free usage exceeded' aparecer).",
    "windows": {"5h": {"limit_tokens": null}, "day": {"limit_tokens": null}, "week": {"limit_tokens": null}}
   },

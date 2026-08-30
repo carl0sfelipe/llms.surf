@@ -221,7 +221,7 @@ rc=0
 ESC_ERR2="$(LOG_DIR="$LOG_DIR" \
   bash "$ESCALATE" "$ESCALATE_SPEC" override-escalate-default --mode 2 2>&1 >/dev/null)" || rc=$?
 if [ "$rc" -eq 0 ] \
-  && printf '%s\n' "$ESC_ERR2" | grep -qF '[dispatch-escalate] tiers=opencode/deepseek-v4-flash-free opencode/deepseek-v4-pro'; then
+  && printf '%s\n' "$ESC_ERR2" | grep -qF '[dispatch-escalate] tiers=opencode/nemotron-3-ultra-free opencode/deepseek-v4-pro'; then
   ok "dispatch-escalate: sem DISPATCH_TIERS, mantém tiers default do mode (regressão OK)"
 else
   not "dispatch-escalate default tiers quebrou (rc=$rc): $ESC_ERR2"

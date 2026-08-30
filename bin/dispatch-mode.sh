@@ -206,7 +206,10 @@ if [ -z "${DISPATCH_RUNNER:-}" ]; then
 fi
 
 model_ref="$(grep -E '^\s*model_ref:' "$mode_yaml" | head -1 | sed 's/.*model_ref:[[:space:]]*//' | tr -d '"' || true)"
-model_ref="${model_ref:-deepseek-v4-flash-free}"
+# E5-M3: o default antigo (deepseek-v4-flash-free) tinha hint morto e ficou
+# sendo servido em silêncio — a classe exata do incidente E5. Default agora é
+# a rota free do catálogo carimbado (resolve loud se o catálogo estiver ausente).
+model_ref="${model_ref:-tier:cheap}"
 # Incidente 2026-08-11-prompt-v3-travelview-espera-override-dis: override por
 # env vence YAML e default. Permite fallback cheap→paid sem criar outro modo.
 if [ -n "${DISPATCH_MODEL_REF:-}" ]; then
@@ -400,7 +403,14 @@ with open(path, "a") as f:
   export ORACFIT_EVENTS_FILE="$(oracfit_events_path)"
   export ORACFIT_INTERRUPT_FILE="$(oracfit_interrupt_file "$RUN_ID")"
   export ORACFIT_SESSION_FILE="$(oracfit_session_file "$RUN_ID")"
-  "$DISPATCH_RUNNER" "${runner_args[@]}" | "$SCRIPT_DIR/oracfit-thinking-tee.py"
+  # Incidente 2026-08-30-unlock-plan-passa-tier-ao-runner-sem-res (B2/E5-M4):
+  # model_ref tier:* não é id — nenhum runner de verdade o aceita (exit 3).
+  # Expande pela cadeia do catálogo free carimbado via run-with-fallback.
+  case "$model_ref" in
+    tier:*) STAGE_RUNNER="$SCRIPT_DIR/run-with-fallback.sh" ;;
+    *)      STAGE_RUNNER="$DISPATCH_RUNNER" ;;
+  esac
+  "$STAGE_RUNNER" "${runner_args[@]}" | "$SCRIPT_DIR/oracfit-thinking-tee.py"
   runner_rc=${PIPESTATUS[0]}
   unset ORACFIT_EVENTS_FILE
   set -e

@@ -7,7 +7,7 @@ description: >
   vision_gate (juiz gemma). Loop ate APPROVED.
 stages:
   - role: run
-    model_ref: deepseek-v4-flash-free
+    model_ref: tier:cheap
     oracle: true
     max_attempts: 2
   - role: render
@@ -52,6 +52,6 @@ gauntlet:
   until_approved: true
   safety_ceiling: 5
   loop_target: run
-  critic_model_ref: deepseek/deepseek-v4-flash-direct
+  critic_model_ref: tier:mid
 run_attempt_budget: 10
 on_fail: halt

@@ -35,7 +35,7 @@ if [ -n "$BASE_URL" ]; then
         echo "   O hermes vai cair para fallback_providers e falhar com erro sobre outro modelo." >&2
         echo "   Conserto: use API free como default em $CONFIG —" >&2
         echo "     model:" >&2
-        echo "       default: deepseek-v4-flash-free" >&2
+        echo "       default: nemotron-3-ultra-free (rota free viva — model-registry.json)" >&2
         echo "       provider: opencode-zen" >&2
         falhou=1
       fi
@@ -64,7 +64,7 @@ then
   echo "   Conserto em $CONFIG, dentro de auxiliary:" >&2
   echo "     compression:" >&2
   echo "       provider: opencode-zen" >&2
-  echo "       model: deepseek-v4-flash-free" >&2
+  echo "       model: nemotron-3-ultra-free   # free vivo, ctx 1M — registry é a verdade" >&2
   echo "       context_length: 128000" >&2
   falhou=1
 fi

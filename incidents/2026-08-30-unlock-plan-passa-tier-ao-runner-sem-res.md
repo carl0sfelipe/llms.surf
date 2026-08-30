@@ -3,8 +3,8 @@ id: 2026-08-30-unlock-plan-passa-tier-ao-runner-sem-res
 titulo: unlock_plan passa tier: ao runner sem resolver
 data: 2026-08-30
 recorrivel: sim
-regra: pendente
-status: aberto
+regra: nao — virou codigo (classe C)
+status: fechado (2026-08-31)
 classe: C
 interage_com: "core/runner-contract.md (quem chama passa id do registry; id ausente → exit 3)"
 interage_com: "bin/lib-oracfit-mode-loader.py resolve-tier (existe e não é chamado por dump/dispatch-stages)"
@@ -89,10 +89,37 @@ O runner Cursor, com id presente sem hint, também é exit 3 (contrato:
 Camada 1 dispara primeiro (`tier:expensive` nem é id). Camada 2 ficaria
 exposta no dia em que alguém só plugar `resolve-tier` no dump.
 
-## Correção aplicada
+## Correção aplicada (2026-08-31, E5-M4/M3 — camada 1)
 
-Nenhuma. Dono: registrar incidente e parar. Não despachar S25. Não promover
-regra neste turno. Não editar `bin/dispatch-stages.sh` nem o registry.
+Mecanismo, não regra: `tier:*` agora resolve ANTES de chegar a qualquer
+runner, nos 4 pontos de invocação — e a resolução é a cadeia do catálogo
+free carimbado, não um id congelado que apodrece de novo.
+
+1. `bin/lib-oracfit-mode-loader.py` — `resolve-tier tier:cheap` devolve a
+   LISTA fallback ordenada do `data/free-catalog.json` (keyless primeiro);
+   catálogo ausente/ilegível = exit 2 LOUD (nunca degrada para default
+   podre). Commit 2662211.
+2. `bin/run-with-fallback.sh` — aceita `tier:*` e expande para a cadeia
+   (desvio em exit 2/4 real permanece). Commit 2662211.
+3. `bin/dispatch-mode.sh` + `bin/dispatch-stages.sh` + critic do
+   `bin/lib-oracfit-gauntlet.sh` — `tier:*` roteia via run-with-fallback
+   (shim no ponto de invocação); default de modo sem model_ref virou
+   `tier:cheap` (o default antigo citava o hint morto desta família).
+4. `bin/audit-registry-ids.sh --stamp` — grava `id_status` medido no
+   registry; consumidores recusam FANTASMA/NAO-ENCONTRADO na porta
+   (E5-M2). Registry cortado: 46/69 ids mortos removidos (audit DEPOIS:
+   0/23 — 19 EXISTE + 4 PROVAVEL). Modos que citavam mortos migraram para
+   `tier:cheap`/`tier:mid`.
+
+## Camada 2 (cursor hints) — vigência
+
+O alerta permanece: `tier:expensive`/`tier:mid` resolvem para ids pagos
+sem `cli_hints.cursor` — o tow no adapter Cursor segue exit 3 na camada 2
+até o registry ganhar hint Cursor para os alvos de escalada. Não é furo
+novo: é o PRD 4.3 ("indisponível neste CLI"), observável em ~0s, e o
+`run-with-fallback` pula com aviso alto em vez de travar. Teste cobre a
+rota free (stub + `bin/test-free-path.sh`); a rota Cursor é dial de
+registry, não de código.
 
 Caminho de correção (classe C, para quem retomar): `dispatch-stages.sh`
 resolver `tier:*` via `lib-oracfit-mode-loader.py resolve-tier` **antes**

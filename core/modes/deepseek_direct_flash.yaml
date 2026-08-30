@@ -6,7 +6,7 @@ description: >
   provider direto (api.deepseek.com, nao OpenRouter), desconto de cache hit nativo.
 stages:
   - role: run
-    model_ref: deepseek/deepseek-v4-flash-direct
+    model_ref: tier:cheap
     oracle: true
     max_attempts: 3
 gauntlet:

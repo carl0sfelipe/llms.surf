@@ -9,7 +9,7 @@ description: >
   repo scentmatch (preflight recusa outro lugar).
 stages:
   - role: run
-    model_ref: deepseek-v4-flash-free
+    model_ref: tier:cheap
     preflight: >
       test -f plano/00-contexto-global.md && test -f ESTADO.md ||
       { echo "ERROR: workdir nao e a raiz do repo scentmatch (falta plano/00-contexto-global.md)"; exit 1; }
@@ -21,6 +21,6 @@ gauntlet:
   until_approved: true
   safety_ceiling: 5
   loop_target: run
-  critic_model_ref: deepseek/deepseek-v4-flash-direct
+  critic_model_ref: tier:mid
 run_attempt_budget: 5
 on_fail: halt

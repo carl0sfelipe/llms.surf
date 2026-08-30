@@ -13,8 +13,8 @@ o modelo, `adapters/claude-code/runner.sh` recusa com `exit 3`.
 ```
 source adapters/opencode/env.sh
 bin/pre-dispatch-check.sh nvidia
-bin/smoke-test.sh deepseek-v4-flash-free
-bin/dispatch.sh deepseek-v4-flash-free specs/minha-tarefa.md minha-task
+bin/smoke-test.sh nemotron-3-ultra-free
+bin/dispatch.sh nemotron-3-ultra-free specs/minha-tarefa.md minha-task
 bin/poll-status.sh minha-task
 ```
 

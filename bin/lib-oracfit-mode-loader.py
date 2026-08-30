@@ -37,17 +37,19 @@ FREE_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "free-cata
 # `bin/audit-registry-ids.sh --stamp` no model-registry.json.
 DEAD_ID_STATUSES = ("FANTASMA", "NAO-ENCONTRADO", "NAO-VERIFICADO")
 
+# E5-M3: defaults só com id que sobreviveu ao audit (id_status stampado).
+# cheap NÃO tem default aqui — é rota free e resolve pelo catálogo carimbado
+# (data/free-catalog.json), que reprova loud na ausência em vez de servir id
+# podre (classe do incidente E5).
 _DEFAULT_TIERS = {
-    "cheap": "deepseek-v4-flash-free",
-    "mid": "deepseek/deepseek-v4-chat",
-    "expensive": "google/gemini-2.5-pro-001",
-    "vision": "meta/llama-3.2-90b-vision-instruct",
+    "mid": "deepseek-v4-pro",
+    "expensive": "claude-sonnet-5",
+    "vision": "gemini-3.6-flash",
 }
 _TIER_FALLBACKS = {
-    "cheap": "deepseek-v4-flash-free",
-    "mid": "llama-3.3-70b-versatile",
-    "expensive": None,
-    "vision": "google/gemma-3-27b-vision-it:free",
+    "mid": "deepseek-v4-flash-openrouter",
+    "expensive": "deepseek-v4-pro",
+    "vision": None,
 }
 
 
@@ -553,11 +555,11 @@ def resolve_tier(tier, registry_path=None, catalog_path=None):
 
         elif tier == "mid":
             for m in models:
-                if m.get("id") == "deepseek/deepseek-v4-chat":
+                if m.get("id") == "deepseek-v4-pro":
                     print(m["id"])
                     return
             for m in models:
-                if m.get("id") == "llama-3.3-70b-versatile":
+                if m.get("id") == "deepseek-v4-flash-openrouter":
                     print(m["id"])
                     return
             for m in models:
@@ -575,7 +577,7 @@ def resolve_tier(tier, registry_path=None, catalog_path=None):
                     print(m["id"])
                     return
             for m in models:
-                if m.get("id") == "google/gemini-2.5-pro-001":
+                if m.get("id") == "claude-sonnet-5":
                     print(m["id"])
                     return
             for m in models:
@@ -586,11 +588,7 @@ def resolve_tier(tier, registry_path=None, catalog_path=None):
 
         elif tier == "vision":
             for m in models:
-                if m.get("id") == "meta/llama-3.2-90b-vision-instruct":
-                    print(m["id"])
-                    return
-            for m in models:
-                if m.get("id") == "google/gemma-3-27b-vision-it:free":
+                if m.get("id") == "gemini-3.6-flash":
                     print(m["id"])
                     return
             for m in models:

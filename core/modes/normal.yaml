@@ -2,7 +2,7 @@ id: normal
 version: "1"
 stages:
   - role: run
-    model_ref: deepseek-v4-flash-free
+    model_ref: tier:cheap
     oracle: true
 max_attempts: 3
 description: >

@@ -22,7 +22,7 @@ runner.sh <model_id> <spec_file> [--session ID] [--fork]
 - `id` presente sem hint para aquele CLI → `exit 3` (modelo indisponível ali; ver PRD 4.3)
 - `id` ausente do registry → `exit 3` (PRD seção 11, regra 2: nunca inventar model id)
 
-Passar o `id` cru para o CLI é bug: `opencode run --model deepseek-v4-flash-free` retorna erro de servidor, enquanto o hint `opencode/deepseek-v4-flash-free` funciona.
+Passar o `id` cru para o CLI é bug: `opencode run --model nemotron-3-ultra-free` retorna erro de servidor, enquanto o hint `opencode/nemotron-3-ultra-free` funciona.
 - `<spec_file>` — caminho para arquivo com o spec/prompt.
 - `--session ID` — opcional. Reusa/forka sessão existente.
 - `--fork` — opcional. Junto com `--session`, cria fork em vez de reusar.

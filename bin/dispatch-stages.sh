@@ -401,7 +401,14 @@ for line in open(sys.argv[1]):
         # thinking/tool_call no events.jsonl (precisa de ORACFIT_RUN_ID +
         # ORACFIT_EVENTS_FILE, exportados acima). Sem o tee, o painel não
         # mostra thinking em run multi-stage.
-        "$DISPATCH_RUNNER" "$model_ref" "$run_spec" 2>&1 \
+        # Incidente 2026-08-30-unlock-plan-passa-tier-ao-runner-sem-res
+        # (B2/E5-M4): tier:* não é id — expande pela cadeia do catálogo
+        # free carimbado em vez de entregar string cru ao runner (exit 3).
+        case "$model_ref" in
+          tier:*) STAGE_RUNNER="$SCRIPT_DIR/run-with-fallback.sh" ;;
+          *)      STAGE_RUNNER="$DISPATCH_RUNNER" ;;
+        esac
+        "$STAGE_RUNNER" "$model_ref" "$run_spec" 2>&1 \
           | "$SCRIPT_DIR/oracfit-thinking-tee.py" >"${gauntlet_dir}/runner-${attempt}.log"
         runner_rc=${PIPESTATUS[0]}
       fi

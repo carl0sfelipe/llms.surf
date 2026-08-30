@@ -4,10 +4,10 @@ name: Auditoria blog search (sem visão)
 description: >
   Flash-class com TOOLS=1 audita se a busca do blog funciona (Meili/fs,
   input, resultados). Não precisa de vision — texto + curl/grep bastam.
-  Fit: deepseek-v4-flash-free / tier:cheap.
+  Fit: rota free do catalogo carimbado (tier:cheap).
 stages:
   - role: run
-    model_ref: deepseek-v4-flash-free
+    model_ref: tier:cheap
     oracle: true
     max_attempts: 3
 gauntlet:

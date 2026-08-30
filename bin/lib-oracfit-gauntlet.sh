@@ -467,7 +467,7 @@ oracfit_gauntlet_run_critic() {
   local accum="${4:-}"
   local attempt="${5:-}"
   local barra_file="${6:-}"
-  local critic_ref runner oracle_sig log_tail barra crit_spec raw cjson gap
+  local critic_ref runner critic_runner oracle_sig log_tail barra crit_spec raw cjson gap
   local with_timeout critic_timeout critic_rc
 
   # fail-open: args ausentes não derrubam o stage loop
@@ -533,13 +533,27 @@ oracfit_gauntlet_run_critic() {
   fi
   critic_timeout="${ORACFIT_CRITIC_TIMEOUT:-180}"
 
+  # Incidente B2/E5-M4: critic_model_ref tier:* não é id — expande pela
+  # cadeia do catálogo free carimbado em vez de entregar cru ao runner.
+  case "$critic_ref" in
+    tier:*)
+      if [ -f "${_gauntlet_lib_dir}/run-with-fallback.sh" ]; then
+        critic_runner="${_gauntlet_lib_dir}/run-with-fallback.sh"
+      else
+        echo "gauntlet: run-with-fallback.sh ausente — critic tier: sem resolução, skipping" >&2
+        return 0
+      fi
+      ;;
+    *) critic_runner="$runner" ;;
+  esac
+
   # Despacha via runner (mesmo shape do builder), captura stdout.
   critic_rc=0
   if [ -n "$with_timeout" ]; then
-    raw="$(bash "$with_timeout" "$critic_timeout" "$runner" "$critic_ref" "$crit_spec" 2>/dev/null)" || critic_rc=$?
+    raw="$(bash "$with_timeout" "$critic_timeout" "$critic_runner" "$critic_ref" "$crit_spec" 2>/dev/null)" || critic_rc=$?
   else
     echo "gauntlet: with-timeout.sh não encontrado — critic sem teto (regra 12)" >&2
-    raw="$("$runner" "$critic_ref" "$crit_spec" 2>/dev/null)" || critic_rc=$?
+    raw="$("$critic_runner" "$critic_ref" "$crit_spec" 2>/dev/null)" || critic_rc=$?
   fi
   rm -f "$crit_spec"
 

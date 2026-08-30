@@ -3,91 +3,6 @@
   "version": 1,
   "models": [
     {
-      "id": "mistral-small-4-119b-2603",
-      "provider": "nvidia",
-      "tier": "free",
-      "accuracy": 0.92,
-      "latency_ms": 2600,
-      "context_window": 64000,
-      "rate_limit": "Leve",
-      "best_for": [
-        "código",
-        "raciocínio médio"
-      ],
-      "source": "specs/free-model-ecosystem.md:78",
-      "verified_at": null,
-      "fallback": [
-        "llama-3.3-70b-versatile",
-        "deepseek-v4-flash-free",
-        "qwen-uncensored"
-      ],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "nemotron-3-nano-30b-a3b",
-      "provider": "nvidia",
-      "tier": "free",
-      "accuracy": 0.92,
-      "latency_ms": 3500,
-      "context_window": 256000,
-      "rate_limit": "Leve",
-      "best_for": [
-        "código",
-        "fallback"
-      ],
-      "source": "specs/free-model-ecosystem.md:79",
-      "verified_at": "2026-07-27",
-      "cli_hints": {
-        "opencode": "nvidia/nvidia/nemotron-3-nano-30b-a3b"
-      },
-      "fallback": [
-        "mistral-small-4-119b-2603"
-      ],
-      "id_status": "FANTASMA",
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 6542,
-        "provider_observed": "unknown — sem catálogo público acessível sem chave",
-        "quantization": "unknown — sem catálogo público acessível sem chave"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "nemotron-3-super-120b-a12b",
-      "provider": "nvidia",
-      "tier": "free",
-      "accuracy": 0.83,
-      "latency_ms": 7000,
-      "context_window": 64000,
-      "rate_limit": "Leve",
-      "best_for": [
-        "contexto longo"
-      ],
-      "source": "specs/free-model-ecosystem.md:80",
-      "verified_at": "2026-07-27",
-      "cli_hints": {
-        "opencode": "nvidia/nvidia/nemotron-3-super-120b-a12b"
-      },
-      "fallback": [
-        "llama-3.3-70b-versatile",
-        "deepseek-v4-flash-free",
-        "qwen-uncensored"
-      ],
-      "id_status": "FANTASMA",
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 0.875,
-        "suite_n": 8,
-        "latency_ms": 5906,
-        "provider_observed": "unknown — sem catálogo público acessível sem chave",
-        "quantization": "unknown — sem catálogo público acessível sem chave"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
       "id": "gpt-oss-20b",
       "provider": "nvidia-groq",
       "tier": "free",
@@ -103,218 +18,7 @@
       "cli_hints": {},
       "fallback": [],
       "id_status": "PROVAVEL",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "llama-3.3-70b-versatile",
-      "provider": "groq",
-      "tier": "free",
-      "accuracy": 0.75,
-      "latency_ms": 500,
-      "context_window": 6000,
-      "rate_limit": "Alto",
-      "best_for": [
-        "prompts curtos",
-        "tempo real"
-      ],
-      "source": "specs/free-model-ecosystem.md:82",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [
-        "mistral-small-4-119b-2603"
-      ],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "z-ai/glm-5.2",
-      "provider": "z-ai-nvidia",
-      "tier": "free",
-      "accuracy": 0.83,
-      "latency_ms": 8100,
-      "context_window": 1000000,
-      "rate_limit": "Semanal",
-      "best_for": [
-        "agentes",
-        "docs longos"
-      ],
-      "source": "specs/free-model-ecosystem.md:83",
-      "verified_at": "2026-07-27",
-      "cli_hints": {
-        "opencode": "nvidia/z-ai/glm-5.2"
-      },
-      "fallback": [
-        "deepseek-v4-flash-free",
-        "nemotron-3-super-120b-a12b"
-      ],
-      "id_status": "FANTASMA",
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 5916,
-        "provider_observed": "unknown — sem catálogo público acessível sem chave",
-        "quantization": "unknown — sem catálogo público acessível sem chave"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "nemotron-3-nano-omni-30b-reasoning",
-      "provider": "nvidia",
-      "tier": "free",
-      "accuracy": 0.75,
-      "latency_ms": 3800,
-      "context_window": 256000,
-      "rate_limit": "Leve",
-      "best_for": [
-        "raciocínio profundo"
-      ],
-      "source": "specs/free-model-ecosystem.md:84",
-      "verified_at": "2026-07-27",
-      "cli_hints": {
-        "opencode": "nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
-      },
-      "fallback": [
-        "mistral-small-4-119b-2603"
-      ],
-      "id_status": "FANTASMA",
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 8889,
-        "provider_observed": "unknown — sem catálogo público acessível sem chave",
-        "quantization": "unknown — sem catálogo público acessível sem chave"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "llama-4-maverick-17b-128e",
-      "provider": "nvidia",
-      "tier": "free",
-      "accuracy": 0.67,
-      "latency_ms": 1700,
-      "context_window": 1000000,
-      "rate_limit": "Leve",
-      "best_for": [
-        "longo + rápido"
-      ],
-      "source": "specs/free-model-ecosystem.md:85",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "diffusiongemma-26b-a4b-it",
-      "provider": "nvidia",
-      "tier": "free",
-      "accuracy": 0.67,
-      "latency_ms": 1100,
-      "context_window": 8000,
-      "rate_limit": "Leve",
-      "best_for": [
-        "tarefas simples e rápidas"
-      ],
-      "source": "specs/free-model-ecosystem.md:86",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "deepseek-v4-flash-free",
-      "provider": "zen",
-      "tier": "free",
-      "accuracy": 0.5,
-      "latency_ms": 8000,
-      "context_window": 1000000,
-      "rate_limit": "Leve",
-      "best_for": [
-        "agentes",
-        "contexto muito longo"
-      ],
-      "source": "specs/free-model-ecosystem.md:87",
-      "verified_at": "2026-07-27",
-      "cli_hints": {
-        "opencode": "opencode/deepseek-v4-flash-free",
-        "hermes": "opencode-zen deepseek-v4-flash-free"
-      },
-      "fallback": [
-        "nemotron-3-super-120b-a12b",
-        "qwen3.8-max-preview"
-      ],
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 4412,
-        "provider_observed": "unknown — Zen nao publica",
-        "provider_upstream": "unknown — Zen nao publica quem serve os pesos",
-        "quantization": "unknown — Zen nao publica",
-        "evidencia_provider": "auth.json provider id \"opencode\" (type=api, sem baseURL); logs: providerID=opencode modelID=deepseek-v4-flash-free; namespace opencode/ em `opencode models`"
-      },
-      "hermes_verified_at": "2026-07-26",
-      "hermes_evidence": "hermes -z \"responda apenas: OK\" --provider opencode-zen -m deepseek-v4-flash-free -> \"OK\", exit 0",
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "deepseek-v4-flash-direct",
-      "provider": "deepseek",
-      "tier": "paid",
-      "accuracy": null,
-      "latency_ms": 2568,
-      "context_window": 1000000,
-      "rate_limit": null,
-      "best_for": [
-        "substrato god mode v4 (prime-agent)",
-        "agentes"
-      ],
-      "source": "adapters/prime-agent/DISCOVERY.md",
-      "verified_at": "2026-08-13",
-      "cli_hints": {
-        "prime-agent": "deepseek/deepseek-v4-flash"
-      },
-      "fallback": [
-        "deepseek-v4-flash-free"
-      ],
-      "verified_by": "prime-agent",
-      "id_status": "NAO-ENCONTRADO",
-      "measured": {
-        "latency_ms": 2568,
-        "evidencia_provider": "prime-agent auth.json provider \"deepseek\" (type=api); `prime-agent model list` mostra provider deepseek com deepseek-v4-flash e deepseek-v4-pro"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "deepseek-v4-pro-direct",
-      "provider": "deepseek",
-      "tier": "paid",
-      "accuracy": null,
-      "latency_ms": 3068,
-      "context_window": 1000000,
-      "rate_limit": null,
-      "best_for": [
-        "critic/raciocínio no substrato prime-agent"
-      ],
-      "source": "adapters/prime-agent/DISCOVERY.md",
-      "verified_at": "2026-08-13",
-      "cli_hints": {
-        "prime-agent": "deepseek/deepseek-v4-pro"
-      },
-      "fallback": [
-        "deepseek-v4-flash-direct"
-      ],
-      "verified_by": "prime-agent",
-      "id_status": "NAO-ENCONTRADO",
-      "measured": {
-        "latency_ms": 3068,
-        "evidencia_provider": "prime-agent auth.json provider \"deepseek\" (type=api); `prime-agent model list` mostra provider deepseek com deepseek-v4-flash e deepseek-v4-pro"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "nemotron-3-ultra-free",
@@ -342,149 +46,7 @@
         "provider_observed": "unknown — Zen nao publica",
         "quantization": "unknown — Zen nao publica"
       },
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "north-mini-code-free",
-      "provider": "zen",
-      "tier": "free",
-      "accuracy": 0.42,
-      "latency_ms": 12500,
-      "context_window": 256000,
-      "rate_limit": "Leve",
-      "best_for": [
-        "código simples"
-      ],
-      "source": "specs/free-model-ecosystem.md:89",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "opencode/north-mini-code-free"
-      },
-      "fallback": [],
-      "verified_by": "opencode",
-      "id_status": "FANTASMA",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 14655,
-        "provider_observed": "unknown — Zen nao publica",
-        "quantization": "unknown — Zen nao publica"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "meta/llama-3.2-90b-vision-instruct",
-      "provider": "nvidia-groq",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [
-        "visão 90B"
-      ],
-      "source": "specs/free-model-ecosystem.md:97",
-      "verified_at": null,
-      "cli_hints": {
-        "opencode": "nvidia/meta/llama-3.2-90b-vision-instruct"
-      },
-      "fallback": [
-        "qwen/qwen-2.5-vl-7b-instruct:free"
-      ],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "meta/llama-3.2-11b-vision-instruct",
-      "provider": "groq",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [
-        "visão 11B"
-      ],
-      "source": "specs/free-model-ecosystem.md:98",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "qwen/qwen-2.5-vl-7b-instruct:free",
-      "provider": "openrouter",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [
-        "visão 7B"
-      ],
-      "source": "specs/free-model-ecosystem.md:99",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [
-        "google/gemma-3-27b-vision-it:free"
-      ],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "google/gemma-3-27b-vision-it:free",
-      "provider": "openrouter",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [
-        "visão 27B"
-      ],
-      "source": "specs/free-model-ecosystem.md:100",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "whisper-1",
-      "provider": "OpenAI (via Groq?)",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [
-        "transcrição"
-      ],
-      "source": "specs/free-model-ecosystem.md:106",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "distil-whisper",
-      "provider": "huggingface-local",
-      "tier": "local",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [
-        "transcrição local"
-      ],
-      "source": "specs/free-model-ecosystem.md:107",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "glm-5.2",
@@ -503,25 +65,7 @@
         "nemotron-3-super-120b-a12b"
       ],
       "id_status": "PROVAVEL",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "qwen3.8-max-preview",
-      "provider": "qwen-token-plan",
-      "tier": "token-plan",
-      "accuracy": 0.8,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": "Token plan semanal (reset ~7 dias)",
-      "best_for": [],
-      "source": "specs/free-model-ecosystem.md:114",
-      "verified_at": "2026-07-23",
-      "cli_hints": {
-        "opencode": "qwen-token-plan/qwen3.8-max-preview"
-      },
-      "fallback": [],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "qwen3.7-max",
@@ -537,46 +81,7 @@
       "cli_hints": {},
       "fallback": [],
       "id_status": "PROVAVEL",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "deepseek/deepseek-v4-chat",
-      "provider": "deepseek",
-      "tier": "paid",
-      "accuracy": 0.9,
-      "latency_ms": null,
-      "context_window": 128000,
-      "rate_limit": null,
-      "best_for": [
-        "código",
-        "raciocínio"
-      ],
-      "source": "specs/free-model-ecosystem.md:123",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "deepseek/deepseek-v4-flash",
-      "provider": "deepseek",
-      "tier": "paid",
-      "accuracy": 0.85,
-      "latency_ms": null,
-      "context_window": 128000,
-      "rate_limit": null,
-      "best_for": [
-        "mais barato"
-      ],
-      "source": "specs/free-model-ecosystem.md:124",
-      "verified_at": null,
-      "cli_hints": {
-        "opencode": "nvidia/deepseek-ai/deepseek-v4-flash"
-      },
-      "fallback": [],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "deepseek-v4-flash-openrouter",
@@ -596,45 +101,7 @@
         "deepseek-v4-flash-free"
       ],
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "mistralai/mistral-small-4-119b-2603",
-      "provider": "mistralai",
-      "tier": "paid",
-      "accuracy": 0.92,
-      "latency_ms": null,
-      "context_window": 256000,
-      "rate_limit": null,
-      "best_for": [
-        "código"
-      ],
-      "source": "specs/free-model-ecosystem.md:125",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "nvidia/nemotron-3-super-120b-a12b",
-      "provider": "nvidia",
-      "tier": "paid",
-      "accuracy": 0.83,
-      "latency_ms": null,
-      "context_window": 1000000,
-      "rate_limit": null,
-      "best_for": [
-        "contexto longo barato"
-      ],
-      "source": "specs/free-model-ecosystem.md:126",
-      "verified_at": null,
-      "cli_hints": {
-        "opencode": "nvidia/nvidia/nemotron-3-super-120b-a12b"
-      },
-      "fallback": [],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "openai/gpt-oss-120b",
@@ -662,7 +129,7 @@
         "provider_observed": "CoreWeave; DeepInfra; Novita; SiliconFlow; Mancer 2; DigitalOcean; Google; BaseTen; Parasail; SambaNova; Amazon Bedrock; DeepInfra; Together; Nebius; Amazon Bedrock; Phala; Groq; Mara; Cerebras",
         "quantization": "CoreWeave=fp4; DeepInfra=bf16; Novita=fp4; SiliconFlow=fp8; Mancer 2=fp8; DigitalOcean=unknown; Google=unknown; BaseTen=fp4; Parasail=fp4; SambaNova=unknown; Amazon Bedrock=unknown; DeepInfra=bf16; Together=unknown; Nebius=fp4; Amazon Bedrock=unknown; Phala=unknown; Groq=unknown; Mara=unknown; Cerebras=fp16"
       },
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "cohere/command-r-plus-08-2024",
@@ -690,134 +157,7 @@
         "provider_observed": "Cohere",
         "quantization": "Cohere=unknown"
       },
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "google/gemini-2.5-flash-001",
-      "provider": "google",
-      "tier": "paid",
-      "accuracy": 0.9,
-      "latency_ms": null,
-      "context_window": 1000000,
-      "rate_limit": null,
-      "best_for": [
-        "barato + longo + bom"
-      ],
-      "source": "specs/free-model-ecosystem.md:129",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "google/gemini-2.5-pro-001",
-      "provider": "google",
-      "tier": "paid",
-      "accuracy": 0.95,
-      "latency_ms": null,
-      "context_window": 1000000,
-      "rate_limit": null,
-      "best_for": [
-        "melhor qualidade"
-      ],
-      "source": "specs/free-model-ecosystem.md:130",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "qwen-uncensored",
-      "provider": "local",
-      "tier": "local",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": 32000,
-      "rate_limit": null,
-      "best_for": [
-        "anchor local",
-        "sempre disponível"
-      ],
-      "source": "specs/free-model-ecosystem.md:136",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "ornith:9b",
-      "provider": "local",
-      "tier": "local",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": 64000,
-      "rate_limit": null,
-      "best_for": [
-        "anchor local",
-        "sempre disponível"
-      ],
-      "source": "specs/free-model-ecosystem.md:137",
-      "verified_at": null,
-      "cli_hints": {},
-      "fallback": [],
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "laguna-s-2.1-free",
-      "provider": "zen",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 (varredura de 21 modelos free, 19 responderam)",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "opencode/laguna-s-2.1-free"
-      },
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 0.25,
-        "suite_n": 8,
-        "latency_ms": 2392,
-        "provider_observed": "unknown — Zen nao publica",
-        "quantization": "unknown — Zen nao publica"
-      },
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "ling-3.0-flash-free",
-      "provider": "zen",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 (varredura de 21 modelos free, 19 responderam)",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "opencode/ling-3.0-flash-free",
-        "hermes": "opencode-zen ling-3.0-flash-free"
-      },
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 4268,
-        "provider_observed": "unknown — Zen nao publica",
-        "quantization": "unknown — Zen nao publica"
-      },
-      "hermes_verified_at": "2026-07-26",
-      "hermes_evidence": "hermes -z \"responda apenas: OK\" --provider opencode-zen -m ling-3.0-flash-free -> \"OK\", exit 0",
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "mimo-v2.5-free",
@@ -842,7 +182,7 @@
         "quantization": "unknown — Zen nao publica"
       },
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "cohere/north-mini-code:free",
@@ -867,7 +207,7 @@
         "quantization": "Cohere=unknown"
       },
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "google/gemma-4-26b-a4b-it:free",
@@ -892,7 +232,7 @@
         "quantization": "Darkbloom=unknown; Google AI Studio=unknown"
       },
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "google/gemma-4-31b-it:free",
@@ -909,57 +249,7 @@
         "opencode": "openrouter/google/gemma-4-31b-it:free"
       },
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "inclusionai/ling-3.0-flash:free",
-      "provider": "openrouter",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 (varredura de 21 modelos free, 19 responderam)",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "openrouter/inclusionai/ling-3.0-flash:free"
-      },
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 0.875,
-        "suite_n": 8,
-        "latency_ms": 4526,
-        "provider_observed": "Novita",
-        "quantization": "Novita=unknown"
-      },
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "nvidia/nemotron-3-nano-30b-a3b:free",
-      "provider": "openrouter",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 (varredura de 21 modelos free, 19 responderam)",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "openrouter/nvidia/nemotron-3-nano-30b-a3b:free"
-      },
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 4906,
-        "provider_observed": "Nvidia",
-        "quantization": "Nvidia=bf16"
-      },
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
@@ -984,7 +274,7 @@
         "quantization": "Nvidia=unknown"
       },
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "nvidia/nemotron-3-super-120b-a12b:free",
@@ -1009,107 +299,7 @@
         "quantization": "Nvidia=unknown"
       },
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "nvidia/nemotron-nano-12b-v2-vl:free",
-      "provider": "openrouter",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 (varredura de 21 modelos free, 19 responderam)",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "openrouter/nvidia/nemotron-nano-12b-v2-vl:free"
-      },
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 0.375,
-        "suite_n": 8,
-        "latency_ms": 22165,
-        "provider_observed": "Nvidia",
-        "quantization": "Nvidia=unknown"
-      },
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "nvidia/nemotron-nano-9b-v2:free",
-      "provider": "openrouter",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 (varredura de 21 modelos free, 19 responderam)",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "openrouter/nvidia/nemotron-nano-9b-v2:free"
-      },
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 0.875,
-        "suite_n": 8,
-        "latency_ms": 21180,
-        "provider_observed": "Nvidia",
-        "quantization": "Nvidia=bf16"
-      },
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "openai/gpt-oss-20b:free",
-      "provider": "openrouter",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 (varredura de 21 modelos free, 19 responderam)",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "openrouter/openai/gpt-oss-20b:free"
-      },
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 14596,
-        "provider_observed": "Darkbloom",
-        "quantization": "Darkbloom=unknown"
-      },
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "poolside/laguna-m.1:free",
-      "provider": "openrouter",
-      "tier": "free",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 (varredura de 21 modelos free, 19 responderam)",
-      "verified_at": "2026-07-25",
-      "cli_hints": {
-        "opencode": "openrouter/poolside/laguna-m.1:free"
-      },
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": 0.875,
-        "suite_n": 8,
-        "latency_ms": 41238,
-        "provider_observed": "Poolside",
-        "quantization": "Poolside=fp4"
-      },
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "poolside/laguna-s-2.1:free",
@@ -1134,7 +324,7 @@
         "quantization": "Poolside=fp8"
       },
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "poolside/laguna-xs-2.1:free",
@@ -1159,33 +349,7 @@
         "quantization": "Poolside=fp8"
       },
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "gemma-4-12b-it-Q6_K",
-      "provider": "local-llamacpp",
-      "tier": "local",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": 16384,
-      "rate_limit": "nenhum (local)",
-      "best_for": [],
-      "source": "smoke test real 2026-07-25 via adapters/llamacpp/runner.sh",
-      "verified_at": "2026-07-25",
-      "quantization": "Q6_K (arquivo GGUF, 9.8GB)",
-      "cli_hints": {
-        "llamacpp": "<home-do-dono>/models/gemma-4-12b-it-Q6_K.gguf"
-      },
-      "id_status": "NAO-ENCONTRADO",
-      "verified_by": "llamacpp",
-      "measured": {
-        "suite_accuracy": 1.0,
-        "suite_n": 8,
-        "latency_ms": 35123,
-        "provider_observed": "unknown — sem catálogo público acessível sem chave",
-        "quantization": "unknown — sem catálogo público acessível sem chave"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "ornith-1.5-35b-a3b",
@@ -1218,7 +382,7 @@
         "provider_observed": "dedicado full-GPU (decisão do usuário, 27/08): decode 93.4 tok/s, prefill ~1369 tok/s, agregado 2 slots 158 tok/s — vs 17.2 no modo coexistente com Flash Next",
         "quantization": "Q4_K_M 21.7GB INTEIRO na VRAM (~23GB/48GB usados com KV), -ngl 999 -fa on -ub 2048"
       },
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "qwen38-flashnext-125b",
@@ -1252,7 +416,7 @@
         "provider_observed": "decode solo 13.1 tok/s (medido 2026-08-27 via /v1/chat/completions); agregado 4 slots pendente de carga real",
         "quantization": "UD-Q4_K_XL: dense+~1/3 experts em VRAM (~28GB/49GB), resto em RAM host 188GB"
       },
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "claude-sonnet-5",
@@ -1280,31 +444,7 @@
       "evidencia_hint": "claude -p --model sonnet \"responda apenas: OK\" -> \"OK\", exit 0 (2026-07-26)",
       "nota": "Camada Arquiteto do SKILL.md. Sem numeros de accuracy/latencia porque a suite nao foi rodada contra ele — campos nulos em vez de inventados (regra 35).",
       "id_status": "PROVAVEL",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "qwen-uncensored-local",
-      "provider": "llamacpp-local",
-      "tier": "free",
-      "accuracy": 0.7,
-      "latency_ms": 2000,
-      "context_window": 32768,
-      "rate_limit": "Ilimitado (local)",
-      "best_for": [
-        "código",
-        "bulk output",
-        "agentes autônomos"
-      ],
-      "source": "llamacpp-local/qwen-uncensored no opencode",
-      "verified_at": null,
-      "cli_hints": {
-        "opencode": "llamacpp-local/qwen-uncensored"
-      },
-      "fallback": [
-        "deepseek-v4-flash-free"
-      ],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "deepseek-v4-pro",
@@ -1328,38 +468,7 @@
         "deepseek-v4-flash-free"
       ],
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "nemotron-3-ultra-550b-a55b",
-      "provider": "nvidia",
-      "tier": "free",
-      "accuracy": 0.95,
-      "latency_ms": 5000,
-      "context_window": 1000000,
-      "rate_limit": "Moderado",
-      "best_for": [
-        "raciocínio complexo",
-        "contexto muito longo",
-        "código"
-      ],
-      "source": "descoberta-automatica-2026-07-27",
-      "verified_at": "2026-07-27",
-      "cli_hints": {
-        "opencode": "nvidia/nvidia/nemotron-3-ultra-550b-a55b"
-      },
-      "fallback": [
-        "nemotron-3-super-120b-a12b"
-      ],
-      "id_status": "FANTASMA",
-      "verified_by": "opencode",
-      "measured": {
-        "suite_accuracy": null,
-        "suite_n": 0,
-        "latency_ms": 38000,
-        "provider_observed": "NVIDIA — via agent-vault"
-      },
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "nemotron-3-ultra-550b-a55b-openrouter",
@@ -1383,98 +492,7 @@
         "nemotron-3-ultra-550b-a55b"
       ],
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "groq-compound",
-      "provider": "groq",
-      "tier": "free",
-      "accuracy": 0.88,
-      "latency_ms": 2000,
-      "context_window": 128000,
-      "rate_limit": "Rápido",
-      "best_for": [
-        "raciocínio",
-        "código",
-        "perguntas diretas"
-      ],
-      "source": "descoberta-automatica-2026-07-27",
-      "verified_at": null,
-      "cli_hints": {
-        "opencode": "groq/groq/compound"
-      },
-      "fallback": [
-        "groq-compound-mini"
-      ],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "groq-compound-mini",
-      "provider": "groq",
-      "tier": "free",
-      "accuracy": 0.82,
-      "latency_ms": 1000,
-      "context_window": 128000,
-      "rate_limit": "Muito rápido",
-      "best_for": [
-        "perguntas simples",
-        "fallback",
-        "alta velocidade"
-      ],
-      "source": "descoberta-automatica-2026-07-27",
-      "verified_at": null,
-      "cli_hints": {
-        "opencode": "groq/groq/compound-mini"
-      },
-      "fallback": [],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "llama-4-scout-17b-16e-instruct",
-      "provider": "groq",
-      "tier": "free",
-      "accuracy": 0.85,
-      "latency_ms": 3000,
-      "context_window": 256000,
-      "rate_limit": "Moderado",
-      "best_for": [
-        "raciocínio",
-        "contexto longo"
-      ],
-      "source": "descoberta-automatica-2026-07-27",
-      "verified_at": null,
-      "cli_hints": {
-        "opencode": "groq/meta-llama/llama-4-scout-17b-16e-instruct"
-      },
-      "fallback": [
-        "groq-compound"
-      ],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "qwen3-32b",
-      "provider": "groq",
-      "tier": "free",
-      "accuracy": 0.85,
-      "latency_ms": 2500,
-      "context_window": 131072,
-      "rate_limit": "Rápido",
-      "best_for": [
-        "raciocínio",
-        "código",
-        "multilingual"
-      ],
-      "source": "descoberta-automatica-2026-07-27",
-      "verified_at": null,
-      "cli_hints": {
-        "opencode": "groq/qwen/qwen3-32b"
-      },
-      "fallback": [],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "openrouter-free-router",
@@ -1503,7 +521,7 @@
         "latency_ms": 21000,
         "provider_observed": "OpenRouter — free router"
       },
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "deepseek/deepseek-v4-flash-0731",
@@ -1526,107 +544,7 @@
         "deepseek-v4-flash-free"
       ],
       "id_status": "EXISTE",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "glm-5.2-zcode",
-      "provider": "z.ai",
-      "tier": "token-plan",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": 1000000,
-      "rate_limit": "Z.ai Coding Plan",
-      "best_for": [
-        "codigo",
-        "agentic",
-        "bulk"
-      ],
-      "source": "ZCode CLI DISCOVERY 2026-08-04 (zcode --help + ~/.zcode/v2 bots-model-cache)",
-      "verified_at": "2026-08-04",
-      "cli_hints": {
-        "zcode": "builtin:zai-coding-plan/GLM-5.2"
-      },
-      "fallback": [
-        "deepseek-v4-flash-free"
-      ],
-      "verified_by": "zcode",
-      "id_status": "NAO-ENCONTRADO",
-      "nota": "Sem --model no CLI; hint grava model.main no cli config.",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "cursor-sonnet-4-thinking",
-      "provider": "cursor",
-      "tier": "paid",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": "plano Cursor",
-      "best_for": [
-        "codigo",
-        "agentic",
-        "refatoracao"
-      ],
-      "source": "cursor-agent --help 2026-08-04 (exemplo oficial: sonnet-4-thinking)",
-      "verified_at": "2026-08-04",
-      "cli_hints": {
-        "cursor": "sonnet-4-thinking"
-      },
-      "fallback": [
-        "claude-sonnet-5",
-        "deepseek-v4-flash-free"
-      ],
-      "verified_by": "cursor",
-      "id_status": "NAO-ENCONTRADO",
-      "nota": "FORK=0; SESSION via --resume.",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "cursor-gpt-5",
-      "provider": "cursor",
-      "tier": "paid",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": "plano Cursor",
-      "best_for": [
-        "codigo",
-        "reasoning"
-      ],
-      "source": "cursor-agent --help 2026-08-04 (exemplo oficial: gpt-5)",
-      "verified_at": "2026-08-04",
-      "cli_hints": {
-        "cursor": "gpt-5"
-      },
-      "fallback": [
-        "cursor-sonnet-4-thinking"
-      ],
-      "verified_by": "cursor",
-      "id_status": "NAO-ENCONTRADO",
-      "id_checked_at": "2026-08-30T18:18:48Z"
-    },
-    {
-      "id": "deepseek/deepseek-v4-flash-direct",
-      "provider": "deepseek",
-      "tier": "paid",
-      "accuracy": null,
-      "latency_ms": null,
-      "context_window": null,
-      "rate_limit": null,
-      "best_for": [
-        "content_factory driver + EPIC mecanico via api.deepseek.com (cache hit nativo)"
-      ],
-      "source": "https://api.deepseek.com/v1/models (chamada real 2026-08-01); smoke oracfit 2026-08-09",
-      "verified_at": "2026-08-09",
-      "cli_hints": {
-        "opencode": "deepseek-direct/deepseek-v4-flash"
-      },
-      "fallback": [
-        "deepseek-v4-flash-openrouter",
-        "deepseek-v4-flash-free"
-      ],
-      "id_status": "FANTASMA",
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
       "id": "gemini-3.6-flash",
@@ -1657,7 +575,7 @@
         "latency_ms": 12600,
         "provider_observed": "opencode-go (Zen/Go); upstream nao publica"
       },
-      "id_checked_at": "2026-08-30T18:18:48Z"
+      "id_checked_at": "2026-08-30T18:29:39Z"
     }
   ]
 }
