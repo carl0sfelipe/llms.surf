@@ -1,57 +1,80 @@
-# ESCALADA-5 — Fable: o caminho FREE é o produto (prioridade do dono)
+# ESCALADA-5 v2 — Fable: plano FREE pré-mastigado (validar, não desenhar)
 
-> URGENTE, 2026-08-31. Incidente entregue por sessão externa
-> (incidents/2026-08-30-free-models-sao-a-prioridade-do-dono-e-o.md) e
-> NUMEROS VERIFICADOS por mim na árvore do main hoje:
-> `resolve-tier tier:cheap` → deepseek-v4-flash-free; audit-registry-ids:
-> 21 NAO-ENCONTRADO + 25 FANTASMA de 69 ids (46/69 quebrados).
+> URGENTE. Regra desta escalada: **tudo já está decidido e desenhado
+> abaixo.** Seu trabalho é validar 5 decisões (responda A ou B, uma linha
+> cada), apontar risco que eu não vi, e congelar. NÃO explore o registry
+> nem a web — tudo que você precisaria verificar está aqui, verificado
+> hoje (2026-08-31) na árvore do main. Se quiser conferir UM número:
+> `bash bin/audit-registry-ids.sh | tail -4`.
 
-## A diretriz do dono (tese do produto)
+## 0. Situação medida (a tese do dono)
 
-O default do llms.surf é o caminho FREE: modelo caro pensa, modelos
-grátis suam. Hoje o default resolve pra fantasma, 46/69 ids do registry
-estão mortos, e o catalogo autenticado na prática é PAGO (118 Bedrock +
-36 Copilot vs 6 opencode free). O README promete o que o código não
-entrega — isso é a classe de incidente mais grave da casa.
+- `resolve-tier tier:cheap` → `deepseek-v4-flash-free` → **FANTASMA**
+  (audit-registry-ids). O caminho DEFAULT do produto não despacha.
+- **46/69 ids do registry mortos**: 21 NAO-ENCONTRADO + 25 FANTASMA.
+- Free: só 2/22 alcançáveis (faltam 5 NVIDIA + quase todo OpenRouter :free).
+- auth: 0 credenciais gravadas; 3 providers PAGOS por env herdada
+  (118 Bedrock + 36 Copilot) vs 6 free. O default de fato é pago.
+- Captura de credencial escrita 3x, hardcoded no OpenRouter, nunca no
+  caminho principal: dispatch-vision-ui-qa.sh:98, dispatch-vision-map.sh:24,
+  vision-gauntlet-loop.py:88 (dívida regra 32).
+- Fonte nova aprovada pelo dono: **awesome-freellm-apis / freellm.net**
+  (MIT, atualizado diário, 453 modelos JSON, 30 providers free
+  permanentes, rate limits RPM/RPD por provider, base URLs
+  OpenAI-compatible). Inspecionado por mim: é real e cobre exatamente os
+  buracos (NVIDIA 126 modelos, Zen, Groq, Gemini, SiliconFlow...).
 
-## A fonte nova que o dono quer usar
+## 1. O plano (implemento EU; você só valida as 5 decisões)
 
-https://github.com/open-free-llm-api/awesome-freellm-apis — lista
-curada de APIs LLM gratuitas. O dono quer isto INTEGRADO: o registry
-alimentado a partir dessa lista (ids alcançáveis, endpoints, limites),
-com proveniência carimbada por fonte — o mesmo espírito do import S28
-(localmaxxing carimbado como `reported`): fonte declarada, nunca id
-solto.
+**M1 — feed**: script `bin/sync-free-catalog.sh` baixa o dataset
+estruturado do freellm.net (453 modelos, JSON) e escreve
+`data/free-catalog.json` com proveniência `{"source":
+"freellm.net/awesome-freellm-apis", "snapshot": "<data>", "license":
+"MIT"}`. Idem espírito S28: fonte carimbada, nunca id solto.
 
-## O caminho de correção proposto (6 itens, todos gate/script — classe C)
+**M2 — gate na porta**: id novo só entra no registry candidato se o
+audit passar (mata a classe "fantasma nasce"). Falha = lista nomeada,
+fail loud.
 
-1. Preflight que separa: catalogo inalcançável / id inexistente /
-   provider não autenticado (mensagens distintas, fail loud).
-2. lib-free-credentials.sh ÚNICA: descobrir TODOS os providers do
-   auth.json (~/.local/share/opencode/auth.json) em vez de só OpenRouter
-   hardcoded (a captura existe 3x nos scripts de vision, nunca no caminho
-   principal — dívida regra 32).
-3. Plug do audit-registry-ids no dispatch (fantasma não despacha).
-4. tier:cheap resolve para LISTA com fallback, não id único.
-5. provider_efetivo no ledger (o run registra quem atendeu de verdade).
-6. Allowlist de provider por run.
+**M3 — reparo do estoque**: os 46 ids mortos saem do registry (ou vão
+para `status: retired` com data) — registry ≤ tamanho verdade.
 
-## O que o Fable entrega
+**M4 — tier:cheap = lista quota-aware**: resolve para ordem de fallback
+(provider 1 → 2 → ...) lendo os rate limits do feed (RPM/RPD). Nada de
+id único apodrecendo.
 
-1. **Desenho da integração awesome-freellm-apis → registry**: mapeamento
-   da lista pra entries do registry com proveniência (fonte + data de
-   coleta), o que vira tier:cheap, e como evita-los virarem os próximos
-   25 fantasmas (o mecanismo que impede id morto no caminho default).
-2. **Ordem e gate dos 6 itens de correção** com oráculo por item (classe
-   C, todos gate/script, $0) — sequência pra fechar o caminho free ANTES
-   do anúncio de lançamento.
-3. **Definição de "fechado"**: o gate que prova que o default free
-   despacha de verdade sem credencial paga (a promessa do README medida,
-   não assumida).
+**M5 — credencial única**: `bin/lib-free-credentials.sh` descobre TODOS
+os providers do auth.json (genérico, não só OpenRouter); as 3 capturas
+hardcoded passam a chamá-la.
 
-## Restrições
+**M6 — verdade no ledger**: campo `provider_efetivo` em toda linha de
+run + allowlist de provider por run (o run registra quem atendeu de
+verdade).
 
-- NADA de disciplina/prompt: tudo mecanismo (regra 32).
-- Não tocar em bestmodel-prod/Vast/rig Paraguai.
-- A sessão externa que achou isso NÃO corrigiu nada — só registrou
-  (fluxo correto); a implementação é nossa, com oráculo congelado.
+## 2. As 5 decisões (responda A ou B — minha recomendação marcada)
+
+- **D1 retire**: A) 46 mortos REMOVIDOS do registry (registry = só
+  verdade) ← recomendo; B) ficam com `status: retired`.
+- **D2 feed**: A) dataset JSON do freellm.net direto ← recomendo (453
+  modelos, estruturado); B) parse do README markdown.
+- **D3 quota**: A) fallback consulta rate limits do feed em runtime ←
+  recomendo; B) snapshot semanal dos limites no registry.
+- **D4 credencial**: A) auth.json como única fonte (genérico por
+  provider) ← recomendo; B) chaves por env `*_API_KEY` também aceitas.
+- **D5 fechado**: o gate que prova o fim — recomendo: `test-free-path.sh`
+  = preflight lint + resolve-tier tier:cheap devolve lista ≥3 ids vivos +
+  dispatch stub fechando com provider_efetivo registrado, tudo sem
+  credencial paga. Concorda ou aperta?
+
+## 3. Definição de pronto
+
+Os 6 mecanismos em gates verdes + D5 exit 0 + a promessa do README
+("no API key, 2 minutos") medida de novo com cronômetro. Sem isso, o
+anúncio não sai.
+
+## 4. NÃO reabrir
+
+S28 (import localmaxxing), The Lineup (S13), export (S27), Claude Design
+(ESCALADA-4) — tudo em andamento por outras frentes. O incidente externo
+que originou esta escalada: os fatos estão citados aqui; o .md dele sobe
+no main quando o dono o entregar (não bloqueia você).
