@@ -212,6 +212,35 @@ else
   not_ "allowlist adulterada devolveu '$TAMPER_STATUS' (esperado violado)"
 fi
 
+# ── 9. storage de credencial ILEGÍVEL = exit 3 (sugestão do Fable no E6:
+#     o fail-loud da lib existia em código, não em gate) ────────────────────
+CORRUPT="$WD/auth-corrupto.json"
+echo '{auth quebrada' > "$CORRUPT"
+ORACFIT_AUTH_JSON="$CORRUPT" ORACFIT_OPENCODE_CONFIG="$WD/inexistente.json" \
+  bash -c 'source "'"$ROOT"'/bin/lib-free-credentials.sh"; free_cred_has_provider opencode' >/dev/null 2>&1
+RC_CORRUPT=$?
+if [ "$RC_CORRUPT" -eq 3 ]; then
+  ok "auth.json corrompido → exit 3 fail-loud (não vira 'sem chave')"
+else
+  not_ "storage ilegível devolveu rc=$RC_CORRUPT (esperado 3)"
+fi
+
+# ── 10. risco E6-1: sync sem opencode NUNCA apaga a perna keyless ────────────
+SHA_KB=$(shasum -a 256 "$ROOT/data/free-catalog.json" | cut -d' ' -f1)
+NOOC_BIN="$WD/nooc-bin"; mkdir -p "$NOOC_BIN"
+for tool in curl mktemp python3 timeout rm mv mkdir dirname basename cat; do
+  P="$(command -v "$tool" 2>/dev/null)" && ln -sf "$P" "$NOOC_BIN/$tool"
+done
+( PATH="$NOOC_BIN:/usr/bin:/bin" \
+  bash "$ROOT/bin/sync-free-catalog.sh" ) >/dev/null 2>&1
+RC_NOOC=$?
+SHA_KA=$(shasum -a 256 "$ROOT/data/free-catalog.json" | cut -d' ' -f1)
+if [ "$RC_NOOC" -eq 1 ] && [ "$SHA_KB" = "$SHA_KA" ]; then
+  ok "sync sem opencode aborta loud e mantém a perna keyless (risco E6-1)"
+else
+  not_ "sync sem opencode: rc=$RC_NOOC, snapshot-mantido=$([ "$SHA_KB" = "$SHA_KA" ] && echo sim || echo NAO)"
+fi
+
 echo ""
 echo "=== RESULTADO: $pass pass, $fail fail ==="
 if [ "$fail" -gt 0 ]; then

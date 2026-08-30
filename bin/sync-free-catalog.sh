@@ -32,6 +32,14 @@ MIN_MODELS=3   # a régua do D5: menos que isso, o caminho free está morto
 
 fail() { echo "❌ sync-free-catalog: $*" >&2; exit 1; }
 
+ALLOW_NO_KEYLESS="${ALLOW_NO_KEYLESS:-0}"
+for arg in "$@"; do
+  case "$arg" in
+    --allow-no-keyless) ALLOW_NO_KEYLESS=1 ;;
+    *) echo "Uso: sync-free-catalog.sh [--allow-no-keyless]" >&2; exit 3 ;;
+  esac
+done
+
 [ -f "$REGISTRY" ] || fail "registry ausente: $REGISTRY"
 
 TMP_FEED=$(mktemp /tmp/free-catalog-feed-XXXXXX.json)
@@ -46,6 +54,27 @@ python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$TMP_FEED" \
   || fail "feed OpenRouter não é JSON válido — snapshot anterior MANTIDO (R2)"
 
 # ── 2. Catálogo local do opencode (perna keyless, sem HTTP) ─────────────────
+# Risco 1 do E6: num ambiente SEM opencode (ex.: CI), o sync geraria um
+# catálogo com a perna keyless VAZIA em silêncio — regressão da promessa
+# zero-key. Se o catálogo atual TEM keyless e o opencode não está
+# disponível, aborta loud; --allow-no-keyless autoriza a exceção.
+OC_AVAILABLE=1
+command -v opencode >/dev/null 2>&1 || OC_AVAILABLE=0
+if [ "$OC_AVAILABLE" -eq 0 ]; then
+  CURRENT_KEYLESS=$(python3 - "$CATALOG" <<'PYK'
+import json, sys
+try:
+    cat = json.load(open(sys.argv[1], encoding="utf-8"))
+    print(sum(1 for m in cat.get("models", []) if m.get("keyless")))
+except Exception:
+    print(0)
+PYK
+)
+  if [ "${CURRENT_KEYLESS:-0}" -gt 0 ] && [ "${ALLOW_NO_KEYLESS:-0}" != "1" ]; then
+    fail "opencode indisponível e o catálogo atual tem $CURRENT_KEYLESS entrada(s) keyless — regenerar agora apagaria a perna zero-key em silêncio (risco E6-1). Rode onde o opencode existe ou passe --allow-no-keyless."
+  fi
+  echo "ⓘ opencode indisponível — perna keyless ficará vazia (ALLOW_NO_KEYLESS=1)" >&2
+fi
 OC_MODELS=$(bash "$REPO_ROOT/bin/with-timeout.sh" 25 opencode models 2>/dev/null) \
   || OC_MODELS=""
 [ -n "$OC_MODELS" ] || echo "ⓘ opencode models indisponível — perna keyless fica vazia neste sync" >&2
