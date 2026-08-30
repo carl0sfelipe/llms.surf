@@ -302,3 +302,42 @@ ORDEM DE IMPLEMENTAÇÃO (mim) — **CUMPRIDA 2026-08-31** (ver seção E5 FECHA
   2 posts de lançamento + tabela falta-pra-lançar). Esqueleto de veredito
   ingerível; checagens só locais; proibido rede/opencode models.
   DONO: colar o arquivo no Fable (pull para 409879c antes).
+
+## E6 EXECUTADO (2026-08-31, sessão autônoma) — commits 2c4f417..60bc015+
+
+Veredito do Fable em docs/go-live/DECISIONS-E6-FABLE-FECHAMENTO.md
+(E5 OK com 1 MELHORAR; RAT-1/2/3 OK; decisões 4.1-4.6; copies prontas;
+4 riscos). Execução:
+
+- **S28 MELHORAR FECHADA** (bestmodel acd779a): migration 0015
+  (reporter NOT NULL + índice único open/dismissed por reporter+alvo)
+  aplicada no gate @5434 e no PROD; Fake lockstep (ValueError = índice);
+  serviço 409 distinto para duplicada-vs-dismissed; find_existing
+  substitui find_open. Imagem do prod REFEITA de novo (api+worker,
+  healthy, smoke 401). Testes 7/7; GATE PASS.
+- **D5 15 pernas** (33a6bd6): perna do Fable (auth.json corrompido →
+  exit 3) + perna do risco E6-1 (sync sem opencode aborta loud, snapshot
+  mantido). sync ganhou --allow-no-keyless.
+- **Copies + dial no MESMO commit** (60bc015, regra anti-drift do risco
+  E6-2): data/lineup-points.json com tiers PROPOSTA (Haole 1+, Grom 5+,
+  Local 20+, Legend 50+, First Wave=prêmio top-25) + 4 arquivos verbatim
+  (COPY-THE-LINEUP, COPY-TRACK-RECORD, LAUNCH-POST-LLMSSURF,
+  LAUNCH-POST-BESTMODEL).
+- 4.1=(a) re-anúncio dentro do post ✓ (já no copy). 4.6=manter argos-opt.
+
+## PENDENTE DE RATIFICAÇÃO DO DONO (recomendações E6, sem código ainda)
+
+- **4.5 (30 dias)**: conversão de referral = 1º SIGNED RUN do indicado
+  em ≤30 dias da criação da conta (join não converte). Se ratificar:
+  exige export S27 com created_at/first_signed_run_at + regra no
+  lineup-build.sh (~1h de sessão).
+- **4.4 (cadência)**: standings a cada 2 semanas, event-driven (pula
+  drop se rank não mudou).
+- **4.2 (canário da free-key)**: chave OpenRouter free do dono +
+  `opencode auth login` + 1 dispatch tier:cheap pela cadeia conferindo
+  provider_efetivo=openrouter + allowlist_status=ok no ledger ANTES de
+  anunciar a perna.
+- Risco E6-3 (First Wave esfriar): ter pronta a resposta "a fila existe
+  quando a cloud existir; a prioridade já é sua".
+- Ordem de lançamento do Fable: smoke autenticado (dono) ANTES do
+  Claude Design congelar UI.
