@@ -430,3 +430,8 @@ tr.no-data td{color:var(--muted);font-style:italic}
   *,*::before,*::after{animation:none!important;transition:none!important}
   .reveal{opacity:1;transform:none}
 }
+
+/* whitelist email capture (renders only when DATA.whitelistEndpoint is set) */
+.wl-form{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0 .25rem}
+.wl-email{background:#0B0E14;border:1px solid var(--line,#22303f);border-radius:8px;color:var(--fg,#D7E2EA);font-family:"JetBrains Mono",monospace;font-size:.95rem;padding:.6rem .8rem;min-width:min(320px,80vw)}
+.wl-email:focus{outline:2px solid #22D3EE;outline-offset:1px}

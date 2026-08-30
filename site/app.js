@@ -1,6 +1,11 @@
 "use strict";
 
 const DATA = {
+  // Funil da whitelist (plugável de propósito): endpoint de captura de email.
+  // VAZIO = o site NÃO pede email (mentiria: Pages é estático, ninguém receberia
+  // o link de confirmação). No dia em que o endpoint da llms-surf cloud estiver
+  // no ar, uma linha aqui liga o funil inteiro (form → confirm.html → thanks.html).
+  whitelistEndpoint: "",
   meta: {
     name: "LLMs.surf",
     former: "Oracfit",
@@ -433,7 +438,41 @@ function initReveal() {
   nodes.forEach(n => io.observe(n));
 }
 
+function buildWhitelist() {
+  const host = $("#whitelist-capture");
+  if (!host) return;
+  if (!DATA.whitelistEndpoint) {
+    // Sem endpoint configurado, o funil de email NÃO renderiza — pedir email
+    // que ninguém confirmaria é conversão quebrada na primeira marcha. A issue
+    // do GitHub segue como porta real (e como sinal de contribuição pro tier).
+    return;
+  }
+  const form = el("form", "wl-form");
+  form.method = "post";
+  form.action = DATA.whitelistEndpoint;
+  const input = el("input", "wl-email");
+  input.type = "email";
+  input.name = "email";
+  input.required = true;
+  input.placeholder = "you@machine.local";
+  input.setAttribute("autocomplete", "email");
+  const btn = el("button", "btn btn-sm", "lock my spot →");
+  btn.type = "submit";
+  form.append(input, btn);
+  form.addEventListener("submit", ev => {
+    ev.preventDefault();
+    fetch(DATA.whitelistEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: input.value.trim() })
+    }).then(() => { window.location.href = "confirm.html"; })
+      .catch(() => { window.location.href = "confirm.html"; });
+  });
+  host.replaceChildren(form);
+}
+
 buildDividers();
+buildWhitelist();
 if ($("#sel-task"))   initHero();
 if ($("#stats-grid")) buildStats();
 if ($("#mech-grid"))  buildMechs();
