@@ -1,0 +1,12 @@
+{
+  "_comment": "Tabela de pontos v0 do The Lineup — PROPOSTA do plano (Fable), dial do dono. Girar o dial = editar este arquivo; a máquina (bin/lineup-build.sh) nunca muda.",
+  "dial": "pending-owner",
+  "points": {
+    "join_issue": 1,
+    "referral_converted": 3,
+    "signed_run": 2,
+    "run_reproduction": 3,
+    "fake_caught": 5,
+    "shared_custom_mode": 2
+  }
+}

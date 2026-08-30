@@ -25,6 +25,15 @@ labels: whitelist
 - **Que trabalho você mandaria rodar no cloud:** <!-- obrigatório, uma frase -->
 - **Adapter que você usa hoje:** <!-- opencode / claude-code / cursor / outro / nenhum -->
 - **Volume esperado:** <!-- escolha um: <5 | 5–20 | 20–60 | 60+ dispatches/mês -->
+- **referred by:** @handle <!-- opcional — sobe no The Lineup quando o indicado CONTRIBUI (run assinada, reprodução) -->
+
+## Consentimento (A3 — transparente, e desmarcar é livre)
+
+- [ ] **consent:** entendo que meu handle do GitHub aparece na fila pública
+  do The Lineup (`data/lineup.json` neste repo, auditável no git) e que a
+  minha contribuição técnica no bestmodel.run (runs assinadas,
+  reproduções) vale pontos nessa fila. Desmarcar não me tira da whitelist —
+  muda só a gamificação.
 
 ## Compromissos da casa (o que fazemos e não fazemos)
 

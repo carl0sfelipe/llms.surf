@@ -1,0 +1,43 @@
+name: lineup
+# S13 — o medidor do The Lineup ($0, auditável): issues da waitlist +
+# export por-contribuidor do bestmodel → data/lineup.json commitado.
+# Auditoria = git history deste arquivo: qualquer um recomputa.
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Busca issues da waitlist e o export do bestmodel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BM_EXPORT_URL: https://raw.githubusercontent.com/carl0sfelipe/bestmodel/main/data/contributor-export.json
+        run: |
+          gh api 'repos/carl0sfelipe/llms.surf/issues?labels=waitlist&state=all&per_page=200' > /tmp/issues.json
+          curl -fsSL "$BM_EXPORT_URL" -o /tmp/contrib-export.json || echo '{"contributors": []}' > /tmp/contrib-export.json
+      - name: Monta data/lineup.json
+        run: bash bin/lineup-build.sh --issues /tmp/issues.json --export /tmp/contrib-export.json
+      - name: Commit com pathspec explícito (nunca add -A)
+        env:
+          # variável do REPO (Settings → Variables): o e-mail noreply do bot.
+          # Não deixamos literal de e-mail no arquivo — o corte público (C2)
+          # recusa e-mail fora da allowlist, e allowlist só gira com o dono.
+          BOT_EMAIL: ${{ vars.BOT_EMAIL }}
+        run: |
+          if [ -z "$BOT_EMAIL" ]; then
+            echo "BOT_EMAIL não configurado: crie a repo variable BOT_EMAIL (e-mail noreply do bot de commit)" >&2
+            exit 1
+          fi
+          git add data/lineup.json
+          git diff --cached --quiet && echo "lineup sem mudança" && exit 0
+          git -c user.name="lineup-bot" -c user.email="$BOT_EMAIL" \
+            commit -m "lineup: rebuild $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
