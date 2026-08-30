@@ -216,11 +216,16 @@
   nenhum consumidor do ledger re-resolve id via registry antes do M3.
 - Pronto += re-anúncio cita o audit ANTES e DEPOIS (46/69 → 0/N).
 
-ORDEM DE IMPLEMENTAÇÃO (mim): M2 gate na porta → M3 retirada dos 46 →
-M4 tier:cheap lista quota-aware (limit-aware, catálogo local) → M5
+ORDEM DE IMPLEMENTAÇÃO (mim) — CORRIGIDA 2026-08-31: **M4 ANTES de M3**
+(retirar o fantasma antes de existir fallback quebra o default por
+inteiro — dependência que a ordem anterior não via): M4 tier:cheap =
+lista fallback (limit-aware, catálogo local carimbado) → M2 gate na
+porta → M3 retirada dos 46 (1 commit citando o audit) → M5
 lib-free-credentials + grep de exclusividade no gate → M6
-provider_efetivo + allowlist → M1 sync freellm.net → test-free-path.sh
-com envs envenenadas → keyless-check → re-medir a promessa do README.
+provider_efetivo + allowlist (e assert R5: nenhum consumidor do ledger
+re-resolve via registry) → M1 sync freellm.net → test-free-path.sh com
+envs envenenadas → keyless-check (R1) → re-medir a promessa do README
+(audit 46/69 → 0/N citado no re-anúncio).
 
 ## Fila de decisões do dono (pendentes)
 
