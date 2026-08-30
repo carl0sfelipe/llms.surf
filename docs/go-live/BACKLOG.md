@@ -86,3 +86,19 @@ segurança. Item sem gatilho é desejo, não backlog.)*
    runs assinadas (S23) e modos compartilhados já contam no espírito da
    fórmula de tiers. O rank é público quando a fórmula "ships with the
    cloud" — número antes de medição, não.
+
+
+---
+
+## Decisão do dono 2026-08-30 — duas listas, um rank
+
+- **Whitelists SEPARADAS**: bestmodel e llms.surf têm listas próprias (cada
+  produto mede o próprio sinal de demanda; o N=25 deste produto continua
+  valendo só pra cá).
+- **O rank de contribuição ATRAVESSA**: contribuir no bestmodel (runs
+  assinadas via S23, benchmarks, opt-out transparente com checkbox visível)
+  gera PONTOS que alimentam o **giveaway de free tokens do llms-surf** no
+  lançamento — a ponte cruzada dos produtos, decidida pelo dono.
+- Efeito na fórmula de tiers: "capacidade de contribuição" ganha fonte
+  mecânica mensurável desde já (pontos do rank); pesos seguem "ships with
+  the cloud".
