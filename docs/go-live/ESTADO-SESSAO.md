@@ -134,6 +134,16 @@
   workflow lineup do llms.surf consome). Primeiro export REAL nasce
   quando existir a primeira run assinada validada com usuário.
 
+## DIALS PARCIAIS DO DONO (2026-08-31)
+
+- Naming do programa de pontos do llms.surf: **"The Lineup"** (aprovado).
+- Tiers: linha sarcástica de **"The Haul" até "The Legend"** — BLOQUEADOS
+  (dono fecha depois).
+- **bestmodel terá gamificação PRÓPRIA, profissional** (menos sarcástica) —
+  desenho/nome separados, depois.
+- **Copy do The Lineup nos sites: BLOQUEADA para modelos flash** — dono
+  leva ao Fable (copy é crítica demais). Máquina (S13) não espera copy.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
