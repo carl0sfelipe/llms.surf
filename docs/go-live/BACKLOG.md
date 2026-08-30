@@ -69,3 +69,20 @@ segurança. Item sem gatilho é desejo, não backlog.)*
   `lib-oracfit-mode-loader.py resolve-tier` (existe e não é chamado);
   irredutível → exit 3 falha-fechada (contrato do runner: quem chama passa
   id válido). Teste: dispatch stub com assert de id resolvido no proof.
+
+
+---
+
+## D11 — Dono decide as pendências cross-produto (2026-08-30)
+
+1. **Whitelist: DUAS LISTAS, uma por produto** (llms-surf e bestmodel cada
+   uma com a sua) — decisão do dono, revertendo a recomendação de lista
+   única. Consequência assumida: dois sinais de demanda separados; o N=25
+   destravante passa a valer POR LISTA.
+2. **Gamificação do giveaway**: quem registra/compartilha ganha PONTOS no
+   rank de giveaway de free tokens do llms-surf no lançamento. Fonte de
+   pontos (decisão mesma data, lado bestmodel): contribuição registrada —
+   começa com o opt-out transparente do Local Lab (A3 do backlog de lá);
+   runs assinadas (S23) e modos compartilhados já contam no espírito da
+   fórmula de tiers. O rank é público quando a fórmula "ships with the
+   cloud" — número antes de medição, não.
