@@ -34,11 +34,12 @@
 
 ## FEITO — scaffold do repo do otimizador (2026-08-30)
 
-- Repo local: `~/Work/argos-opt` (main `0eb65bf`, 2 commits, tree limpa;
+- Repo local: `~/Work/argos-opt` (main `31feea6`, 3 commits, tree limpa;
   SEM remote — criação de repo remoto só com ordem do dono).
 - Nome PROVISÓRIO `argos-opt` (livre no crates.io junto com optik-rs,
-  surfopt, goodhist, argminim; argonaut ocupado). Licença PENDENTE
-  (proposta dual MIT/Apache-2.0); Cargo.toml com publish=false.
+  surfopt, goodhist, argminim; argonaut ocupado). **Licença DECIDIDA pelo
+  dono 2026-08-30: dual MIT/Apache-2.0** (termos do argmin); publish=false
+  até o nome final.
 - Disciplina respeitada: spec S1 congelada e commitada ANTES do código
   (3aea764, check-spec verde, oráculo vermelho por design) → implementação
   (0eb65bf, oráculo verde: suíte 23/23 + demo esfera com auto-assert).
@@ -54,7 +55,7 @@
 
 ## Fila de decisões do dono (pendentes)
 
-1. Nome + licença do otimizador (proposta: dual MIT/Apache-2.0).
+1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
 2. Cloud bestmodel: teto diário Vast (US$X), token a custo × margem.
 3. Gatilho "sobe" a rig 3090.
 4. Colar ESCALADA-2 no Fable (5 decisões dele).
