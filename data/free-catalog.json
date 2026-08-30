@@ -1,23 +1,27 @@
 {
-  "stamped_at": "2026-08-31T00:00:00Z",
+  "stamped_at": "2026-08-30T18:42:13Z",
   "kind": "free-catalog/1",
   "source": {
-    "kind": "bootstrap-manual",
-    "note": "Bootstrap manual de 2026-08-31, antes do sync automático (bin/sync-free-catalog.sh, E5-M1). Todo id aqui tem liveza provada por bin/audit-registry-ids.sh (todos EXISTE na captura pré-M3: 46/69 mortos) e contexto medido na API pública do provider na data do carimbo. Nenhum número inventado: rate limits ficam null até existir feed que os publique em JSON estruturado.",
+    "kind": "sync-free-catalog.sh",
     "providers": [
       {
         "provider": "opencode",
         "keyless": true,
-        "note": "Catálogo bundled do opencode autenticado (auth.json provider 'opencode') — perna zero-key da promessa do README (R1). Liveza: audit EXISTE + presença em `opencode models` local.",
-        "context_length_source": null
+        "endpoint": "local: `opencode models`",
+        "synced_at": "2026-08-30T18:42:13Z",
+        "models_total": 2
       },
       {
         "provider": "openrouter",
         "keyless": false,
         "endpoint": "https://openrouter.ai/api/v1/models",
-        "note": "Perna free-key: exige credencial openrouter armazenada (M5). Free = pricing prompt/completion == 0 medido na API em 2026-08-31 (21 modelos free ao vivo; só entram aqui os que já têm entrada no model-registry.json — verdade do runner). deepseek/deepseek-v4-flash e openai/gpt-oss-120b SAÍRAM do free (viraram pagos no feed — classe do incidente E5) e não estão aqui.",
-        "context_length_source": "API pública OpenRouter, snapshot 2026-08-31"
+        "synced_at": "2026-08-30T18:42:13Z",
+        "models_total": 9,
+        "free_criterion": "pricing.prompt == 0 and pricing.completion == 0 medido no feed"
       }
+    ],
+    "skipped": [
+      "gpt-oss-20b: sem hint opencode/openrouter — fora do escopo do sync"
     ]
   },
   "models": [
@@ -26,63 +30,110 @@
       "provider": "opencode",
       "keyless": true,
       "context_length": null,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     },
     {
       "ref": "mimo-v2.5-free",
       "provider": "opencode",
       "keyless": true,
       "context_length": null,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     },
     {
       "ref": "cohere/north-mini-code:free",
       "provider": "openrouter",
       "keyless": false,
       "context_length": 256000,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     },
     {
       "ref": "google/gemma-4-26b-a4b-it:free",
       "provider": "openrouter",
       "keyless": false,
       "context_length": 262144,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     },
     {
       "ref": "google/gemma-4-31b-it:free",
       "provider": "openrouter",
       "keyless": false,
       "context_length": 262144,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     },
     {
       "ref": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
       "provider": "openrouter",
       "keyless": false,
       "context_length": 256000,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     },
     {
       "ref": "nvidia/nemotron-3-super-120b-a12b:free",
       "provider": "openrouter",
       "keyless": false,
       "context_length": 262144,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     },
     {
       "ref": "poolside/laguna-s-2.1:free",
       "provider": "openrouter",
       "keyless": false,
       "context_length": 262144,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     },
     {
       "ref": "poolside/laguna-xs-2.1:free",
       "provider": "openrouter",
       "keyless": false,
       "context_length": 262144,
-      "limits": { "rpm": null, "rpd": null }
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
+    },
+    {
+      "ref": "nemotron-3-ultra-550b-a55b-openrouter",
+      "provider": "openrouter",
+      "keyless": false,
+      "context_length": 1000000,
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
+    },
+    {
+      "ref": "openrouter-free-router",
+      "provider": "openrouter",
+      "keyless": false,
+      "context_length": 200000,
+      "limits": {
+        "rpm": null,
+        "rpd": null
+      }
     }
   ]
 }
