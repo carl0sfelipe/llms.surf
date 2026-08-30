@@ -21,7 +21,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BM_EXPORT_URL: https://raw.githubusercontent.com/carl0sfelipe/bestmodel/main/data/contributor-export.json
         run: |
-          gh api 'repos/carl0sfelipe/llms.surf/issues?labels=waitlist&state=all&per_page=200' > /tmp/issues.json
+          gh api 'repos/carl0sfelipe/llms.surf/issues?labels=whitelist&state=all&per_page=200' > /tmp/issues.json
           curl -fsSL "$BM_EXPORT_URL" -o /tmp/contrib-export.json || echo '{"contributors": []}' > /tmp/contrib-export.json
       - name: Monta data/lineup.json
         run: bash bin/lineup-build.sh --issues /tmp/issues.json --export /tmp/contrib-export.json
