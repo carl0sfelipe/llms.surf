@@ -158,6 +158,19 @@
   não tem fetch_contributor_points nem rotas de signing key. Rebuild +
   restart do container é pré-requisito do export real.
 
+## S28 DEFINIDA PELO DONO (2026-08-31): importar runs com fonte + botão de denúncia
+
+- Dono quer IMPORTAR os runs colhidos pro prod **com a fonte de origem
+  carimbada**, classe `reported` (não-verificados pelo CLI — ok, ajudam a
+  achar os melhores modelos; badge honesto da S24 já cobre).
+- **Botão "denunciar run irreal"** no web → endpoint + tabela run_report →
+  confirmado = mecânica "fake pego" (5 pontos). É o contrapeso do import.
+- IMPORTADORES JÁ EXISTEM: infra/scripts/import_localmaxxing.py
+  (--apply --source pool.json) e import_lab_export.py — a S28 adapta pra
+  prod com proveniência (source_url/name) + rota de denúncia + botão.
+- Gate DB @5434: 36 runs (34 measured_signed, 2 derived). Os 626 vêm do
+  pool do dono (perguntar onde está o pool.json / a fonte).
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
