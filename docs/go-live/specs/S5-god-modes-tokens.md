@@ -49,7 +49,7 @@ VERIFICACAO: bash tests/test-site-honesty.sh && grep -qi waitlist site/index.htm
 
 ## Oráculo
 
-- comando: bash tests/test-site-honesty.sh && grep -qi waitlist site/index.html && grep -q "Models per task" site/llms.txt && grep -q "surf aliases" bin/llms-surf-tui.sh && test -f .github/ISSUE_TEMPLATE/tokens-waitlist.md
+- comando: bash tests/test-site-honesty.sh && grep -qi waitlist site/index.html && grep -q "llms-surf cloud" site/llms.txt && grep -q "surf aliases" bin/llms-surf-tui.sh && test -f .github/ISSUE_TEMPLATE/tokens-waitlist.md
 - exit esperado: 0 — honestidade do site verde, seção de tokens presente na
   jornada humana E na superfície de agente, TUI no trio de surf, template de
   waitlist no repo.
