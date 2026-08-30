@@ -53,11 +53,27 @@
 - L01 (bestmodel CLI v2) destravado: consumir como crate quando o dono
   bater o martelo de nome/licença.
 
+## FEITO — L03A: TPE sobre flags de llama.cpp no bestmodel (2026-08-30, noite)
+
+- bestmodel main `8b6d4fe` pushado. Spec `specs/en/L03A-tpe-lab-search.md`
+  congelada antes do código (7317d34) → oráculo verde: `benchmark-probe lab
+  --stub` end-to-end, suíte 46 testes.
+- Primeiro objetivo real DECIDIDO pelo dono: flags de llama.cpp na 3090,
+  NUNCA brute force — TPE do argos-opt (path dep `../../../argos-opt`).
+- MEDIDO (seed 42, 60 trials, stub): TPE 406.8 tok/s vs random 329.4,
+  barra 355 pinada na spec. Sem repeats. Mesma seed → mesmo lab.
+- Armadilha da vez: o objetivo devolve tok/s (maior = melhor) e o argos-opt
+  MINIMIZA — sem o sinal invertido o TPE "otimizava" o pior canto (50.6);
+  pego pelo teste TPE-vs-random, contrato na spec.
+- Quando o dono der "sobe": trocar o stub pelo script real de bench
+  (mesmo contrato: JSON no stdin, tok/s no stdout, exit≠0 = falha) — o
+  loop não muda (é o L02).
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
 2. Cloud bestmodel: teto diário Vast (US$X), token a custo × margem.
-3. Gatilho "sobe" a rig 3090.
+3. Gatilho "sobe" a rig 3090 (destrava o bench real do L03A/L02).
 4. Colar ESCALADA-2 no Fable (5 decisões dele).
 5. Janela do B2 (tier cru — trava dispatch tow; conserto ~30min).
 
