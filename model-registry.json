@@ -21,7 +21,8 @@
         "deepseek-v4-flash-free",
         "qwen-uncensored"
       ],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nemotron-3-nano-30b-a3b",
@@ -43,7 +44,7 @@
       "fallback": [
         "mistral-small-4-119b-2603"
       ],
-      "id_status": "",
+      "id_status": "FANTASMA",
       "verified_by": "opencode",
       "measured": {
         "suite_accuracy": 1.0,
@@ -51,7 +52,8 @@
         "latency_ms": 6542,
         "provider_observed": "unknown — sem catálogo público acessível sem chave",
         "quantization": "unknown — sem catálogo público acessível sem chave"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nemotron-3-super-120b-a12b",
@@ -74,7 +76,7 @@
         "deepseek-v4-flash-free",
         "qwen-uncensored"
       ],
-      "id_status": "",
+      "id_status": "FANTASMA",
       "verified_by": "opencode",
       "measured": {
         "suite_accuracy": 0.875,
@@ -82,7 +84,8 @@
         "latency_ms": 5906,
         "provider_observed": "unknown — sem catálogo público acessível sem chave",
         "quantization": "unknown — sem catálogo público acessível sem chave"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "gpt-oss-20b",
@@ -99,7 +102,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "PROVAVEL",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "llama-3.3-70b-versatile",
@@ -119,7 +123,8 @@
       "fallback": [
         "mistral-small-4-119b-2603"
       ],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "z-ai/glm-5.2",
@@ -142,7 +147,7 @@
         "deepseek-v4-flash-free",
         "nemotron-3-super-120b-a12b"
       ],
-      "id_status": "",
+      "id_status": "FANTASMA",
       "verified_by": "opencode",
       "measured": {
         "suite_accuracy": 1.0,
@@ -150,7 +155,8 @@
         "latency_ms": 5916,
         "provider_observed": "unknown — sem catálogo público acessível sem chave",
         "quantization": "unknown — sem catálogo público acessível sem chave"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nemotron-3-nano-omni-30b-reasoning",
@@ -171,7 +177,7 @@
       "fallback": [
         "mistral-small-4-119b-2603"
       ],
-      "id_status": "",
+      "id_status": "FANTASMA",
       "verified_by": "opencode",
       "measured": {
         "suite_accuracy": 1.0,
@@ -179,7 +185,8 @@
         "latency_ms": 8889,
         "provider_observed": "unknown — sem catálogo público acessível sem chave",
         "quantization": "unknown — sem catálogo público acessível sem chave"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "llama-4-maverick-17b-128e",
@@ -196,7 +203,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "diffusiongemma-26b-a4b-it",
@@ -213,7 +221,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek-v4-flash-free",
@@ -248,7 +257,9 @@
         "evidencia_provider": "auth.json provider id \"opencode\" (type=api, sem baseURL); logs: providerID=opencode modelID=deepseek-v4-flash-free; namespace opencode/ em `opencode models`"
       },
       "hermes_verified_at": "2026-07-26",
-      "hermes_evidence": "hermes -z \"responda apenas: OK\" --provider opencode-zen -m deepseek-v4-flash-free -> \"OK\", exit 0"
+      "hermes_evidence": "hermes -z \"responda apenas: OK\" --provider opencode-zen -m deepseek-v4-flash-free -> \"OK\", exit 0",
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek-v4-flash-direct",
@@ -271,11 +282,12 @@
         "deepseek-v4-flash-free"
       ],
       "verified_by": "prime-agent",
-      "id_status": "",
+      "id_status": "NAO-ENCONTRADO",
       "measured": {
         "latency_ms": 2568,
         "evidencia_provider": "prime-agent auth.json provider \"deepseek\" (type=api); `prime-agent model list` mostra provider deepseek com deepseek-v4-flash e deepseek-v4-pro"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek-v4-pro-direct",
@@ -297,11 +309,12 @@
         "deepseek-v4-flash-direct"
       ],
       "verified_by": "prime-agent",
-      "id_status": "",
+      "id_status": "NAO-ENCONTRADO",
       "measured": {
         "latency_ms": 3068,
         "evidencia_provider": "prime-agent auth.json provider \"deepseek\" (type=api); `prime-agent model list` mostra provider deepseek com deepseek-v4-flash e deepseek-v4-pro"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nemotron-3-ultra-free",
@@ -320,7 +333,7 @@
         "opencode": "opencode/nemotron-3-ultra-free"
       },
       "fallback": [],
-      "id_status": "",
+      "id_status": "EXISTE",
       "verified_by": "opencode",
       "measured": {
         "suite_accuracy": 1.0,
@@ -328,7 +341,8 @@
         "latency_ms": 12851,
         "provider_observed": "unknown — Zen nao publica",
         "quantization": "unknown — Zen nao publica"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "north-mini-code-free",
@@ -348,14 +362,15 @@
       },
       "fallback": [],
       "verified_by": "opencode",
-      "id_status": "",
+      "id_status": "FANTASMA",
       "measured": {
         "suite_accuracy": 1.0,
         "suite_n": 8,
         "latency_ms": 14655,
         "provider_observed": "unknown — Zen nao publica",
         "quantization": "unknown — Zen nao publica"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "meta/llama-3.2-90b-vision-instruct",
@@ -376,7 +391,8 @@
       "fallback": [
         "qwen/qwen-2.5-vl-7b-instruct:free"
       ],
-      "id_status": ""
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "meta/llama-3.2-11b-vision-instruct",
@@ -393,7 +409,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "qwen/qwen-2.5-vl-7b-instruct:free",
@@ -412,7 +429,8 @@
       "fallback": [
         "google/gemma-3-27b-vision-it:free"
       ],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "google/gemma-3-27b-vision-it:free",
@@ -429,7 +447,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "whisper-1",
@@ -446,7 +465,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "distil-whisper",
@@ -463,7 +483,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "glm-5.2",
@@ -481,7 +502,8 @@
         "deepseek-v4-flash-free",
         "nemotron-3-super-120b-a12b"
       ],
-      "id_status": ""
+      "id_status": "PROVAVEL",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "qwen3.8-max-preview",
@@ -497,7 +519,9 @@
       "cli_hints": {
         "opencode": "qwen-token-plan/qwen3.8-max-preview"
       },
-      "fallback": []
+      "fallback": [],
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "qwen3.7-max",
@@ -512,7 +536,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "PROVAVEL",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek/deepseek-v4-chat",
@@ -530,7 +555,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek/deepseek-v4-flash",
@@ -549,7 +575,8 @@
         "opencode": "nvidia/deepseek-ai/deepseek-v4-flash"
       },
       "fallback": [],
-      "id_status": ""
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek-v4-flash-openrouter",
@@ -568,7 +595,8 @@
       "fallback": [
         "deepseek-v4-flash-free"
       ],
-      "id_status": ""
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "mistralai/mistral-small-4-119b-2603",
@@ -585,7 +613,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nvidia/nemotron-3-super-120b-a12b",
@@ -604,7 +633,8 @@
         "opencode": "nvidia/nvidia/nemotron-3-super-120b-a12b"
       },
       "fallback": [],
-      "id_status": ""
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "openai/gpt-oss-120b",
@@ -624,14 +654,15 @@
       },
       "fallback": [],
       "verified_by": "opencode",
-      "id_status": "",
+      "id_status": "EXISTE",
       "measured": {
         "suite_accuracy": 1.0,
         "suite_n": 8,
         "latency_ms": 4400,
         "provider_observed": "CoreWeave; DeepInfra; Novita; SiliconFlow; Mancer 2; DigitalOcean; Google; BaseTen; Parasail; SambaNova; Amazon Bedrock; DeepInfra; Together; Nebius; Amazon Bedrock; Phala; Groq; Mara; Cerebras",
         "quantization": "CoreWeave=fp4; DeepInfra=bf16; Novita=fp4; SiliconFlow=fp8; Mancer 2=fp8; DigitalOcean=unknown; Google=unknown; BaseTen=fp4; Parasail=fp4; SambaNova=unknown; Amazon Bedrock=unknown; DeepInfra=bf16; Together=unknown; Nebius=fp4; Amazon Bedrock=unknown; Phala=unknown; Groq=unknown; Mara=unknown; Cerebras=fp16"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "cohere/command-r-plus-08-2024",
@@ -651,14 +682,15 @@
       },
       "fallback": [],
       "verified_by": "opencode",
-      "id_status": "",
+      "id_status": "EXISTE",
       "measured": {
         "suite_accuracy": 0.5,
         "suite_n": 8,
         "latency_ms": 8590,
         "provider_observed": "Cohere",
         "quantization": "Cohere=unknown"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "google/gemini-2.5-flash-001",
@@ -675,7 +707,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "google/gemini-2.5-pro-001",
@@ -692,7 +725,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "qwen-uncensored",
@@ -710,7 +744,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "ornith:9b",
@@ -728,7 +763,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [],
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "laguna-s-2.1-free",
@@ -751,7 +787,9 @@
         "latency_ms": 2392,
         "provider_observed": "unknown — Zen nao publica",
         "quantization": "unknown — Zen nao publica"
-      }
+      },
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "ling-3.0-flash-free",
@@ -777,7 +815,9 @@
         "quantization": "unknown — Zen nao publica"
       },
       "hermes_verified_at": "2026-07-26",
-      "hermes_evidence": "hermes -z \"responda apenas: OK\" --provider opencode-zen -m ling-3.0-flash-free -> \"OK\", exit 0"
+      "hermes_evidence": "hermes -z \"responda apenas: OK\" --provider opencode-zen -m ling-3.0-flash-free -> \"OK\", exit 0",
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "mimo-v2.5-free",
@@ -800,7 +840,9 @@
         "latency_ms": 5291,
         "provider_observed": "unknown — Zen nao publica",
         "quantization": "unknown — Zen nao publica"
-      }
+      },
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "cohere/north-mini-code:free",
@@ -823,7 +865,9 @@
         "latency_ms": 6443,
         "provider_observed": "Cohere",
         "quantization": "Cohere=unknown"
-      }
+      },
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "google/gemma-4-26b-a4b-it:free",
@@ -846,7 +890,9 @@
         "latency_ms": 15643,
         "provider_observed": "Darkbloom; Google AI Studio",
         "quantization": "Darkbloom=unknown; Google AI Studio=unknown"
-      }
+      },
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "google/gemma-4-31b-it:free",
@@ -861,7 +907,9 @@
       "verified_at": null,
       "cli_hints": {
         "opencode": "openrouter/google/gemma-4-31b-it:free"
-      }
+      },
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "inclusionai/ling-3.0-flash:free",
@@ -884,7 +932,9 @@
         "latency_ms": 4526,
         "provider_observed": "Novita",
         "quantization": "Novita=unknown"
-      }
+      },
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nvidia/nemotron-3-nano-30b-a3b:free",
@@ -907,7 +957,9 @@
         "latency_ms": 4906,
         "provider_observed": "Nvidia",
         "quantization": "Nvidia=bf16"
-      }
+      },
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
@@ -930,7 +982,9 @@
         "latency_ms": 3769,
         "provider_observed": "Nvidia",
         "quantization": "Nvidia=unknown"
-      }
+      },
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nvidia/nemotron-3-super-120b-a12b:free",
@@ -953,7 +1007,9 @@
         "latency_ms": 8741,
         "provider_observed": "Nvidia",
         "quantization": "Nvidia=unknown"
-      }
+      },
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nvidia/nemotron-nano-12b-v2-vl:free",
@@ -976,7 +1032,9 @@
         "latency_ms": 22165,
         "provider_observed": "Nvidia",
         "quantization": "Nvidia=unknown"
-      }
+      },
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nvidia/nemotron-nano-9b-v2:free",
@@ -999,7 +1057,9 @@
         "latency_ms": 21180,
         "provider_observed": "Nvidia",
         "quantization": "Nvidia=bf16"
-      }
+      },
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "openai/gpt-oss-20b:free",
@@ -1022,7 +1082,9 @@
         "latency_ms": 14596,
         "provider_observed": "Darkbloom",
         "quantization": "Darkbloom=unknown"
-      }
+      },
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "poolside/laguna-m.1:free",
@@ -1045,7 +1107,9 @@
         "latency_ms": 41238,
         "provider_observed": "Poolside",
         "quantization": "Poolside=fp4"
-      }
+      },
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "poolside/laguna-s-2.1:free",
@@ -1068,7 +1132,9 @@
         "latency_ms": 15677,
         "provider_observed": "Poolside",
         "quantization": "Poolside=fp8"
-      }
+      },
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "poolside/laguna-xs-2.1:free",
@@ -1091,7 +1157,9 @@
         "latency_ms": 4947,
         "provider_observed": "Poolside",
         "quantization": "Poolside=fp8"
-      }
+      },
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "gemma-4-12b-it-Q6_K",
@@ -1108,7 +1176,7 @@
       "cli_hints": {
         "llamacpp": "<home-do-dono>/models/gemma-4-12b-it-Q6_K.gguf"
       },
-      "id_status": "",
+      "id_status": "NAO-ENCONTRADO",
       "verified_by": "llamacpp",
       "measured": {
         "suite_accuracy": 1.0,
@@ -1116,7 +1184,8 @@
         "latency_ms": 35123,
         "provider_observed": "unknown — sem catálogo público acessível sem chave",
         "quantization": "unknown — sem catálogo público acessível sem chave"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "ornith-1.5-35b-a3b",
@@ -1137,7 +1206,7 @@
       "cli_hints": {
         "opencode": "vast3090ornith/ornith-1.5-35b-a3b"
       },
-      "id_status": "",
+      "id_status": "EXISTE",
       "verified_by": "",
       "fallback": [
         "qwen38-flashnext-125b"
@@ -1148,7 +1217,8 @@
         "latency_ms": null,
         "provider_observed": "dedicado full-GPU (decisão do usuário, 27/08): decode 93.4 tok/s, prefill ~1369 tok/s, agregado 2 slots 158 tok/s — vs 17.2 no modo coexistente com Flash Next",
         "quantization": "Q4_K_M 21.7GB INTEIRO na VRAM (~23GB/48GB usados com KV), -ngl 999 -fa on -ub 2048"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "qwen38-flashnext-125b",
@@ -1170,7 +1240,7 @@
       "cli_hints": {
         "opencode": "vast3090flash/qwen38-flashnext-125b"
       },
-      "id_status": "",
+      "id_status": "EXISTE",
       "verified_by": "",
       "fallback": [
         "mistral-small-4-119b-2603"
@@ -1181,7 +1251,8 @@
         "latency_ms": null,
         "provider_observed": "decode solo 13.1 tok/s (medido 2026-08-27 via /v1/chat/completions); agregado 4 slots pendente de carga real",
         "quantization": "UD-Q4_K_XL: dense+~1/3 experts em VRAM (~28GB/49GB), resto em RAM host 188GB"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "claude-sonnet-5",
@@ -1207,7 +1278,9 @@
       ],
       "verified_by": "claude-code",
       "evidencia_hint": "claude -p --model sonnet \"responda apenas: OK\" -> \"OK\", exit 0 (2026-07-26)",
-      "nota": "Camada Arquiteto do SKILL.md. Sem numeros de accuracy/latencia porque a suite nao foi rodada contra ele — campos nulos em vez de inventados (regra 35)."
+      "nota": "Camada Arquiteto do SKILL.md. Sem numeros de accuracy/latencia porque a suite nao foi rodada contra ele — campos nulos em vez de inventados (regra 35).",
+      "id_status": "PROVAVEL",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "qwen-uncensored-local",
@@ -1229,7 +1302,9 @@
       },
       "fallback": [
         "deepseek-v4-flash-free"
-      ]
+      ],
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek-v4-pro",
@@ -1251,7 +1326,9 @@
       },
       "fallback": [
         "deepseek-v4-flash-free"
-      ]
+      ],
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nemotron-3-ultra-550b-a55b",
@@ -1274,14 +1351,15 @@
       "fallback": [
         "nemotron-3-super-120b-a12b"
       ],
-      "id_status": "",
+      "id_status": "FANTASMA",
       "verified_by": "opencode",
       "measured": {
         "suite_accuracy": null,
         "suite_n": 0,
         "latency_ms": 38000,
         "provider_observed": "NVIDIA — via agent-vault"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "nemotron-3-ultra-550b-a55b-openrouter",
@@ -1304,7 +1382,8 @@
       "fallback": [
         "nemotron-3-ultra-550b-a55b"
       ],
-      "id_status": ""
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "groq-compound",
@@ -1327,7 +1406,8 @@
       "fallback": [
         "groq-compound-mini"
       ],
-      "id_status": ""
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "groq-compound-mini",
@@ -1348,7 +1428,8 @@
         "opencode": "groq/groq/compound-mini"
       },
       "fallback": [],
-      "id_status": ""
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "llama-4-scout-17b-16e-instruct",
@@ -1370,7 +1451,8 @@
       "fallback": [
         "groq-compound"
       ],
-      "id_status": ""
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "qwen3-32b",
@@ -1391,7 +1473,8 @@
         "opencode": "groq/qwen/qwen3-32b"
       },
       "fallback": [],
-      "id_status": ""
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "openrouter-free-router",
@@ -1412,14 +1495,15 @@
         "opencode": "openrouter/openrouter/free"
       },
       "fallback": [],
-      "id_status": "",
+      "id_status": "EXISTE",
       "verified_by": "opencode",
       "measured": {
         "suite_accuracy": null,
         "suite_n": 0,
         "latency_ms": 21000,
         "provider_observed": "OpenRouter — free router"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek/deepseek-v4-flash-0731",
@@ -1441,7 +1525,8 @@
         "deepseek-v4-flash-openrouter",
         "deepseek-v4-flash-free"
       ],
-      "id_status": ""
+      "id_status": "EXISTE",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "glm-5.2-zcode",
@@ -1465,8 +1550,9 @@
         "deepseek-v4-flash-free"
       ],
       "verified_by": "zcode",
-      "id_status": "",
-      "nota": "Sem --model no CLI; hint grava model.main no cli config."
+      "id_status": "NAO-ENCONTRADO",
+      "nota": "Sem --model no CLI; hint grava model.main no cli config.",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "cursor-sonnet-4-thinking",
@@ -1491,8 +1577,9 @@
         "deepseek-v4-flash-free"
       ],
       "verified_by": "cursor",
-      "id_status": "",
-      "nota": "FORK=0; SESSION via --resume."
+      "id_status": "NAO-ENCONTRADO",
+      "nota": "FORK=0; SESSION via --resume.",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "cursor-gpt-5",
@@ -1515,7 +1602,8 @@
         "cursor-sonnet-4-thinking"
       ],
       "verified_by": "cursor",
-      "id_status": ""
+      "id_status": "NAO-ENCONTRADO",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "deepseek/deepseek-v4-flash-direct",
@@ -1537,7 +1625,8 @@
         "deepseek-v4-flash-openrouter",
         "deepseek-v4-flash-free"
       ],
-      "id_status": ""
+      "id_status": "FANTASMA",
+      "id_checked_at": "2026-08-30T18:18:48Z"
     },
     {
       "id": "gemini-3.6-flash",
@@ -1561,13 +1650,14 @@
         "openrouter/google/gemma-4-26b-a4b-it:free"
       ],
       "verified_by": "opencode",
-      "id_status": "",
+      "id_status": "EXISTE",
       "measured": {
         "suite_accuracy": null,
         "suite_n": 0,
         "latency_ms": 12600,
         "provider_observed": "opencode-go (Zen/Go); upstream nao publica"
-      }
+      },
+      "id_checked_at": "2026-08-30T18:18:48Z"
     }
   ]
 }

@@ -31,6 +31,11 @@ ALLOWED_GAUNTLET = {
 ROLES = {"unlock", "plan", "run", "map", "reduce", "export", "render", "vision_gate"}
 
 REGISTRY_PATH = Path(__file__).resolve().parent.parent / "model-registry.json"
+FREE_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "free-catalog.json"
+
+# Status de id que reprova na porta (E5-M2): stampado por
+# `bin/audit-registry-ids.sh --stamp` no model-registry.json.
+DEAD_ID_STATUSES = ("FANTASMA", "NAO-ENCONTRADO", "NAO-VERIFICADO")
 
 _DEFAULT_TIERS = {
     "cheap": "deepseek-v4-flash-free",
@@ -438,8 +443,95 @@ def _load_registry(registry_path=None):
         return None
 
 
-def resolve_tier(tier, registry_path=None):
+def _load_free_catalog(catalog_path=None):
+    """Catálogo free carimbado (E5-D3): arquivo LOCAL, nunca HTTP no caminho
+    do dispatch. Ausente, ilegível ou com kind errado = None (reprovado loud
+    pelo chamador — degradação silenciosa é a doença que o E5 fecha)."""
+    cat_path = Path(catalog_path) if catalog_path else FREE_CATALOG_PATH
+    if not cat_path.exists():
+        return None
+    try:
+        data = json.loads(cat_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(data, dict) or data.get("kind") != "free-catalog/1":
+        return None
+    return data
+
+
+def _catalog_order(models):
+    """Ordem de fallback: keyless primeiro (perna zero-key da promessa, R1);
+    dentro do grupo, contexto maior primeiro, empate por ref lexicográfico.
+    Função pura do conteúdo do arquivo — resolve-tier continua
+    byte-determinístico. Limit-aware honesto (R3): RPM/RPD são limites
+    PUBLICADOS (null no bootstrap), não saldo consumido — nada aqui conta
+    quota; o desvio de provider estourado vem das observações reais
+    (usage-hub) consumidas pela cadeia RF-08."""
+    return sorted(
+        (m for m in models if isinstance(m, dict) and m.get("ref")),
+        key=lambda m: (
+            0 if m.get("keyless") else 1,
+            -(m.get("context_length") or 0),
+            str(m.get("ref", "")),
+        ),
+    )
+
+
+def _resolve_tier_cheap(registry_path=None, catalog_path=None):
+    """Imprime a lista fallback de tier:cheap, um ref por linha, em ordem.
+
+    Gate na porta (E5-M2): ref com id_status morto stampado no registry é
+    pulado com WARN alto — catálogo desatualizado nunca entrega fantasma.
+    Catálogo ausente/ilegível = exit 2 LOUD; zero ref vivo = exit 2 LOUD.
+    """
+    cat = _load_free_catalog(catalog_path)
+    if cat is None:
+        print(
+            "ERROR: rota free sem catálogo carimbado legível "
+            "(data/free-catalog.json, kind free-catalog/1). Rode "
+            "bin/sync-free-catalog.sh. Recusando cair nos defaults que já "
+            "serviram id morto (incidente E5)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    statuses = {}
+    for m in _load_registry(registry_path) or []:
+        statuses[str(m.get("id", ""))] = str(m.get("id_status", "") or "")
+
+    printed = 0
+    for m in _catalog_order(cat.get("models", [])):
+        ref = str(m.get("ref", ""))
+        st = statuses.get(ref, "")
+        if any(d in st for d in DEAD_ID_STATUSES):
+            print(
+                f"WARN: catálogo free cita '{ref}' com id_status '{st}' no "
+                f"registry — pulado na porta (E5-M2)",
+                file=sys.stderr,
+            )
+            continue
+        print(ref)
+        printed += 1
+
+    if printed == 0:
+        print(
+            "ERROR: catálogo free não deixou nenhum ref vivo após o gate do "
+            "registry (E5-M2) — sync precisa rodar antes de despachar",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
+def resolve_tier(tier, registry_path=None, catalog_path=None):
     tier = tier.removeprefix("tier:")
+
+    # E5-M4: tier:cheap é a rota FREE e resolve pela lista ordenada do
+    # catálogo local carimbado — nunca pelos defaults hardcodados (o default
+    # antigo, deepseek-v4-flash-free, tinha hint morto e continuou sendo
+    # servido como primeira opção: a classe exata do incidente E5).
+    if tier == "cheap":
+        _resolve_tier_cheap(registry_path, catalog_path)
+        sys.exit(0)
 
     models = _load_registry(registry_path)
 
@@ -584,13 +676,21 @@ def main():
 
     elif cmd == "resolve-tier":
         if len(sys.argv) < 3:
-            print("Usage: resolve-tier <tier> [--registry path.json]", file=sys.stderr)
+            print("Usage: resolve-tier <tier> [--registry path.json] [--catalog path.json]", file=sys.stderr)
             sys.exit(2)
         tier = sys.argv[2]
         registry_path = None
-        if len(sys.argv) > 3 and sys.argv[3] == "--registry" and len(sys.argv) > 4:
-            registry_path = sys.argv[4]
-        resolve_tier(tier, registry_path)
+        catalog_path = None
+        extra = sys.argv[3:]
+        i = 0
+        while i < len(extra):
+            if extra[i] == "--registry" and i + 1 < len(extra):
+                registry_path = extra[i + 1]; i += 2
+            elif extra[i] == "--catalog" and i + 1 < len(extra):
+                catalog_path = extra[i + 1]; i += 2
+            else:
+                i += 1
+        resolve_tier(tier, registry_path, catalog_path)
 
     elif cmd == "dump":
         if len(sys.argv) < 3:

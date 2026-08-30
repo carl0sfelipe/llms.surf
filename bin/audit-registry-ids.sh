@@ -7,12 +7,26 @@
 # sem catalogo publico, ex: NVIDIA/Groq exigem chave), mas marca o que
 # precisa verificacao manual.
 #
-# Uso: bin/audit-registry-ids.sh
+# Uso: bin/audit-registry-ids.sh [--stamp]
+#
+# --stamp (E5-M2, gate na porta): grava o status medido de volta no
+# model-registry.json (id_status + id_checked_at por modelo). Consumidores
+# (resolve-tier, run-with-fallback) recusam FANTASMA/NAO-ENCONTRADO/
+# NAO-VERIFICADO na porta — o registry vira a única verdade, inclusive de
+# liveza. Sem --stamp o script só reporta (comportamento original).
 #
 # Dependencias: python3, curl, bash 4+
 # Todo comando de rede passa por with-timeout.sh (regra 12).
 
 set -uo pipefail
+
+STAMP=0
+for arg in "$@"; do
+  case "$arg" in
+    --stamp) STAMP=1 ;;
+    *) echo "Uso: audit-registry-ids.sh [--stamp]" >&2; exit 3 ;;
+  esac
+done
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MODEL_REGISTRY="${MODEL_REGISTRY:-$REPO_ROOT/model-registry.json}"
@@ -65,6 +79,7 @@ EXISTE=0
 FANTASMA=0
 PROVAVEL=0
 NAO_ENCONTRADO=0
+STATUS_FILE=$(mktemp /tmp/registry-status-XXXXXX)
 
 echo ""
 echo "Modelo (registry id)                            Hint (opencode)                Status          Detalhe"
@@ -98,6 +113,7 @@ while IFS=$'\t' read -r mid hint; do
       FANTASMA=$((FANTASMA+1))
     fi
 
+    printf '%s\t%s\n' "$mid" "$STATUS" >> "$STATUS_FILE"
     printf "%-48s %-30s %-15s %s\n" "$mid" "$hint" "$STATUS" "$DETALHE"
     continue
   fi
@@ -134,10 +150,47 @@ while IFS=$'\t' read -r mid hint; do
     NAO_ENCONTRADO=$((NAO_ENCONTRADO+1))
   fi
 
+  printf '%s\t%s\n' "$mid" "$STATUS" >> "$STATUS_FILE"
   printf "%-48s %-30s %-15s %s\n" "$mid" "(sem hint)" "$STATUS" "$DETALHE"
 done < "$REGISTRY_PAIRS"
 
 rm -f "$REGISTRY_PAIRS"
+
+# ── 4.5 Gravar a liveza medida no registry (E5-M2) ──
+# Escrita atômica: temp no mesmo dir + move. Formato byte-compatível com o
+# arquivo atual (indent 2, ensure_ascii=False, sem newline final).
+if [ "$STAMP" -eq 1 ]; then
+  python3 - "$MODEL_REGISTRY" "$STATUS_FILE" <<'PYSTAMP' || echo "Erro: --stamp não conseguiu gravar o registry" >&2
+import json, os, sys, tempfile
+from datetime import datetime, timezone
+
+reg_path, status_path = sys.argv[1], sys.argv[2]
+status = {}
+with open(status_path, encoding="utf-8") as f:
+    for line in f:
+        mid, st = line.rstrip("\n").split("\t", 1)
+        status[mid] = st
+
+with open(reg_path, encoding="utf-8") as f:
+    reg = json.load(f)
+
+checked_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+stamped = 0
+for m in reg.get("models", []):
+    mid = m.get("id", "")
+    if mid in status:
+        m["id_status"] = status[mid]
+        m["id_checked_at"] = checked_at
+        stamped += 1
+
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(reg_path), suffix=".tmp")
+with os.fdopen(fd, "w", encoding="utf-8") as f:
+    json.dump(reg, f, indent=2, ensure_ascii=False)
+os.replace(tmp, reg_path)
+print(f"stamp: {stamped} modelos com id_status gravado em {reg_path} (checked_at {checked_at})", file=sys.stderr)
+PYSTAMP
+fi
+rm -f "$STATUS_FILE"
 
 # ── 5. Resumo ──
 echo ""

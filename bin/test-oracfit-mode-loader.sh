@@ -71,13 +71,42 @@ python3 "$LOADER" validate "$tmpfile" 2>&1 || rc=$?
 if [ "$rc" -eq 2 ]; then ok "map without rate_limit_s -> exit 2"; else not "map without rate_limit_s should exit 2, got $rc"; fi
 rm -f "$tmpfile"
 
-echo "--- resolve-tier cheap ---"
+echo "--- resolve-tier cheap (E5-M4: lista fallback do catálogo carimbado) ---"
 output=$(python3 "$LOADER" resolve-tier tier:cheap 2>/dev/null || true)
-if [ -n "$output" ]; then ok "resolve-tier tier:cheap -> $output"; else not "resolve-tier should print non-empty"; fi
+rc=$?
+if [ -n "$output" ]; then ok "resolve-tier tier:cheap não vazio"; else not "resolve-tier should print non-empty"; fi
+n_refs=$(printf '%s\n' "$output" | grep -c . || true)
+if [ "$n_refs" -ge 3 ]; then ok "tier:cheap devolve >=3 refs vivos ($n_refs)"; else not "tier:cheap devolveu $n_refs refs (<3 — D5 reprova)"; fi
+first_ref=$(printf '%s\n' "$output" | head -1)
+if [ "$first_ref" = "mimo-v2.5-free" ] || [ "$first_ref" = "nemotron-3-ultra-free" ]; then ok "keyless primeiro na ordem ($first_ref)"; else not "primeiro ref não é keyless: $first_ref"; fi
+
+echo "--- resolve-tier cheap: catálogo ausente reprova LOUD (E5-D3/D5) ---"
+rc=0
+errout=$(python3 "$LOADER" resolve-tier tier:cheap --catalog /tmp/free-catalog-inexistente-xyz.json 2>&1 >/dev/null) || rc=$?
+if [ "$rc" -eq 2 ] && printf '%s' "$errout" | grep -q "catálogo"; then ok "catálogo ausente -> exit 2 com mensagem"; else not "catálogo ausente deveria exit 2 loud, got rc=$rc"; fi
+
+echo "--- resolve-tier cheap: id morto stampado é pulado na porta (E5-M2) ---"
+tmpreg=$(mktemp /tmp/oracfit-reg-XXXXXX.json)
+python3 - "$ROOT/model-registry.json" "$tmpreg" <<'PYEOF'
+import json, sys
+reg = json.load(open(sys.argv[1]))
+for m in reg["models"]:
+    if m["id"] == "mimo-v2.5-free":
+        m["id_status"] = "FANTASMA"
+json.dump(reg, open(sys.argv[2], "w"), indent=2, ensure_ascii=False)
+PYEOF
+output=$(python3 "$LOADER" resolve-tier tier:cheap --registry "$tmpreg" 2>/tmp/oracfit-gate-err.txt || true)
+rc=$?
+if [ "$rc" -eq 0 ] && ! printf '%s' "$output" | grep -q "mimo-v2.5-free" && grep -q "WARN.*mimo-v2.5-free" /tmp/oracfit-gate-err.txt; then
+  ok "ref morto pulado com WARN na porta"
+else
+  not "gate de id morto falhou (rc=$rc)"
+fi
+rm -f "$tmpreg" /tmp/oracfit-gate-err.txt
 
 echo "--- resolve-tier with registry ---"
 output=$(python3 "$LOADER" resolve-tier tier:cheap --registry "$ROOT/model-registry.json" 2>/dev/null || true)
-if [ -n "$output" ]; then ok "resolve-tier with registry -> $output"; else not "resolve-tier with registry should print non-empty"; fi
+if [ -n "$output" ]; then ok "resolve-tier with registry -> non-empty"; else not "resolve-tier with registry should print non-empty"; fi
 
 echo "--- file missing ---"
 rc=0

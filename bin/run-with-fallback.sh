@@ -27,7 +27,33 @@ shift 2
 
 # Cada linha: "<id>\t<id_status ou vazio>" (incidente incidents/2026-07-25-registry-com-model-id-inexistente-e-sem-.md: id_status vai junto,
 # não só o id — quem consome a cadeia precisa saber se o alvo é fantasma).
-CADEIA=$(MODEL="$MODEL" REG="$REGISTRY" python3 -c '
+if [[ "$MODEL" == tier:* ]]; then
+  # E5-M4: tier expande para a LISTA fallback ordenada do catálogo free
+  # carimbado (data/free-catalog.json via resolve-tier — keyless primeiro).
+  # O loop de baixo continua sendo quem pula morto (id_status) e quem desvia
+  # em rate limit/saldo real (exit 2/4 → usage-hub), que é o desvio
+  # dirigido por evento — a copy pública NUNCA diz "quota-aware" (R3).
+  CADEIA=$(REG="$REGISTRY" MODEL="$MODEL" ROOT="$REPO_ROOT" python3 -c '
+import json, os, subprocess, sys
+out = subprocess.run(
+    [sys.executable, os.environ["ROOT"] + "/bin/lib-oracfit-mode-loader.py",
+     "resolve-tier", os.environ["MODEL"], "--registry", os.environ["REG"]],
+    capture_output=True, text=True)
+refs = [l.strip() for l in out.stdout.splitlines() if l.strip()]
+if out.returncode != 0 or not refs:
+    sys.stderr.write(out.stderr)
+    sys.stderr.write("✖ tier %s não resolveu para nenhum ref vivo (E5-M4)\n" % os.environ["MODEL"])
+    sys.exit(2)
+try:
+    statuses = {m.get("id", ""): (m.get("id_status", "") or "")
+                for m in json.load(open(os.environ["REG"]))["models"]}
+except Exception:
+    statuses = {}
+for r in refs:
+    print(r + "\t" + statuses.get(r, ""))
+') || { echo "✖ cadeia do $MODEL vazia — nada despachado" >&2; exit 2; }
+else
+  CADEIA=$(MODEL="$MODEL" REG="$REGISTRY" python3 -c '
 import json, os, sys
 d = json.load(open(os.environ["REG"]))
 mid = os.environ["MODEL"]
@@ -40,6 +66,7 @@ for m in d["models"]:
         sys.exit(0)
 print(mid + "\t")   # não está no registry: o runner é quem recusa (exit 3)
 ')
+fi
 
 # Lê a cadeia pelo fd 3 (não pelo stdin padrão do loop): o runner é chamado
 # dentro do loop e não pode herdar a cadeia como stdin dele.
@@ -52,7 +79,7 @@ TODOS_PULADOS_POR_STATUS=1
 while IFS="$(printf '\t')" read -r M STATUS <&3; do
   [ -n "$M" ] || continue
   case "$STATUS" in
-    *FANTASMA*|*NAO-VERIFICADO*)
+    *FANTASMA*|*NAO-VERIFICADO*|*NAO-ENCONTRADO*)
       echo "  ↳ ⚠️  pulando $M — id_status: $STATUS" >&2
       ULTIMO=2
       continue
