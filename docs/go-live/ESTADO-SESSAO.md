@@ -216,16 +216,7 @@
   nenhum consumidor do ledger re-resolve id via registry antes do M3.
 - Pronto += re-anúncio cita o audit ANTES e DEPOIS (46/69 → 0/N).
 
-ORDEM DE IMPLEMENTAÇÃO (mim) — CORRIGIDA 2026-08-31: **M4 ANTES de M3**
-(retirar o fantasma antes de existir fallback quebra o default por
-inteiro — dependência que a ordem anterior não via): M4 tier:cheap =
-lista fallback (limit-aware, catálogo local carimbado) → M2 gate na
-porta → M3 retirada dos 46 (1 commit citando o audit) → M5
-lib-free-credentials + grep de exclusividade no gate → M6
-provider_efetivo + allowlist (e assert R5: nenhum consumidor do ledger
-re-resolve via registry) → M1 sync freellm.net → test-free-path.sh com
-envs envenenadas → keyless-check (R1) → re-medir a promessa do README
-(audit 46/69 → 0/N citado no re-anúncio).
+ORDEM DE IMPLEMENTAÇÃO (mim) — **CUMPRIDA 2026-08-31** (ver seção E5 FECHADA abaixo).
 
 ## Fila de decisões do dono (pendentes)
 
@@ -249,3 +240,27 @@ envs envenenadas → keyless-check (R1) → re-medir a promessa do README
 - Gate do bestmodel: make gate (exporta DATABASE_URL; perna Postgres roda lá).
 - llms.surf: gh-pages só via plumbing (blobs+mktree+commit-tree), NUNCA
   worktree sujo (contaminou uma vez — classe incidente 2026-08-13).
+
+## E5 FECHADA — caminho free íntegro, M1-M6 + D5 + R1 (2026-08-31)
+
+- **Régua**: audit ANTES 46/69 mortos (21 NAO-ENCONTRADO + 25 FANTASMA)
+  → DEPOIS **0/23** (19 EXISTE + 4 PROVAVEL). Re-anúncio:
+  docs/go-live/RE-ANUNCIO-FREE-PATH.md.
+- Commits da cadeia: 2662211 (M4 catálogo+M2 --stamp/gate na porta) →
+  afeb8ed (M3 retirada + B2 pago) → b7100af (M5 lib credencial por
+  ARQUIVO + gate 3 anéis) → 06b1a86 (M6 provider_efetivo + allowlist
+  R4) → 05371c3 (M1 sync atômico R2) → 710683d (D5: 13 pernas, envs
+  pagas ENVENENADAS não vazam; allowlist adulterada = violado) → 82f5e2d
+  (re-anúncio).
+- `tier:cheap` = lista fallback do `data/free-catalog.json` carimbado
+  (11 refs: 2 keyless opencode + 9 openrouter :free com pricing 0
+  medido; sync regenera do feed JSON /v1/models, nunca scraping).
+- **R1 medido**: perna zero-key responde de verdade (~15-16s, zero
+  chave, custo zero); perna free-key pula com aviso sem credencial em
+  arquivo. NUNCA dizer "quota-aware" (é limit/event-driven, R3).
+- **B2 FECHADO** no mesmo mecanismo: dispatch-mode/dispatch-stages/critic
+  roteiam `tier:*` via run-with-fallback — nenhum tier cru chega a runner.
+- Saúde 20/20 (ganhou exclusividade-credencial + test-free-path).
+- PRÓXIMOS NA FILA: S28 (import pool.json 1310 células + botão denúncia
+  + rebuild prod-api), push pendente, dials do dono (allowlist default já
+  setada: opencode+openrouter — R4 dial, dono pode trocar).
