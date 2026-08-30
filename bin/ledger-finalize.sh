@@ -120,6 +120,40 @@ DURATION=$(( $(date +%s) - STARTED_AT ))
 LOG_LINES=$(wc -l < "$LOG_FILE" 2>/dev/null || echo 0)
 LOG_LINES=$((LOG_LINES))
 
+# provider_efetivo (E5-M6/R4/D5) — quem REALMENTE serviu o run, gravado pela
+# cadeia RF-08 (run-with-fallback) no sucesso. tier:* SEMPRE passa por ela;
+# dispatch direto sem cadeia não tem arquivo e fica fora do escopo da
+# allowlist. Linha autossuficiente (R5): o run não re-resolve id no registry.
+EFETIVO_FILE="$PID_DIR/dispatch-${TASK_NAME}.efetivo"
+REF_EFETIVO=""
+PROVIDER_EFETIVO=""
+ALLOWLIST_STATUS="fora-do-escopo"
+if [ -f "$EFETIVO_FILE" ]; then
+  IFS=$'\t' read -r REF_EFETIVO PROVIDER_EFETIVO < "$EFETIVO_FILE"
+  if [ -n "$PROVIDER_EFETIVO" ]; then
+    ALLOWLIST_FILE="$BIN_DIR/../data/free-provider-allowlist.json"
+    if [ -f "$ALLOWLIST_FILE" ] && python3 - "$ALLOWLIST_FILE" "$PROVIDER_EFETIVO" <<'PYALLOW'
+import json, sys
+al = json.load(open(sys.argv[1], encoding="utf-8"))
+sys.exit(0 if sys.argv[2] in (al.get("providers") or []) else 1)
+PYALLOW
+    then
+      ALLOWLIST_STATUS="ok"
+    else
+      ALLOWLIST_STATUS="sem-allowlist"
+      if [ ! -f "$ALLOWLIST_FILE" ]; then
+        echo "⛔ allowlist ausente: $ALLOWLIST_FILE (E5-M6/R4 — crie o arquivo antes de despachar free)" >&2
+      else
+        ALLOWLIST_STATUS="violado"
+        echo "⛔ PROVIDER FORA DA ALLOWLIST DO DONO: $PROVIDER_EFETIVO (ref $REF_EFETIVO) — run fica marcado como violação (E5-M6/R4)" >&2
+        echo "⛔ allowlist violada: provider_efetivo=$PROVIDER_EFETIVO ref=$REF_EFETIVO (data/free-provider-allowlist.json)" >> "$LOG_FILE" 2>/dev/null || true
+      fi
+    fi
+  else
+    ALLOWLIST_STATUS="sem-provider"
+  fi
+fi
+
 [ -z "$MODEL_ID" ] && MODEL_ID="$MODEL"
 
 mkdir -p "$LEDGER_DIR"
@@ -129,6 +163,7 @@ export STARTED_AT_ISO FINISHED_AT DURATION EXIT_STATUS
 export TOKENS_INPUT TOKENS_OUTPUT TOKENS_REASONING TOKENS_CACHE_READ TOKENS_CACHE_WRITE COST_USD LOG_LINES LOG_FILE LEDGER_FILE FORKS
 export RUNNER_NAME="${DISPATCH_RUNNER_NAME:-}"
 export RUNNER_EXIT ORACLE_EXIT ORACLE_EXPECT="$ORACULO_EXPECT" ORACLE_STATUS ORACLE_CMD="$ORACULO_CMD"
+export REF_EFETIVO PROVIDER_EFETIVO ALLOWLIST_STATUS
 
 python3 -c '
 import json, os
@@ -169,6 +204,12 @@ runner_name = os.environ.get("RUNNER_NAME", "")
 if runner_name:
     record["runner"] = runner_name
 
+# E5-M6/R5: linha autossuficiente — o provider que serviu e o veredito da
+# allowlist vão na linha; nenhum consumidor precisa re-resolver id no registry.
+record["provider_efetivo"] = os.environ.get("PROVIDER_EFETIVO", "")
+record["provider_efetivo_ref"] = os.environ.get("REF_EFETIVO", "")
+record["allowlist_status"] = os.environ.get("ALLOWLIST_STATUS", "fora-do-escopo")
+
 with open(os.environ["LEDGER_FILE"], "a") as f:
     f.write(json.dumps(record, ensure_ascii=False) + "\n")
 '
@@ -201,7 +242,7 @@ case "${RUNNER_EXIT:-}" in
 esac
 bash "$REPO_ROOT_FOR_USAGE/bin/emit-usage-feedback.sh" "${USAGE_ARGS[@]}" 2>/dev/null || true
 
-rm -f "$META_FILE" "$EXIT_FILE"
+rm -f "$META_FILE" "$EXIT_FILE" "$EFETIVO_FILE"
 [ -n "${DISPATCH_LOCK_FILE:-}" ] && rm -f "$DISPATCH_LOCK_FILE"
 
 exit 0

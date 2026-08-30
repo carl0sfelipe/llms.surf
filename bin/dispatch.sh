@@ -78,6 +78,13 @@ METAEOF
 RUNNER_ENTRY="$(cd "$(dirname "$0")" && pwd)/run-with-fallback.sh"
 [ -x "$RUNNER_ENTRY" ] || RUNNER_ENTRY="$DISPATCH_RUNNER"
 
+# E5-M6: run-with-fallback registra quem SERVIU de verdade (ref + provider)
+# neste arquivo; ledger-finalize grava provider_efetivo e assertiona a
+# allowlist do dono (R4) sobre ele.
+DISPATCH_EFETIVO_FILE="$PID_DIR/dispatch-${TASK_NAME}.efetivo"
+export DISPATCH_EFETIVO_FILE
+rm -f "$DISPATCH_EFETIVO_FILE"
+
 # EXIT_FILE é a única forma confiável de saber o exit code real do runner:
 # ledger-finalize.sh roda como processo IRMÃO, não pai, do runner — não pode
 # usar `wait $PID` (só o pai reaps status). O `bash -c` abaixo é filho direto

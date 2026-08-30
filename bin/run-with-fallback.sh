@@ -25,6 +25,10 @@ MODEL="${1:?Uso: run-with-fallback.sh <model_id> <spec_file> [flags...]}"
 SPEC="${2:?Uso: run-with-fallback.sh <model_id> <spec_file> [flags...]}"
 shift 2
 
+# E5-M6: provider por ref — quem serve de verdade vai pro ledger
+# (provider_efetivo) via DISPATCH_EFETIVO_FILE quando o dispatch.sh define.
+declare -A PROV_POR_REF
+
 # Cada linha: "<id>\t<id_status ou vazio>" (incidente incidents/2026-07-25-registry-com-model-id-inexistente-e-sem-.md: id_status vai junto,
 # não só o id — quem consome a cadeia precisa saber se o alvo é fantasma).
 if [[ "$MODEL" == tier:* ]]; then
@@ -76,6 +80,7 @@ for r in refs:
       fi
     fi
     CADEIA+="${REF}"$'\t'"${ST}"$'\n'
+    PROV_POR_REF[$REF]="$PROVIDER"
   done <<< "$CHAIN_META"
   if [ -z "$CADEIA" ]; then
     echo "✖ cadeia do $MODEL vazia após gate de credencial — nada despachado (configura a chave do provider em 'opencode auth login' ou use a perna keyless)" >&2
@@ -94,6 +99,17 @@ for m in d["models"]:
             print(f + "\t" + idx.get(f, ""))
         sys.exit(0)
 print(mid + "\t")   # não está no registry: o runner é quem recusa (exit 3)
+')
+  # Mapa id→provider do registry (E5-M6: provider_efetivo por ref).
+  while IFS="$(printf '\t')" read -r REF PROV; do
+    [ -n "$REF" ] && PROV_POR_REF[$REF]="$PROV"
+  done < <(REG="$REGISTRY" python3 -c '
+import json, os
+try:
+    for m in json.load(open(os.environ["REG"]))["models"]:
+        print(m.get("id", "") + "\t" + (m.get("provider") or ""))
+except Exception:
+    pass
 ')
 fi
 
@@ -141,7 +157,13 @@ while IFS="$(printf '\t')" read -r M STATUS <&3; do
       echo "  ↳ ⚠️  $M indisponível neste CLI (exit 3) — pulando. Se não for falta de cli_hint, é erro de uso." >&2
       ULTIMO=3
       ;;
-    *) exit "$RC" ;;
+    *) 
+      # E5-M6: sucesso (ou erro fatal) — registra quem SERVIU de verdade.
+      # Sem arquivo definido (chamadas fora do dispatch.sh), não registra.
+      if [ "$RC" -eq 0 ] && [ -n "${DISPATCH_EFETIVO_FILE:-}" ]; then
+        printf '%s\t%s\n' "$M" "${PROV_POR_REF[$M]:-}" > "$DISPATCH_EFETIVO_FILE" 2>/dev/null || true
+      fi
+      exit "$RC" ;;
   esac
 done
 exec 3<&-

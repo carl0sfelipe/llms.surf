@@ -1,0 +1,9 @@
+{
+  "kind": "free-provider-allowlist/1",
+  "updated": "2026-08-31",
+  "note": "Allowlist DEFAULT de provider no caminho free (E5-M6/R4 — dial do dono, decisão explícita e não consequência da ordem do feed). opencode = perna zero-key (bundle do opencode autenticado); openrouter = perna free-key (:free com pricing 0). Qualquer outro provider só entra com edição humana deste arquivo citando a decisão.",
+  "providers": [
+    "opencode",
+    "openrouter"
+  ]
+}
