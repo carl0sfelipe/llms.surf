@@ -201,6 +201,27 @@
   gen-seo.mjs gera m/, p/ e sitemap.xml (proibido colar por cima);
   âncoras de copy extraídas verbatim.
 
+## E5 CONGELADA (Fable, 2026-08-31) — implementação M1-M6 autorizada
+
+- DECISIONS-E5-FREE-PATH.md ingerido do checkout do Fable. D1-D5 = A/A/A/
+  A/A-紧 (D5 com 2 apertos: envs pagas ENVENENADAS no gate — isca prova
+  imunidade; provider_efetivo ∈ allowlist do run, não só presente).
+- 5 riscos dele viram requisitos: (R1) "no API key" ≠ "sem credencial
+  paga" — checar keyless dos 2/22 alcançáveis ANTES de re-anunciar, D5
+  tem 2 pernas (zero-key pra promessa, free-key via auth.json);
+  (R2) sync atômico: temp → valida schema+contagem+amostra → move, falha
+  mantém último snapshot bom; (R3) é limit-aware, não quota — copy
+  pública NUNCA usa a palavra "quota" sem mecanismo de contador;
+  (R4) allowlist default de provider = DIAL do dono; (R5) assertar que
+  nenhum consumidor do ledger re-resolve id via registry antes do M3.
+- Pronto += re-anúncio cita o audit ANTES e DEPOIS (46/69 → 0/N).
+
+ORDEM DE IMPLEMENTAÇÃO (mim): M2 gate na porta → M3 retirada dos 46 →
+M4 tier:cheap lista quota-aware (limit-aware, catálogo local) → M5
+lib-free-credentials + grep de exclusividade no gate → M6
+provider_efetivo + allowlist → M1 sync freellm.net → test-free-path.sh
+com envs envenenadas → keyless-check → re-medir a promessa do README.
+
 ## Fila de decisões do dono (pendentes)
 
 1. Nome final do otimizador (licença JÁ DECIDIDA: dual MIT/Apache-2.0).
