@@ -12,7 +12,12 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ORACFIT="${ORACFIT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}/bin/oracfit"
+# Exporta o root ANTES de despachar: a fachada bin/llms-surf sabe onde o tree
+# está, mas o dispatcher embaixo (oracfit_resolve_root) só lê env ou
+# ~/.oracfit/current — sem isto, o wizard num shell LIMPO (leigo que não
+# exportou nada) morre em "cannot resolve Oracfit root" no primeiro dispatch.
+export ORACFIT_ROOT="${ORACFIT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+ORACFIT="$ORACFIT_ROOT/bin/oracfit"
 
 bold() { [ -t 1 ] && printf '\033[1m%s\033[0m\n' "$1" || printf '%s\n' "$1"; }
 sep()  { printf '%s\n' "──────────────────────────────────────────"; }
@@ -69,8 +74,12 @@ nova_tarefa() {
   read -r -p "Dispatch '$TASK' (mode $MODO, adapter $AD)? [y/N]: " OK
   case "$OK" in y|Y|yes|YES) ;; *) echo "— cancelled"; return 0 ;; esac
 
+  # $ORACFIT é o ARQUIVO bin/oracfit — $ORACFIT/.. resolve para bin/, e
+  # bin/adapters/ não existe: o adapter nunca era sourced e o dispatch morria
+  # com DISPATCH_RUNNER unset em shell limpo (bug do caminho do leigo; só era
+  # invisível quando o operador exportava o env à mão). Path certo: $ORACFIT_ROOT.
   # shellcheck disable=SC1091
-  [ -f "$ORACFIT/../adapters/$AD/env.sh" ] && . "$ORACFIT/../adapters/$AD/env.sh"
+  [ -f "$ORACFIT_ROOT/adapters/$AD/env.sh" ] && . "$ORACFIT_ROOT/adapters/$AD/env.sh"
   echo "— dispatching (live log; the oracle decides at the end)…"
   "$ORACFIT" run "$MODO" "$SPEC" "$TASK"
   local rc=$?
