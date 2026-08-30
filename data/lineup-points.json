@@ -1,6 +1,6 @@
 {
-  "_comment": "Tabela de pontos v0 do The Lineup — PROPOSTA do plano (Fable), dial do dono. Girar o dial = editar este arquivo; a máquina (bin/lineup-build.sh) nunca muda.",
-  "dial": "pending-owner",
+  "_comment": "Tabela de pontos v0 do The Lineup — PROPOSTA do plano (Fable), dial do dono. Girar o dial = editar este arquivo; a máquina (bin/lineup-build.sh) nunca muda. E6 (2026-08-31): tiers do Fable entraram como PROPOSTA de política (cortes de pontos são design, não fato medido) — valeram-se no MESMO commit das copies (regra anti-drift do risco E6-2: copy sobe com dial, nunca separado). Regra 30 dias do E6 (4.5: conversão = 1º signed run do indicado em ≤30 dias da criação da conta) aguarda RATIFICAÇÃO do dono antes de entrar na máquina.",
+  "dial": "proposta-E6-2026-08-31 (owner pode girar)",
   "points": {
     "join_issue": 1,
     "referral_converted": 3,
@@ -8,5 +8,22 @@
     "run_reproduction": 3,
     "fake_caught": 5,
     "shared_custom_mode": 2
+  },
+  "tiers": {
+    "_comment": "PROPOSTA do Fable (E6 4.3) — não são fatos medidos; o dono gira aqui.",
+    "journey": ["Haole", "Grom", "Local", "The Legend"],
+    "haole": { "threshold_points": 1 },
+    "grom": { "threshold_points": 5, "requires": "1+ signed run" },
+    "local": { "threshold_points": 20, "requires": "3+ signed runs ou 1+ reproduction" },
+    "the_legend": {
+      "threshold_points": 50,
+      "requires": "1+ confirmed fake caught ou 3+ reproductions"
+    },
+    "first_wave": {
+      "kind": "prize-nao-tier",
+      "size": 25,
+      "rule": "top-25 por pontos",
+      "prize": "prioridade na fila de cloud QUANDO ela existir (nada de GPU/data prometida)"
+    }
   }
 }
