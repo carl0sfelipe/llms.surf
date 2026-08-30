@@ -12,6 +12,14 @@ labels: whitelist
      ambos chegam MEDIADOS no dia em que saírem. Entrar custa esta issue;
      sair custa apagá-la. -->
 
+## A oferta do lançamento (para a first wave)
+
+- **Free tokens para quebrar os vencedores:** quando os modelos medidos
+  pelo bestmodel.run aterrissarem no llms-surf cloud, a whitelist testa
+  os picks com tokens GRÁTIS, contra o SEU trabalho — antes de alguém
+  pagar um centavo. A quantia não é anunciada antes de existir medida;
+  a ordem é a lista, e a first wave entra primeiro.
+
 ## Quando os tokens saírem, a lista é a ordem
 
 - **Que trabalho você mandaria rodar no cloud:** <!-- obrigatório, uma frase -->

@@ -68,14 +68,16 @@ location, not a field  -  a mode is private because it lives in your workdir;
 public is only the YAML you post. Share via the `share your break` issue
 template; install someone else's with `oracfit mode add <file.yaml>`.
 
-## Whitelist  -  llms-surf cloud tokens
+## Whitelist  -  llms-surf cloud tokens x bestmodel.run
 
-llms-surf cloud tokens - credits that run dev tasks on the most economical
-model per task, chosen per mode and stage, cost-measured run by run in this
-repo's ledger - are not out yet. When they drop, the whitelist is how:
-list order, first wave first, early access, nothing else. How we pick,
-tune and serve is the closed-source side of this enterprise. No price, no
-date, no tps exists anywhere until measured in the tree. Joining costs one
+The launch offer, exactly as it will happen: bestmodel.run measures which
+model wins each objective (benchmark, not hype); llms-surf cloud takes
+those winners, tunes them to the task shape and serves them at the lowest
+measured cost per run; and the whitelist breaks the winners in first -
+free tokens to test the picks against your own work, before anyone pays.
+List order, first wave first, nothing else. How we pick, tune and serve is
+the closed-source side of this enterprise. No price, no date, no tps, no
+token amounts exist anywhere until measured in the tree. Joining costs one
 GitHub issue; leaving costs one click.
 
 ## Files an agent should read next
