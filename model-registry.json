@@ -578,6 +578,30 @@
       "id_checked_at": "2026-08-30T18:29:39Z"
     },
     {
+      "id": "claude-fable-5",
+      "provider": "cheaperinference",
+      "tier": "paid",
+      "accuracy": null,
+      "latency_ms": null,
+      "context_window": null,
+      "rate_limit": "sem published limits; assinatura Claude Code do dono ESGOTADA em 2026-08-31 — por isso o acesso e via cheaperinference",
+      "best_for": [
+        "decisao de arquitetura",
+        "desempate de trade-off",
+        "revisao de deploy"
+      ],
+      "source": "listado por GET https://api.cheaperinference.com/v1/models (62 modelos) em 2026-08-31; registrado para dogfooding do unlock_plan",
+      "verified_at": "2026-08-31",
+      "quantization": "unknown (API fechada)",
+      "cli_hints": {
+        "opencode": "cheaperinference/claude-fable-5"
+      },
+      "id_status": "PROVAVEL",
+      "verified_by": "opencode",
+      "fallback": [],
+      "nota": "Camada CARA: so decide/esqueleto, nunca escreve arquivo (ver memoria expensive-call-ultra-cheap). accuracy/latencia nulos porque nenhuma suite rodou contra ele — campos nulos em vez de inventados (regra 35)."
+    },
+    {
       "id": "gpt-5.6-luna",
       "provider": "cheaperinference",
       "tier": "paid",
