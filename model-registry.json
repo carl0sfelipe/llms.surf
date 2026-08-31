@@ -584,7 +584,7 @@
       "accuracy": null,
       "latency_ms": null,
       "context_window": 400000,
-      "rate_limit": "desconhecido (provider pago novo, sem published limits)",
+      "rate_limit": "rate limit observado em produção 2026-08-30 (após suíte+build+smokes seguidos); sem published limits — retry após espera",
       "best_for": [
         "frontend completo multi-arquivo",
         "agente com bash (build npm)"
@@ -597,9 +597,7 @@
       },
       "id_status": "",
       "verified_by": "opencode",
-      "fallback": [
-        "qwen38-flashnext-125b"
-      ],
+      "fallback": [],
       "measured": {
         "suite_accuracy": 1.0,
         "suite_n": 8,
