@@ -576,6 +576,38 @@
         "provider_observed": "opencode-go (Zen/Go); upstream nao publica"
       },
       "id_checked_at": "2026-08-30T18:29:39Z"
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "provider": "cheaperinference",
+      "tier": "paid",
+      "accuracy": null,
+      "latency_ms": null,
+      "context_window": 400000,
+      "rate_limit": "desconhecido (provider pago novo, sem published limits)",
+      "best_for": [
+        "frontend completo multi-arquivo",
+        "agente com bash (build npm)"
+      ],
+      "source": "configurado pelo dono no opencode (api.cheaperinference.com), dogfooding 2026-08-30",
+      "verified_at": "2026-08-30",
+      "quantization": "unknown (API fechada)",
+      "cli_hints": {
+        "opencode": "cheaperinference/gpt-5.6-luna"
+      },
+      "id_status": "",
+      "verified_by": "opencode",
+      "fallback": [
+        "qwen38-flashnext-125b"
+      ],
+      "measured": {
+        "suite_accuracy": 1.0,
+        "suite_n": 8,
+        "latency_ms": 7037,
+        "provider_observed": "unknown — sem catálogo público acessível sem chave",
+        "quantization": "unknown — sem catálogo público acessível sem chave"
+      },
+      "id_checked_at": ""
     }
   ]
 }
