@@ -3,8 +3,8 @@ id: 2026-08-30-fallback-do-registry-aponta-endpoint-sus
 titulo: fallback do registry aponta endpoint suspenso e rate limit temporario vira run morto
 data: 2026-08-30
 recorrivel: sim
-regra: pendente
-status: aberto
+regra: 55
+status: promovido
 ---
 
 # fallback do registry aponta endpoint suspenso e rate limit temporario vira run morto

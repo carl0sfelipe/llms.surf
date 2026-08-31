@@ -61,8 +61,8 @@
       "verified_at": null,
       "cli_hints": {},
       "fallback": [
-        "deepseek-v4-flash-free",
-        "nemotron-3-super-120b-a12b"
+        "deepseek-v4-flash-openrouter",
+        "nvidia/nemotron-3-super-120b-a12b:free"
       ],
       "id_status": "PROVAVEL",
       "id_checked_at": "2026-08-30T18:29:39Z"
@@ -98,7 +98,8 @@
         "opencode": "openrouter/deepseek/deepseek-v4-flash"
       },
       "fallback": [
-        "deepseek-v4-flash-free"
+        "openrouter-free-router",
+        "nvidia/nemotron-3-super-120b-a12b:free"
       ],
       "id_status": "EXISTE",
       "id_checked_at": "2026-08-30T18:29:39Z"
@@ -407,7 +408,7 @@
       "id_status": "EXISTE",
       "verified_by": "",
       "fallback": [
-        "mistral-small-4-119b-2603"
+        "ornith-1.5-35b-a3b"
       ],
       "measured": {
         "suite_accuracy": null,
@@ -438,7 +439,7 @@
         "claude": "sonnet"
       },
       "fallback": [
-        "deepseek-v4-flash-free"
+        "openrouter-free-router"
       ],
       "verified_by": "claude-code",
       "evidencia_hint": "claude -p --model sonnet \"responda apenas: OK\" -> \"OK\", exit 0 (2026-07-26)",
@@ -465,7 +466,7 @@
         "opencode": "opencode/deepseek-v4-pro"
       },
       "fallback": [
-        "deepseek-v4-flash-free"
+        "openrouter-free-router"
       ],
       "id_status": "EXISTE",
       "id_checked_at": "2026-08-30T18:29:39Z"
@@ -489,7 +490,7 @@
         "opencode": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
       },
       "fallback": [
-        "nemotron-3-ultra-550b-a55b"
+        "openrouter-free-router"
       ],
       "id_status": "EXISTE",
       "id_checked_at": "2026-08-30T18:29:39Z"
@@ -540,8 +541,7 @@
         "opencode": "openrouter/deepseek/deepseek-v4-flash-0731"
       },
       "fallback": [
-        "deepseek-v4-flash-openrouter",
-        "deepseek-v4-flash-free"
+        "deepseek-v4-flash-openrouter"
       ],
       "id_status": "EXISTE",
       "id_checked_at": "2026-08-30T18:29:39Z"
@@ -565,7 +565,7 @@
         "opencode": "opencode/gemini-3.6-flash"
       },
       "fallback": [
-        "openrouter/google/gemma-4-26b-a4b-it:free"
+        "google/gemma-4-26b-a4b-it:free"
       ],
       "verified_by": "opencode",
       "id_status": "EXISTE",

@@ -3,8 +3,8 @@ id: 2026-08-30-allowlist-do-free-path-assertiona-dispat
 titulo: allowlist do free path assertiona dispatch pago explicito e marca run legitimo como violado
 data: 2026-08-30
 recorrivel: sim
-regra: pendente
-status: aberto
+regra: 54
+status: promovido
 ---
 
 # allowlist do free path assertiona dispatch pago explicito e marca run legitimo como violado

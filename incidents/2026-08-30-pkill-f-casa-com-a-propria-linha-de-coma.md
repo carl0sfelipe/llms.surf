@@ -2,7 +2,7 @@
 id: 2026-08-30-pkill-f-casa-com-a-propria-linha-de-coma
 titulo: pkill -f casa com a propria linha de comando do autor e mata o shell chamador
 data: 2026-08-30
-recorrivel: sim
+recorrivel: não
 regra: pendente
 status: aberto
 ---

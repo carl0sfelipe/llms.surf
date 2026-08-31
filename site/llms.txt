@@ -47,8 +47,8 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 ## Counts (from this git tree  -  tests/test-site-honesty.sh)
 
 - version: 3.5.0
-- incidents: 107 (excludes incidents/uso/)
-- models in registry: 23
+- incidents: 110 (excludes incidents/uso/)
+- models in registry: 24
 - modes: 20
 - adapters: 8 + 1 stub
 - test suites: 37
