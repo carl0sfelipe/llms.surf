@@ -10,6 +10,10 @@ on:
 
 permissions:
   contents: write
+  # Declarar um bloco permissions zera TODO escopo nao listado. Sem esta
+  # linha o passo do gh api devolve 403 "Resource not accessible by
+  # integration" ao ler as issues da waitlist.
+  issues: read
 
 jobs:
   build:
