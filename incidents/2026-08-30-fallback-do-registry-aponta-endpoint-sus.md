@@ -42,6 +42,28 @@ rápido, fica mudo. Evidência: cauda do log dispatch-webnext-02.log
   próximo, cadeia vazia = exit 2 limpo. Alternativa: `bin/pre-dispatch-check.sh`
   para o fallback no momento do dispatch.
 
+## Auditoria da escala (mesma noite, depois da pergunta do dono)
+
+Varredura de TODOS os fallbacks do registry (resolução por id OU hint):
+
+- 7 FANTASMAS (nem id nem hint existe): `deepseek-v4-flash-free`
+  (referenciado 4×: glm-5.2, deepseek-v4-flash-openrouter, claude-sonnet-5,
+  deepseek-v4-pro), `mistral-small-4-119b-2603` (qwen38),
+  `nemotron-3-super-120b-a12b` (glm-5.2, bare name — id real é
+  `nvidia/nemotron-3-super-120b-a12b:free`), `nemotron-3-ultra-550b-a55b`
+  (bare name — id real tem sufixo `-openrouter`). Classe: id renomeado no
+  registry, fallback apodreceu silenciosamente.
+- 1 ENDPOINT MORTO: ornith-1.5-35b-a3b → qwen38-flashnext-125b (túneis
+  8019/8020 e IP público da Vast testados: todos mortos).
+- 3 VIÁVEIS: deepseek/deepseek-v4-flash-0731 → deepseek-v4-flash-openrouter
+  (registry, cloud vivo); gemini-3.6-flash → openrouter/google/gemma-4-26b-a4b-it:free
+  (via hint, cloud vivo).
+
+Conclusão: dos 11 refs de fallback, só 3 chains funcionariam hoje. Fantasma
+falha rápido (exit 3 do runner); endpoint morto é o caso letal (retry mudo).
+A correção estrutural proposta cobre os dois: validar ref E sanidade do
+endpoint antes de entregar o run ao fallback.
+
 ## Pode acontecer de novo?
 
 Sim — TODO modelo do registry cujo fallback aponte para provider suspenso/
