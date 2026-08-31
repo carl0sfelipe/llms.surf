@@ -1,5 +1,10 @@
 {
-  "machine": "bin/lineup-build.sh",
   "entries": [],
-  "generated_at": null
+  "inputs_sha256": {
+    "export": "387032913ee50efe9ca86ffbaf8f0a045b88ab6ecfbebf7118a36c902a1de257",
+    "issues": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "points": "9d86a36068fe02620cc819cbe6c07c5056681217ad19b51d7ff4ffeb04e794d8"
+  },
+  "machine": "bin/lineup-build.sh",
+  "points_table_dial": "proposta-E6-2026-08-31 (owner pode girar)"
 }
