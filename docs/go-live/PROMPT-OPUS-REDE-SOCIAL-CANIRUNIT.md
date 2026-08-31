@@ -1,9 +1,11 @@
 # SUPERPROMPT — Opus (max): transforme o site PROD do CanIRunIt na nossa rede social de captura — sem trocar o que é bonito
 
 > Como usar: rode isto no Claude (Opus, esforço máximo) com o repositório
-> `CanIRunIt` aberto (workdir `canirunit-web/`). É autocontido: os contratos
-> de API estão AQUI, verbatim, direto do código da API pública. Não precisa
-> de anexo.
+> `CanIRunIt` aberto, **no branch `social/capture-network`** (já criado,
+> com `canirunit-web/reference/social/` dentro — decisões aprovadas
+> empacotadas pra você não re-derivar). O prompt é autocontido: os
+> contratos de API estão AQUI, verbatim, direto do código da API pública.
+> Não precisa de anexo.
 
 ## MISSÃO
 
@@ -38,12 +40,27 @@ repo.
 ## BOOT — leia nesta ordem antes de escrever 1 linha
 
 1. `canirunit-web/CONTRATO-GLOBAL.md` — o contrato da casa (stack, honestidade, layout do repo).
-2. `canirunit-web/prototypes/` — a spec visual final (NÃO EDITAR NUNCA).
-3. `canirunit-web/site/index.html` e `site/hardware.html` — o corpo vivo: estrutura, nav, cenas, seletor goal-first.
-4. `canirunit-web/site/assets/theme.css`, `engine.mjs`, `goal-page.mjs`,
+2. `canirunit-web/reference/social/README.md` e os arquivos ao lado —
+   **ECONOMIA: decisões de produto/UX JÁ APROVADAS pelo dono**, vindas de
+   um build Next.js paralelo. As duas jornadas separadas da entrada
+   (intent OU hardware), o form de report, os filtros por dimensão, o
+   basis honesto (measured/reported, MIN_RUNS_MEASURED=3), a escada
+   Track Record com copy congelada e a tabela adotado/rejeitado — tudo já
+   foi decidido, visto e aprovado. **Porte a lógica pra vanilla ES
+   module; NÃO re-derive, NÃO redesenhe.** Ali também estão os 3 deltas
+   obrigatórios (TSX→vanilla, report 4→5 categorias, mural SAMPLE→API
+   viva). `reference/` é read-only.
+3. `canirunit-web/prototypes/` — a spec visual final (NÃO EDITAR NUNCA).
+4. `canirunit-web/site/index.html` e `site/hardware.html` — o corpo vivo: estrutura, nav, cenas, seletor goal-first.
+5. `canirunit-web/site/assets/theme.css`, `engine.mjs`, `goal-page.mjs`,
    `hardware-page.mjs`, `ui.mjs`, `load-data.mjs` — a lei visual e a lógica de dados existente (basis honesto: measured > reported > extrapolated > no data).
-5. `canirunit-web/site/m/index.html` e uma amostra de `site/p/` — mobile e página por modelo.
-6. Este documento inteiro (contratos abaixo).
+6. `canirunit-web/site/m/index.html` e uma amostra de `site/p/` — mobile e página por modelo.
+7. Este documento inteiro (contratos abaixo).
+
+**Orçamento de exploração**: os passos 1–2 respondem 80% das decisões de
+produto. Depois deles, explore o site (passos 3–6) com leitura dirigida —
+não varra o repo inteiro. O dono está pagando por token: cada arquivo que
+você abre sem necessidade é um rim.
 
 Regra do disco: quando sua memória e o repo discordarem, o disco vence.
 Divergência encontrada → anote no RELATÓRIO e siga pelo disco.
