@@ -175,7 +175,7 @@ if bash tests/test-site-honesty.sh >/dev/null 2>&1; then
 else
   not "test-site-honesty"
 fi
-if grep -qi "whitelist" site/index.html && grep -q "llms-surf cloud" site/llms.txt \
+if grep -qi "the lineup" site/index.html && grep -q "llms-surf cloud" site/llms.txt \
    && ! grep -qiE 'tokens for sale: [0-9]|price: \$?[0-9]' site/index.html site/llms.txt; then
   ok "seção de tokens presente e sem número inventado"
 else

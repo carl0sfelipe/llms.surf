@@ -226,15 +226,38 @@
   <section class="section nob reveal" id="tokens">
     <div class="wrap">
       <div class="section-head">
-        <span class="kicker">// whitelist — llms-surf cloud × bestmodel.run</span>
-        <h2>tokens aren't out — <span class="g">but the first wave rides free.</span></h2>
-        <p>Two products, one engine: <a href="https://bestmodel.run" rel="noopener">bestmodel.run</a> measures which model actually wins each objective — the benchmark, not the hype. llms-surf cloud takes those winners, tunes them to your task shape, and serves them at the lowest measured cost per run. When the winners land, the whitelist breaks them in first: free tokens to test the picks against your own work, before anyone pays a cent. How we pick, tune and serve stays the closed-source side of this enterprise. No price until it's measured. No date until it's real. List order, first wave first, nothing else. One GitHub issue to get in. One click to get out.</p>
+        <span class="kicker">// the lineup — llms-surf cloud &times; bestmodel.run</span>
+        <h2>One billion tokens for the people who <span class="g">build the benchmark.</span></h2>
+        <p><a href="https://bestmodel.run" rel="noopener">bestmodel.run</a> measures which model actually wins each objective &mdash; the benchmark, not the hype. llms-surf cloud takes those winners, tunes them to your task shape, and serves them at the lowest measured cost per run. Neither product exists without measurements, and measurements come from people: signed runs, reproductions of someone else&rsquo;s numbers, fakes caught before they spread.</p>
+        <p>So that work gets paid in the product. <strong>1,000,000,000 llms-surf cloud tokens</strong> go to the lineup, split by how far you paddled out. You cannot buy a place here. You earn it, and the ledger that says so is a file in this repo.</p>
       </div>
-      <div id="whitelist-capture" aria-live="polite"></div>
+
+      <div class="mech-grid">
+        <div class="mech">
+          <div class="mech-head"><strong>Haole</strong><span class="mech-id">&times;1</span></div>
+          <p class="mech-claim">1 point &mdash; you opened the issue. You are in the water and in the file.</p>
+        </div>
+        <div class="mech">
+          <div class="mech-head"><strong>Grom</strong><span class="mech-id">&times;5</span></div>
+          <p class="mech-claim">5 points &mdash; roughly a signed run of your own, or a referral who actually contributed.</p>
+        </div>
+        <div class="mech">
+          <div class="mech-head"><strong>Local</strong><span class="mech-id">&times;25</span></div>
+          <p class="mech-claim">20 points &mdash; you show up repeatedly: several signed runs, or you reproduced what someone else claimed.</p>
+        </div>
+        <div class="mech">
+          <div class="mech-head"><strong>The Legend</strong><span class="mech-id">&times;100</span></div>
+          <p class="mech-claim">50 points &mdash; the tier for people who caught a fake or rebuilt other people&rsquo;s numbers until they held.</p>
+        </div>
+      </div>
+
+      <p>The multiplier is your share of the pool, not a promise of a fixed number: you get one billion &times; your weight &divide; the sum of everyone&rsquo;s weights. A fixed per-person amount would break the day too many people showed up, so we do not print one. Your share moves as the lineup grows, and every recomputation is a commit you can read.</p>
+
+      <div id="waitlist-capture" aria-live="polite"></div>
       <div class="cta-pair">
-        <a class="btn btn-ghost" href="https://github.com/carl0sfelipe/llms.surf/issues/new?template=tokens-waitlist.md">claim your first-wave spot (GitHub issue — also feeds your tier) →</a>
+        <a class="btn btn-ghost" href="https://github.com/carl0sfelipe/llms.surf/issues/new?template=tokens-waitlist.md">Take your spot in the lineup (one GitHub issue) &rarr;</a>
       </div>
-      <p class="caption">email-only entry opens with the cloud — no form here until a real confirmation link can be sent. The issue is the door today, and contribution is what climbs.</p>
+      <p class="caption">The tokens do not exist yet &mdash; llms-surf cloud is not live, so nothing is credited today and there is no date. What is fixed now is the pledge and the arithmetic. Tier is computed from points alone; the machine does not claim to verify what it cannot see. Points, weights and pool size are the owner&rsquo;s dial in <code>data/lineup-points.json</code>, and the queue is <code>data/lineup.json</code> &mdash; both public, both auditable in git history. One issue to get in. One click to get out.</p>
     </div>
   </section>
 

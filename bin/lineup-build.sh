@@ -117,6 +117,54 @@ for e in entries:
         e["referral_converted"] = None
     e["points_total"] = total
 
+# ── tier + fatia do pool (E7 2026-08-31) ────────────────────────────────
+# Tier sai SO de threshold_points. O campo "requires" da tabela ("1+ signed
+# run", "3+ reproductions") e intencao declarada e NAO e verificavel aqui: o
+# export traz pontos AGREGADOS, nao o detalhe por tipo de contribuicao. Por
+# isso a saida declara tier_basis="points_only" -- a maquina nao finge
+# conferir o que nao ve. No dia em que o export trouxer o detalhe, isto passa
+# a checar de verdade e o tier_basis muda junto.
+#
+# A fatia e proporcional ao peso do tier: pool * peso / soma_dos_pesos, em
+# inteiros. Ninguem recebe numero fixo prometido -- numero fixo quebra se
+# aparecer gente demais. O resto da divisao fica DECLARADO em
+# token_pool.unallocated em vez de sumir num arredondamento.
+tiers_doc = points_doc.get("tiers") or {}
+pool_doc = points_doc.get("token_pool") or {}
+journey = [str(x) for x in (tiers_doc.get("journey") or [])]
+
+
+def _tier_key(name):
+    return name.lower().replace(" ", "_")
+
+
+# ordem decrescente de corte: ganha o tier mais alto que a pessoa alcanca
+ladder = []
+for name in journey:
+    conf = tiers_doc.get(_tier_key(name))
+    if isinstance(conf, dict) and conf.get("threshold_points") is not None:
+        ladder.append((int(conf["threshold_points"]), name, _tier_key(name)))
+ladder.sort(key=lambda x: -x[0])
+
+weights = pool_doc.get("weights") or {}
+total_pool = int(pool_doc.get("total_tokens") or 0)
+
+for e in entries:
+    e["tier"] = None
+    e["tier_weight"] = 0
+    for threshold, name, key in ladder:
+        if e["points_total"] >= threshold:
+            e["tier"] = name
+            e["tier_weight"] = int(weights.get(key, 0))
+            break
+
+weight_sum = sum(e["tier_weight"] for e in entries)
+allocated = 0
+for e in entries:
+    share = (total_pool * e["tier_weight"]) // weight_sum if weight_sum else 0
+    e["token_share"] = share
+    allocated += share
+
 doc = {
     # byte-determinismo: nada de relógio — a proveniência é o fingerprint
     # dos inputs (git history do lineup.json é a auditoria inteira)
@@ -126,7 +174,14 @@ doc = {
         "points": __import__("hashlib").sha256(open(points_f, "rb").read()).hexdigest(),
     },
     "machine": "bin/lineup-build.sh",
-    "points_table_dial": json.load(open(points_f, encoding="utf-8")).get("dial", "unknown"),
+    "points_table_dial": points_doc.get("dial", "unknown"),
+    "tier_basis": "points_only",
+    "token_pool": {
+        "total_tokens": total_pool,
+        "allocated": allocated,
+        "unallocated": total_pool - allocated if weight_sum else total_pool,
+        "weight_sum": weight_sum,
+    },
     "entries": entries,
 }
 with open(out_f, "w", encoding="utf-8") as f:

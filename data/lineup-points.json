@@ -1,6 +1,6 @@
 {
-  "_comment": "Tabela de pontos v0 do The Lineup — PROPOSTA do plano (Fable), dial do dono. Girar o dial = editar este arquivo; a máquina (bin/lineup-build.sh) nunca muda. E6 (2026-08-31): tiers do Fable entraram como PROPOSTA de política (cortes de pontos são design, não fato medido) — valeram-se no MESMO commit das copies (regra anti-drift do risco E6-2: copy sobe com dial, nunca separado). Regra 30 dias do E6 (4.5: conversão = 1º signed run do indicado em ≤30 dias da criação da conta) aguarda RATIFICAÇÃO do dono antes de entrar na máquina.",
-  "dial": "proposta-E6-2026-08-31 (owner pode girar)",
+  "_comment": "Tabela de pontos do The Lineup — dial do dono. A maquina (bin/lineup-build.sh) nunca muda; girar o dial e editar este arquivo. Cortes de pontos, pesos de tier e o tamanho do pool sao POLITICA (o que a casa decide dar), nunca medida. Copy sobe no MESMO commit do dial (regra anti-drift E6-2).",
+  "dial": "pool-1e9-2026-08-31 (owner pode girar)",
   "points": {
     "join_issue": 1,
     "referral_converted": 3,
@@ -10,7 +10,7 @@
     "shared_custom_mode": 2
   },
   "tiers": {
-    "_comment": "PROPOSTA do Fable (E6 4.3) — não são fatos medidos; o dono gira aqui.",
+    "_comment": "Nomes e cortes sao POLITICA, nao fato medido. O tier e calculado SO por threshold_points: 'requires' e intencao declarada e NAO e verificavel com os dados que entram na maquina hoje (o export traz pontos agregados, nao o detalhe por tipo de contribuicao). Por isso lineup.json carrega tier_basis='points_only' -- a maquina nao finge conferir o que nao ve.",
     "journey": [
       "Haole",
       "Grom",
@@ -42,5 +42,15 @@
   "referral_conversion": {
     "mode": "any_contribution",
     "_comment": "E6 4.5: dono ratificar → mode='first_signed_run_within', window_days=30. Modo atual (any_contribution): indicação converte se o indicado contribuiu com qualquer ponto (comportamento v0 congelado na S13). Modo novo: converte só se o 1º SIGNED RUN do indicado ocorrer em ≤ window_days da criação da conta (join não converte)."
+  },
+  "token_pool": {
+    "_comment": "COMPROMISSO da casa, nao medida: 1 bilhao de tokens do llms-surf cloud para quem constroi o projeto. Distribuicao PROPORCIONAL por peso de tier -- ninguem recebe um numero fixo prometido, porque o numero fixo quebraria se aparecesse gente demais. Cada pessoa leva pool * peso_dela / soma_dos_pesos. Sem data: os tokens sao creditados quando o cloud existir.",
+    "total_tokens": 1000000000,
+    "weights": {
+      "haole": 1,
+      "grom": 5,
+      "local": 25,
+      "the_legend": 100
+    }
   }
 }
