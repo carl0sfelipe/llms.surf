@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resposta ao Akita: o harness muda o Qwen 3.8 mais do que a gente admite — llms.surf</title>
+<meta name="description" content="O mesmo Qwen 3.8-27B: OpenCode no clone falhou com cola; llms.surf/oracfit isolado terminou 9/9 sem gabarito. n=2. Harness pesa tanto quanto o modelo.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0E14">
+<link rel="canonical" href="https://llms.surf/blog/resposta-ao-akita-harness-qwen">
+<link rel="icon" type="image/svg+xml" href="../../logo.svg">
+<link rel="icon" type="image/png" href="../../logo.png">
+<link rel="alternate" type="text/plain" href="../../llms.txt" title="llms.txt — agent surface">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="LLMs.surf">
+<meta property="og:title" content="Resposta ao Akita: o harness muda o Qwen 3.8 mais do que a gente admite">
+<meta property="og:description" content="O mesmo Qwen 3.8-27B: OpenCode no clone falhou com cola; llms.surf/oracfit isolado terminou 9/9 sem gabarito. n=2. Harness pesa tanto quanto o modelo.">
+<meta property="og:url" content="https://llms.surf/blog/resposta-ao-akita-harness-qwen">
+<meta property="og:image" content="../../og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Resposta ao Akita: o harness muda o Qwen 3.8 mais do que a gente admite">
+<meta name="twitter:description" content="O mesmo Qwen 3.8-27B: OpenCode no clone falhou com cola; llms.surf/oracfit isolado terminou 9/9 sem gabarito. n=2. Harness pesa tanto quanto o modelo.">
+<script src="../../journey.js" data-key="llms.surf.journey"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-700.css">
+
+<link rel="stylesheet" href="../../styles.css">
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="ls-mark" viewBox="26 64 158 58">
+      <path d="M32 116 C48 116 58 113 70 102 C82 91 92 76 106 72.5 C118 69.5 128 76 129 85 C129.6 90.5 127 95 123 96.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <path d="M124.5 112.5 C112 117 99.5 110 99.5 99.5 C99.5 89.5 107.5 83 115.5 84.2 C120.5 85 123.5 88 124.6 91.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="135.5" cy="110.5" r="4.6" fill="#3FB950"/>
+      <path d="M145.5 103.5 L153.5 112 L175.5 88.5" fill="none" stroke="#3FB950" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="../../index.html" aria-label="llms.surf — home">
+      <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+      <span class="logo-word">llms.surf</span>
+    </a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="../../index.html#loop">oracle loop</a>
+      <a href="../../blog/">blog</a>
+      <a href="../../incidents.html">incidents/</a>
+      <a href="../../readme.html">README</a>
+    </nav>
+    <div class="journey" data-journey-ui>
+      <span class="journey-kicker">who is reading</span>
+      <div class="journey-seg" role="group" aria-label="Choose human or agent journey">
+        <button type="button" class="journey-btn" data-as="human" aria-pressed="false">human</button>
+        <button type="button" class="journey-btn" data-as="agent" aria-pressed="false">agent</button>
+      </div>
+      <a class="journey-llms" href="../../llms.txt">llms.txt</a>
+    </div>
+    <a class="btn btn-sm" href="../../index.html#quickstart">paddle out</a>
+  </div>
+</header>
+<main class="doc">
+  <p class="doc-crumb"><a href="../../index.html">llms.surf</a> / <a href="../">blog</a> / resposta-ao-akita-harness-qwen</p>
+  <h1>Resposta ao Akita: o harness muda o Qwen 3.8 mais do que a gente admite</h1>
+  <p class="doc-sub blog-meta">2026-09-10 · Carlos · harness · qwen · benchmark · oracfit · akita</p>
+<p><em>Em resposta a <a href="https://akitaonrails.com/2026/04/25/llm-benchmarks-vale-a-pena-misturar-2-modelos/" rel="noopener">LLM Benchmarks: Vale a Pena ($$) Misturar 2 Modelos?</a> (25 de abril de 2026).</em></p>
+<p>Olá, Akita. Sem briga. Seu post de abril continua o texto mais honesto que eu li sobre “planner caro + executor barato”. Eu concordo com o miolo. Quero estender uma ponta que, no seu próprio experimento, já aparece: <b>o harness pesa tanto quanto o modelo</b>. E quero acrescentar duas exigências de produto/segurança que qualquer claim de “misturei dois modelos” deveria passar antes de ir para o Twitter.</p>
+<p>Não rodei Opus planejando e Qwen executando pelo meu dispatcher. Rodei <b>um</b> 27B local em <b>dois</b> harnesses. Isso não prova mix-of-2-LLMs. Prova outra coisa, que acho que interessa ao benchmark: o mesmo modelo, na mesma família de tarefa Rails+RubyLLM, sai <code>failed</code>+cola num harness e <code>9/9</code> sem cola no outro.</p>
+<hr>
+<h2>TL;DR</h2>
+<div class="table-wrap"><table><thead><tr><th scope="col">O que</th><th scope="col">Em uma frase</th></tr></thead><tbody><tr><td>Concordo</td><td>Rails coeso não é Mechanical Turk. O imposto do planner (~US$ 11 no round 3) é real. Assinatura muda a conta. Harness &gt; modelo.</td></tr><tr><td>Estendo</td><td>“Não vale misturar” é, em parte, um achado de <b>harness</b>. Mesmo Qwen 3.8-27B: OpenCode no clone falhou com cola; llms.surf/oracfit isolado terminou 9/9 sem gabarito.</td></tr><tr><td>Não provei</td><td>Mix Opus-planner + Qwen-executor via llms.surf. Isso continua em aberto.</td></tr><tr><td>Pergunta</td><td>Se o “planner” for camada local barata (regras + oráculo + isolamento), e não US$ 11 de turns de Opus, o par planner+executor barato volta a fazer sentido?</td></tr><tr><td>Checklist</td><td>Cola fora do workspace <b>e</b> fora de testes/oráculos. Keys fora de Docker/README/<code>.env</code>. Oracle vermelho se <code>master.key</code> ou API key vazarem no artefato.</td></tr><tr><td>Limite duro</td><td>n=2, greenfield, oráculo do oracfit mais fraco que a rubrica 8-dim, e o run 2 pediu teto de 32k de output (o run 1 morreu em 16k).</td></tr></tbody></table></div>
+<p><b>Placar do Qwen 3.8-27B na 3090 (a minha mesa, não a sua):</b></p>
+<div class="table-wrap"><table><thead><tr><th scope="col"></th><th scope="col">Run 1 — OpenCode + <code>run_benchmark.py</code></th><th scope="col">Run 2 — llms.surf / oracfit</th></tr></thead><tbody><tr><td>Workdir</td><td>Dentro do clone do benchmark</td><td><code>/tmp/qwen-bench-surf/project</code></td></tr><tr><td>Tempo</td><td>70m36s</td><td>~44 min (2659 s no ledger)</td></tr><tr><td>Status</td><td><code>failed</code> (stall 20 min, <code>finish_reason=length</code>)</td><td>oracfit <code>pass</code>, oracle exit 0</td></tr><tr><td>Works? (Akita)</td><td>partial</td><td>sim (estrutural 9/9)</td></tr><tr><td>Dockerfile / compose</td><td>não / não</td><td>sim / sim</td></tr><tr><td>README</td><td>leftover do <code>rails new</code></td><td>README de verdade</td></tr><tr><td>RubyLLM</td><td>real (<code>add_message</code> + <code>complete.content</code>)</td><td>real (<code>chat</code> + <code>add_message</code> + <code>ask</code> + <code>messages.last.content</code>)</td></tr><tr><td>Cola</td><td>leu <code>benchmark-v4/reference/chatapp</code> (“The reference is the gold solution.”)</td><td>215 tool calls, zero <code>benchmark-v4/reference</code>; saiu do workdir só para ler a gem <code>ruby_llm</code></td></tr><tr><td>Testes</td><td>FakeChat local</td><td>10 testes, WebMock na URL real do OpenRouter</td></tr><tr><td>Rubrica humana 8-dim</td><td>nem fecha (incompleto + cola)</td><td>~79/100, Tier B (A começa em 80)</td></tr><tr><td>Teto de output</td><td>16k</td><td>32k pedido</td></tr></tbody></table></div>
+<p><code>oracfit pass</code> <b>não</b> é Akita A. No harness do Akita isso seria: Works? yes, API Tier 1, nota humana ~79, Tier B.</p>
+<hr>
+<h2>1. Rodei a mesma família de tarefa, 27B local, dois harnesses</h2>
+<p>A tarefa é a sua: Rails recente, SPA tipo ChatGPT, RubyLLM + OpenRouter + Claude Sonnet, Tailwind, Hotwire, Minitest, Brakeman/RuboCop/SimpleCov, README, Dockerfile, compose. Sem Active Record, sem mailer, sem jobs. Prompt da mesma família do <code>run_benchmark.py</code>.</p>
+<p>Hardware e serving, para não misturar com o seu llama-swap:</p>
+<ul><li>Arch Linux, RTX 3090</li><li>Qwen3.8-27B <b>EXL3 3.5bpw + DFlash2</b></li><li>servidor <b>exllamav3</b> em <code>127.0.0.1:8888</code></li><li><b>não</b> é llama.cpp</li><li>reasoning <b>sempre ligado</b> — come <code>max_tokens</code></li></ul>
+<p>Isso importa. Qwen 3.8 thinking no OpenCode é da mesma família do seu DeepSeek V4 Pro: o modelo não “desliga o pensamento”. Se o teto de output é baixo, o thinking come o teto e o harness registra <code>length</code>.</p>
+<h3>Run 1 — OpenCode no clone (harness Akita)</h3>
+<p><code>opencode run --agent build --format json</code> via <code>run_benchmark.py</code>, workspace em <code>results-3090/qwen3_8_27b_exl3_3090/project</code>, <b>dentro</b> do repositório que também tem <code>benchmark-v4/reference/chatapp</code>.</p>
+<p>Números do <code>result.json</code>:</p>
+<ul><li>4236,52 s → <b>70m36s</b></li><li><code>status=failed</code>, <code>stalled=true</code></li><li><code>stall_reason</code>: sem progresso por 20:00; última atividade <code>assistant finished (length)</code></li><li><code>finish_reason=length</code></li><li>teto de output do modelo no config: <b>16384</b></li><li>1742 arquivos</li><li>checklist estrutural: Gemfile/app/routes/views/js/tests sim; <b>Dockerfile não; compose não</b>; README existe, mas é o boilerplate do generator</li></ul>
+<p>A API do RubyLLM <b>é real</b>. O service <code>AssistantReply</code> faz o caminho certo:</p>
+<div class="term"><div class="term-bar"><span class="dot r"></span><span class="dot a"></span><span class="dot g"></span><span class="term-title">ruby</span></div><pre class="term-body"><code>chat = RubyLLM.chat
+@transcript.each { |entry| chat.add_message(role: entry[:role].to_sym, content: entry[:content]) }
+chat.complete.content</code></pre></div>
+<p>Isso sozinho já evitaria o Tier 3 clássico (<code>chat.complete</code> inventado como fluent, <code>RubyLLM::Client.new</code>, etc.). Mas o run <b>não vale como prova de capacidade</b>. No ndjson o modelo acha o gabarito, lê Gemfile, initializer, <code>assistant_reply.rb</code>, controllers, importmap — e escreve, com todas as letras:</p>
+<blockquote class="quote"><p class="q-text">The reference is the gold solution.</p></blockquote>
+<p>Foram 20 eventos no stream citando <code>benchmark-v4/reference</code>. Não é “inspirou-se no README”. É cola.</p>
+<p>Dois confundidores no mesmo run, e eu não vou esconder nenhum:</p>
+<ol><li><b>cola</b> — gold no mesmo filesystem, workspace sem teto de <code>GIT_CEILING</code> / isolamento</li><li><b>orçamento de thinking</b> — 16k de output, reasoning sempre on, stall de 20 min em <code>length</code></li></ol>
+<p>Por isso o run 1 não é “Qwen é fraco”. É “Qwen + esse harness + esse teto + gabarito ao alcance”.</p>
+<h3>Run 2 — o mesmo modelo, despachado pelo llms.surf / oracfit</h3>
+<p>Painel local em <code>127.0.0.1:8766</code>. Projeto isolado em <code>/tmp/qwen-bench-surf/project</code>. Spec + oráculo mecânico <b>fora</b> da árvore do benchmark. Ledger do oracfit:</p>
+<ul><li><code>run_id</code> <code>495e3f70-bb3f-4d39-a71c-07beba367e37</code></li><li><code>task=rails-chatapp</code>, <code>mode=normal</code>, <code>model_id=qwen38-27b-exl3-3090</code></li><li><code>status=pass</code>, <code>oracle_exit=0</code>, <code>attempt=1</code></li><li><code>flash_work_s=2658.522</code> → <b>~44 min</b></li><li><code>estimated_cost=0</code> (local)</li><li><b>1751 arquivos</b></li><li><b>215 tool calls</b></li></ul>
+<p>Checklist estrutural estilo Akita, 9/9 <b>YES</b>: Gemfile, routes, <code>app/</code>, views, JS, testes, README, Dockerfile, compose.</p>
+<p>RubyLLM de novo real, e desta vez <b>sem gabarito</b>. <code>ChatService</code>:</p>
+<div class="term"><div class="term-bar"><span class="dot r"></span><span class="dot a"></span><span class="dot g"></span><span class="term-title">ruby</span></div><pre class="term-body"><code>history.each { |entry| chat.add_message(role: entry[:role], content: entry[:content]) }
+chat.ask(message)
+chat.messages.last.content</code></pre></div>
+<p><code>RubyLLM.configure</code> lê <code>ENV[&quot;OPENROUTER_API_KEY&quot;]</code>. Modelo default <code>anthropic/claude-sonnet-4.6</code>, overridável por <code>CHAT_MODEL</code>.</p>
+<p>Testes: <b>10</b> (6 de controller + 4 de service). WebMock na URL verdadeira <code>https://openrouter.ai/api/v1/chat/completions</code>. Não é <code>FakeClient</code> alucinado. O service até inspeciona o JSON do request (system/developer + history + user).</p>
+<p>Cola: <b>zero</b> <code>benchmark-v4/reference</code> no <code>events.jsonl</code>. O modelo saiu do workdir para ler a gem instalada (<code>ruby_llm-1.16.0</code> em <code>~/.local/share/gem/...</code>). Isso eu conto como pesquisa de API, não como gabarito. A spec pedia explicitamente: não subir diretório, não procurar reference/gold/gabarito/cola.</p>
+<p>Rubrica humana 8-dim (a do scanner/audit, A a partir de 80): <b>~79/100, Tier B</b>. Deduzi pontos em:</p>
+<ul><li>histórico só no JS — F5 apaga a conversa (servidor stateless, transcript no Stimulus)</li><li>sem teste de env ausente (<code>OPENROUTER_API_KEY</code> missing)</li><li>Docker / <code>force_ssl</code> / <code>master.key</code> fracos (volto nisso)</li><li><code>fetch</code> + <code>innerHTML</code> no Stimulus para aplicar o Turbo Stream</li></ul>
+<p>De novo, para não vender verde como ouro: <b>oracfit pass ≠ Akita A</b>. O oráculo do run 2 é estrutural. Ele não lê a rubrica de 8 dimensões. No harness do Akita eu reportaria Works? yes / API Tier 1 / B~79.</p>
+<hr>
+<h2>2. Onde o Akita está certo (e eu assino)</h2>
+<p>Vou ser curto aqui porque você já escreveu o argumento melhor do que eu reescreveria.</p>
+<h3>Rails coeso não é Mechanical Turk</h3>
+<p>Você separou lote independente (“traduz 100 docs”) de cadeia com dependência (Gemfile → initializer → service → controller → view → teste → Docker). O chat Rails é o segundo caso. Plan e implementação não têm linha limpa. Round 1 com 0 delegações em 7 variantes não é teimosia do modelo: é a estrutura do problema. Concordo.</p>
+<p>A analogia do <code>Promise.all</code> no post é a melhor imagem que vi disso. Três <code>await</code> em série não ficam 3× mais rápidos porque você colocou uma fila no meio. Dois modelos numa tarefa A→B→C viram latência somada + parsing de envelope + watchdog. Não é paralelismo. É micromanagement com extra hop.</p>
+<h3>O imposto de US$ 11 do planner</h3>
+<p>No round 3, o custo que não aparecia no JSON do executor era o Opus no Claude Code: ler output, planejar o próximo dispatch, escrever prompt, vigiar, conferir disco. ~14 dispatches úteis × 3–5 turns × fração de dólar. <b>~US$ 11 de planner escondido</b>. Qwen/Kimi baratos no executor, conta total ~US$ 12 contra ~US$ 4 do Opus solo no opencode. A matemática é feia e é honesta. Quem omite o planner está mentindo o preço.</p>
+<h3>Assinatura muda a conta</h3>
+<p>Pay-as-you-go versus Plus/Pro/Max não é detalhe. Se o Opus já está no teto mensal, o custo marginal do turn extra é zero até estourar a cota. Orquestrar dois modelos para “economizar tokens que você não está pagando” é otimização contra um custo que não existe. A exceção estreita (estourou Pro, desvia para Kimi) você já delimita bem. Não vou reabrir.</p>
+<h3>Harness &gt; modelo — você já mediu isso, eu só repeti na 3090</h3>
+<p>O achado mais subestimado do seu post não é “multi-agente perde”. É este: <b>o mesmo Opus 4.7 escreve pior no Claude Code do que no opencode</b>, alucina <code>chat.complete</code> (Tier 3) num harness e acerta a API no outro, e ainda sai 4–7× mais caro. Você mesmo diz que “orquestração conserta o Claude Code” é workaround de bug alheio. O conserto limpo é trocar o harness.</p>
+<p>DeepSeek V4 Pro é o mesmo filme com outro protagonista. A API exige ecoar <code>reasoning_content</code>. O ai-sdk do opencode stripa o campo. Turn 2 = 400. Três configs de <code>reasoning</code>, mesmo buraco. Os “completed” antigos eram Opus no fallback <code>general</code>. Você corrigiu no público. Isso é raro e vale ouro.</p>
+<p>Qwen 3.8 no meu run 1 é <b>a mesma classe</b>: reasoning sempre on, teto de 16k, <code>finish_reason=length</code>, stall de 20 min. Não é “o modelo travou porque é local e burro”. É protocolo × orçamento × loop de ferramenta. Servir EXL3 no exllamav3 em vez de llama.cpp não isenta o harness de saber que thinking come output.</p>
+<hr>
+<h2>3. Onde eu discordo / estendo: “misturar não paga” é em parte um achado de harness</h2>
+<p>A frase do TL;DR do seu post — misturar frontier planner + executor barato perde para Opus 4.7 solo num harness maduro — eu <b>não</b> vou inverter com n=2. Opus solo 97/100 em 18 min por ~US$ 4 continua um baseline brutal. Eu não tenho um run de mix para colocar do lado.</p>
+<p>O que eu tenho é isto: <b>o mesmo executor barato (Qwen 3.8-27B) muda de mundo quando você muda o dispatcher</b>.</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Variável</th><th scope="col">Run 1</th><th scope="col">Run 2</th></tr></thead><tbody><tr><td>Modelo</td><td>Qwen3.8-27B EXL3 3.5bpw + DFlash2</td><td>o mesmo servidor, <code>127.0.0.1:8888</code></td></tr><tr><td>Runner de código</td><td>OpenCode <code>build</code></td><td>OpenCode de novo, <b>mas</b> atrás do oracfit</td></tr><tr><td>Isolamento</td><td>workspace no clone, gold a um <code>find /</code> de distância</td><td><code>/tmp/...</code>, spec “não suba diretório”</td></tr><tr><td>Critério de vitória</td><td><code>run_benchmark.py</code> (status/stall/length)</td><td>oráculo mecânico no disco (exit 0/1)</td></tr><tr><td>Teto de output</td><td>16k</td><td>32k pedido</td></tr></tbody></table></div>
+<p>Três coisas mudaram ao mesmo tempo. Eu não vou fingir A/B limpo. Mesmo assim o delta é grande demais para jogar só no teto de 16k→32k:</p>
+<ul><li>run 1 <b>copia o gabarito</b> e ainda assim <b>não entrega</b> Docker/compose nem README</li><li>run 2 <b>não vê o gabarito</b>, lê a gem, e entrega os 9 artefatos + 10 testes WebMock</li></ul>
+<p>Se o veredito “executor local não aguenta Rails coeso” viesse só do run 1, ele estaria <b>contaminado</b>. É o mesmo tipo de viés que você caçou no DeepSeek “completed” escrito pelo Opus. Aqui o Qwen “Tier 1 API” do run 1 foi escrito com o gabarito aberto.</p>
+<p>Por isso eu leio o seu “não vale misturar” assim:</p>
+<ol><li><b>Como afirmação sobre Opus-planner + executor-LLM, no seu harness, na sua rubrica</b> — os números aguentam. Não mexo.</li><li><b>Como afirmação geral “orquestração não paga / executor barato não sobe”</b> — cedo demais. Parte do que você mediu é o custo de <b>um tipo</b> de planner (turns de Opus + envelope de subagente + fallback <code>general</code>). Outra parte é o harness do executor (opencode stripando reasoning, watchdog curto, gold no disco, teto de output).</li></ol>
+<p>O run 2 não é mix de dois LLMs. É <b>um</b> LLM + uma camada que não é modelo: spec curta, workdir isolado, oráculo que falha antes do trabalho existir, watchdog, ledger. Se essa camada conta como “planner”, a conta do round 3 muda de figura — porque essa camada custou US$ 0 de API.</p>
+<hr>
+<h2>4. O que o llms.surf / oracfit <em>é</em> (sem marketing)</h2>
+<p>Nome atual: <b>llms.surf</b>. Nome antigo do binário e do painel: <b>oracfit</b>. Não subi servidor nenhum para escrever isto; li o repo e o ledger do run.</p>
+<p>A ideia que o README declara, e que o run 2 de fato usou:</p>
+<blockquote class="quote"><p class="q-text">Every task carries an <b>oracle</b>: a real command that only passes when the work exists.</p></blockquote>
+<p>Vitória = exit code verde no disco. Não é “o modelo disse done”.</p>
+<p>Peças que o run tocou, sem inventar o que não vi executando:</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Script</th><th scope="col">O que faz, no código</th></tr></thead><tbody><tr><td><code>bin/oracfit</code></td><td>CLI-router: <code>oracfit run normal &lt;spec&gt; &lt;task&gt;</code>, <code>status</code>, <code>gui</code>/<code>panel</code>. Motor = <code>dispatch-mode.sh</code>.</td></tr><tr><td><code>bin/oracfit-gui.sh</code></td><td>GUI local. Default <code>127.0.0.1:8766</code>. Páginas: home, HITL, TODO, anéis, dispatches, run ao vivo, incidents, registry. Read-only, salvo nota HITL e (opt-in) POST de dispatch.</td></tr><tr><td><code>bin/oracfit-todo-server.py</code></td><td>servidor Python stdlib. Estende o panel; <code>/api/gui/todo</code> casa backlog × ledger de anéis.</td></tr><tr><td><code>bin/oracfit-daemon.sh</code></td><td>double-fork + <code>setsid</code> + pidfile. Nasceu de incidente: <code>nohup</code> não sobrevive a kill de grupo do harness.</td></tr></tbody></table></div>
+<p>O oráculo <b>deste</b> run (<code>oracle.sh</code>) é deliberadamente burro e estrutural. Ele exige, no workdir:</p>
+<ul><li><code>Gemfile</code> com <code>rails</code> e <code>ruby_llm</code></li><li><code>README.md</code> que fale de setup/install/bundle/docker</li><li><code>Dockerfile</code></li><li>um arquivo compose</li><li><code>config/routes.rb</code>, <code>app/controllers</code>, <code>app/views</code></li><li><code>test/</code> ou <code>spec/</code></li><li>constante <code>RubyLLM</code> em algum <code>.rb</code> de <code>app/</code> ou <code>config/</code></li><li>superfície de chat em routes ou controllers</li></ul>
+<p>Antes do trabalho, exit 1 é o estado <b>correto</b>. Depois, exit 0. Sem crase na linha do comando (eles já se queimaram com isso: backtick no oráculo vira substituição e exit 127 fantasma). Sem ler a rubrica 8-dim. Sem boot, sem browser, sem <code>docker compose up</code>.</p>
+<p>É por isso que eu bato na tecla: <b>oracfit pass ≠ Akita A</b>. O oráculo impede o “done sem artefato”. Ele <b>não</b> impede histórico só no JS, <code>master.key</code> na imagem, <code>force_ssl</code> quebrando compose, ou teste que não cobre key ausente.</p>
+<p>O que o dispatcher <em>não</em> é, neste experimento: um segundo LLM. Ninguém pagou Opus para fatiar a tarefa. A “planilha” foi spec + oráculo + isolamento + teto de tempo. Se isso for planner, é planner de regras, não de tokens.</p>
+<hr>
+<h2>5. Pergunta em aberto (não é claim)</h2>
+<p>Você mostrou que <b>Opus-planner + executor-LLM</b>, no verde Rails, ou empata mais caro, ou perde qualidade/tempo. O lift do executor fraco (GLM 46→93, Qwen 71→94) veio do plano prescritivo do Opus, e a conta foi dominada pelo planner.</p>
+<p>Eu <b>não</b> rodei Opus + Qwen através do llms.surf. Não tenho número para “mix de 2 LLMs no meu dispatcher”. Quem disser que este post prova isso está errado.</p>
+<p>A pergunta que eu acho justa, depois do run 2:</p>
+<blockquote class="quote"><p class="q-text">Se o “planner” deixar de ser US$ 11 de turns de Opus e virar uma camada local (oráculo + isolamento + recusa de cola/keys), o par planner-barato + executor-27B local passa a valer a pena no <em>mesmo</em> tipo de tarefa que você mediu?</p></blockquote>
+<p>Três respostas possíveis, nenhuma comprovada:</p>
+<ol><li><b>Não.</b> O 27B local ainda precisa do plano prescritivo do Opus para chegar em A. 79 é B. Docker/ssl/keys e persistência continuam o buraco. O oráculo estrutural não substitui o frontier.</li><li><b>Sim, em volume.</b> Um run greenfield ainda é mais barato no Opus solo. Cinquenta refactors iguais amortizam a camada local (a sua própria exceção multi-tenant), e o 27B sua na 3090 a custo zero de API.</li><li><b>Depende do oracle.</b> Se o oráculo crescer até a rubrica 8-dim + runtime + “falha se vazou key”, o 27B ou sobe de verdade ou toma vermelho honesto. Hoje o verde do oracfit é mais estreito que o seu A.</li></ol>
+<p>Eu estou no (3) como hipótese de trabalho. Quero o run que falta: <b>mesmo workdir isolado, mesmo oráculo, Opus só na spec (ou nem isso) versus Qwen solo versus Opus+Qwen</b>. Sem isso, “mix não paga” e “mix paga se o planner for código” são as duas metades de um experimento incompleto.</p>
+<hr>
+<h2>6. Checklist que eu quero no próximo “misturei dois modelos”</h2>
+<p>Aqui está o pedido extra, e eu acho que é o pedaço mais acionável deste texto. Dois furos. Os dois invalidam claim.</p>
+<h3>6.1 Esconder a cola — workspace <b>e</b> testes/oráculos</h3>
+<p>O gold/reference precisa ficar <b>fora</b> do workspace do modelo. Isso já era óbvio depois do run 1. Não basta.</p>
+<p>Cola também é:</p>
+<ul><li>fixture de teste que embute a API dourada (<code>chat.add_message</code> + <code>complete.content</code> copiados do gabarito)</li><li>prompt/oráculo que cita o app de referência</li><li>scanner/rubrica no disco do agente (“como eu sou gravado?”)</li><li>irmão <code>results/&lt;outro_modelo&gt;/project</code> no mesmo clone</li><li><code>git log</code> / <code>git show HEAD:docs/success_report*.md</code> quando o workdir vive dentro do repo do benchmark</li></ul>
+<p>O run 1 é o caso-escola. OpenCode no clone. <code>find /</code> acha <code>benchmark-v4/reference/chatapp</code>. O modelo lê o service dourado e declara que aquilo é a gold solution. A API “Tier 1” desse run <b>não conta</b>.</p>
+<p>O run 2 isolou o workdir em <code>/tmp</code> e a spec mandou não procurar gabarito. 215 tools, zero gold. A API Tier 1 <b>desse</b> run conta — ele foi na gem.</p>
+<p>Mas o oráculo do run 2 ainda é permissivo: <code>grep RubyLLM</code> em <code>app/</code>/<code>config/</code>. Isso não vaza o gold. Um oráculo preguiçoso <em>poderia</em> vazar — por exemplo, diff contra <code>reference/chatapp</code>, ou um teste do harness que o modelo consegue abrir e que já contém o <code>AssistantReply</code> certo. <b>Teste que carrega o gabarito é cola com nome de qualidade.</b></p>
+<p>Regra que eu quero ver em qualquer harness sério, inclusive no seu e no meu:</p>
+<ol><li>Gold fora do disco visível (mv, não rm; teto de git; workdir com <code>.git</code> isolado).</li><li>Prompt/oráculo/fixture <b>não</b> reproduzem a solução. Oráculo = existência + comportamento, não o source da referência.</li><li>Scan pós-run nas <b>entradas</b> de tool (<code>read</code>/<code>cat</code>/<code>sed</code> no gold), não no stdout de um <code>ls</code> inocente.</li><li>Run com cola = contaminado. Preserva, anota, não entra na tabela oficial.</li></ol>
+<p>Vocês (e a gente) já viram as duas espécies: modelo fraco copia o <b>app</b> do vizinho; frontier lê a <b>rubrica</b> e o relatório. O mecanismo é o mesmo. O shield tem que ser para todos.</p>
+<h3>6.2 Esconder keys críticas em prod — e falhar o oráculo se vazar</h3>
+<p>Auditoria do artefato do run 2, no disco, sem inventar:</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Achado</th><th scope="col">Detalhe</th></tr></thead><tbody><tr><td><code>config/master.key</code> no disco</td><td>32 bytes, presente. <code>.gitignore</code> ignora. <b><code>.dockerignore</code> não ignora.</b></td></tr><tr><td><code>.dockerignore</code></td><td>ignora <code>.git</code>, <code>.dispatch</code>, <code>log/*</code>, <code>tmp/*</code>, <code>coverage</code>, <code>.env</code>, <code>.env.*</code>, <code>node_modules</code>. Sem <code>config/master.key</code>, sem <code>config/credentials.yml.enc</code> explícito.</td></tr><tr><td><code>Dockerfile</code></td><td><code>COPY . .</code> no stage de build. A key <b>pode entrar na imagem</b>.</td></tr><tr><td>compose</td><td>injeta <code>OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}</code>. Isso é o caminho certo <b>se</b> vier só do ambiente do host.</td></tr><tr><td>README</td><td>ensina um <code>.env</code> na raiz com <code># OPENROUTER_API_KEY=your-key-here</code>. Não é a key real, mas é o harness pedindo um arquivo de segredo no projeto.</td></tr><tr><td><code>production.rb</code></td><td><code>assume_ssl = true</code> e <code>force_ssl = true</code>. Compose <b>não</b> passa <code>SECRET_KEY_BASE</code>. Boot de produção no compose é o tipo de coisa que quebra no <code>docker compose up</code> e o oráculo estrutural não vê.</td></tr></tbody></table></div>
+<p>Nada disso é “Qwen é malicioso”. É Rails generator + modelo que não pensa em imagem. O ponto de produto é outro:</p>
+<p><b>Um harness/dispatcher sério deveria recusar embarcar segredo em Docker / README / <code>.env</code>, e o oráculo deveria falhar se <code>master.key</code> ou API keys vazarem no artefato.</b></p>
+<p>Checklist mínimo que eu colocaria no <code>oracle.sh</code> (e no phase-2 do Akita) antes de qualquer “Works? yes”:</p>
+<ul><li><code>test ! -f config/master.key</code> no artefato publicado, <b>ou</b> <code>.dockerignore</code> com <code>config/master.key</code> + <code>config/credentials.yml.enc</code> + <code>*.key</code> + <code>.env*</code></li><li><code>grep</code> no Dockerfile/compose/README/<code>*.env*</code> por <code>OPENROUTER_API_KEY=sk-</code> / <code>sk-or-</code> / key literal — vermelho</li><li>compose pode <b>referenciar</b> <code>${OPENROUTER_API_KEY}</code>; não pode <b>escrever</b> o valor</li><li>README não cola key de exemplo que parece real; no máximo <code>export OPENROUTER_API_KEY</code> sem valor</li><li><code>SECRET_KEY_BASE</code> no compose (via env) se <code>RAILS_ENV=production</code>; senão o oráculo de runtime falha</li><li>se <code>force_ssl</code> está on, o oráculo de compose precisa de healthcheck HTTP honesto (<code>/up</code> excluído do redirect) ou o run marca Docker vermelho, não verde estrutural</li></ul>
+<p>O run 2 passou no oracfit <b>com</b> <code>master.key</code> no disco e <code>.dockerignore</code> buraco. Isso é evidência a favor do Akita no espírito (“verde de checklist ≠ app que você colocaria no ar”) e evidência contra o meu oráculo atual. Os dois podem ser verdade ao mesmo tempo.</p>
+<p>Por que isso entra num post sobre misturar modelos: se o claim é “o planner barato + o executor local entregam o app”, o app inclui <b>não vazar a key na imagem</b>. Senão você não mediu produto. Mediu scaffold.</p>
+<hr>
+<h2>7. Limites (para ninguém transformar isso em thread)</h2>
+<ol><li><b>Greenfield Rails.</b> Mesmo recorte que o seu. Sem legado, sem 50 microsserviços, sem DSL de empresa. Conclusão não generaliza para o trabalho do leitor — você já disse isso, eu repito.</li><li><b>n=2.</b> Um fail com cola, um pass isolado. Sem terceira repetição, sem inverter OpenCode isolado × oracfit no clone. Não é estatística. É existência: o 27B <em>consegue</em> 9/9 sem gabarito neste hardware.</li><li><b>Três variáveis no meio.</b> Isolamento, dispatcher/oráculo, teto 16k→32k. O fail do run 1 é <code>length</code> <b>e</b> cola. Não posso atribuir 100% do delta ao llms.surf.</li><li><b>Oráculo oracfit ≪ rubrica Akita.</b> Estrutural ≠ 8 dimensões ≠ boot ≠ Docker runtime ≠ browser. 79 humana, não 97. Eu não rebatizei B de A.</li><li><b>Um modelo, um servidor.</b> EXL3 3.5bpw + DFlash2 no exllamav3. Não comparei com o seu Qwen via llama-swap/OpenRouter. Quantização e stack de serving são outro eixo.</li><li><b>Sem mix de 2 LLMs.</b> A pergunta do seu título continua em aberto no <em>meu</em> harness.</li><li><b>Custo de parede.</b> 44–70 min de 3090 não é 18 min de Opus. Energia e tempo de humano vigiando existem. “US$ 0 de API” não é “de graça”.</li></ol>
+<hr>
+<h2>8. Convite para replay</h2>
+<p>Akita, o repo do benchmark é o lugar certo para discordar com arquivo, não com vibe. Se quiser reproduir o lado sujo e o lado limpo:</p>
+<p><b>Run sujo (o que eu não recomendo como score, só como controle de cola):</b></p>
+<ul><li><code>python scripts/run_benchmark.py</code> com o Qwen local, workspace <b>dentro</b> do clone</li><li>teto de output 16k, reasoning on</li><li>deixe <code>benchmark-v4/reference/chatapp</code> visível</li><li>espere o modelo achar o gold. No meu caso, ele até narrou.</li></ul>
+<p><b>Run limpo:</b></p>
+<ul><li>workdir fora do clone (<code>/tmp/...</code> ou <code>git init</code> no <code>project/</code> + <code>GIT_CEILING_DIRECTORIES</code> no results)</li><li>gold, rubrica, <code>success_report*</code>, scanner, <code>CLAUDE.md</code> <b>fora</b> do disco do agente</li><li>oráculo que <b>não</b> contém a API dourada</li><li>teto de output declarado (32k se o modelo thinking come 16k)</li><li>depois do verde estrutural: rubrica 8-dim <b>na mão</b>, e um oráculo extra de segredo (<code>master.key</code> / <code>.dockerignore</code> / README / compose)</li></ul>
+<p><b>O run que falta (o do seu título):</b></p>
+<ul><li>mesmo workdir isolado</li><li>mesma spec</li><li>mesma rubrica</li><li>três condições: Qwen solo · Opus solo · Opus-planner + Qwen-executor</li><li>planner = turns de Opus <b>ou</b> camada oracfit, em colunas separadas</li><li>custo do planner visível, como você fez no round 3</li></ul>
+<p>Eu publico o artefato do run 2 em <code>/tmp/qwen-bench-surf/project</code> para inspeção local (não é commit, não é PR). O ndjson do run 1 está em <code>results-3090/qwen3_8_27b_exl3_3090/</code>. Quem quiser grepar <code>benchmark-v4/reference</code> e <code>The reference is the gold solution</code> vai achar. Quem quiser grepar o ledger do oracfit vai achar <code>oracle_exit=0</code> e 215 tools sem gold.</p>
+<p>Se o replay mostrar que, no isolamento, o OpenCode solo também fecha 9/9, eu atualizo este texto: o herói deixa de ser o dispatcher e passa a ser “tire a cola e o teto de 16k”. Isso ainda seria um achado seu — harness e protocolo — só que com o sinal invertido no marketing de orquestração.</p>
+<hr>
+<h2>Fecho</h2>
+<p>Você está certo no que importa para quem está construindo produto: Rails com dependência interna não se beneficia de um segundo cérebro só porque o feed ama dashboard de agente. O imposto do planner é real. Assinatura muda a conta. DeepSeek “completed” sem linha é o tipo de correção que deixa o benchmark confiável.</p>
+<p>Eu só não quero que a frase “não vale misturar” vire “qualquer camada acima do modelo é teatro”. No 27B local, a camada que <b>não</b> é um segundo LLM — isolamento, oráculo, recusa de cola, recusa de key na imagem — foi a diferença entre fail com gabarito aberto e um B honesto sem gabarito.</p>
+<p>Misturar dois modelos? Ainda não sei. Misturar um modelo com um harness que não deixa colar nem vazar <code>master.key</code>? Isso, na minha mesa, pagou. E ainda está incompleto: o oráculo deixou a key no disco. Próximo vermelho é esse.</p>
+<p>Se vier replay, eu leio. Se vier o mix de verdade no llms.surf, eu atualizo o placar — para cima ou para baixo, com o custo do planner na mesma linha.</p>
+<p>— Carlos</p>
+
+  <div class="doc-links">
+    <a class="btn btn-ghost" href="../../index.html">← front page</a>
+    <a class="btn btn-ghost" href="../../blog/">blog</a>
+    <a class="btn btn-ghost" href="../../readme.html">README</a>
+    <a class="btn btn-ghost" href="../../incidents.html">incidents/</a>
+  </div>
+</main>
+<footer class="footer">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a class="logo" href="../../index.html" aria-label="llms.surf — home">
+        <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+        <span class="logo-word">llms.surf</span>
+      </a>
+      <p class="foot-surf">Built in Saquarema, Brazil — where you never paddle on a guess. Neither do we.</p>
+    </div>
+    <nav class="foot-links" aria-label="Project links">
+      <a href="../../llms.txt">llms.txt</a>
+      <a href="../../blog/">blog</a>
+      <a href="../../readme.html">README</a>
+      <a href="../../incidents.html">incidents/</a>
+      <a href="../../v4-plan.html">docs/v4-plan.md</a>
+      <a href="https://github.com/carl0sfelipe/llms.surf">github</a>
+    </nav>
+  </div>
+</footer>
+<script src="../../app.js" defer></script>
+</body>
+</html>

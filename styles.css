@@ -402,6 +402,21 @@ tr.no-data td{color:var(--muted);font-style:italic}
 .doc .status-open{color:var(--amber);font-weight:700}
 .doc .status-nodata{color:var(--muted);font-style:italic}
 .doc-links{display:flex;gap:12px;flex-wrap:wrap;margin-top:36px}
+.doc a{color:var(--cyan)}
+.doc a:hover{color:var(--green)}
+.doc h3{font-family:var(--mono);font-size:clamp(16px,1.8vw,20px);margin:32px 0 12px}
+.doc ol{margin:0 0 14px 22px;color:var(--muted)}
+.doc em{color:var(--text);font-style:italic}
+.doc hr{border:0;border-top:1px solid var(--line);margin:36px 0}
+.doc blockquote{margin:22px 0}
+.doc .term-body code{border:0;padding:0;background:transparent;color:var(--text);font-size:13.5px;line-height:1.7;white-space:pre-wrap}
+.doc .blog-meta{font-family:var(--mono);color:var(--muted);font-size:13px}
+.blog-item{margin:0 0 36px;padding-bottom:28px;border-bottom:1px solid var(--line)}
+.blog-item:last-of-type{border-bottom:none}
+.blog-item h2{margin:8px 0 12px}
+.blog-item h2 a{color:var(--text)}
+.blog-item h2 a:hover{color:var(--green)}
+.blog-item .chips{margin-top:14px}
 
 .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
 .reveal.in{opacity:1;transform:none}
