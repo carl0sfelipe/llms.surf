@@ -34,11 +34,11 @@ MARK = """\
 
 HEAD_FONTS = """\
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-600.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-600.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-700.css" media="print" onload="this.media='all'">
 """
 
 
@@ -259,8 +259,9 @@ def page(
 <meta name="twitter:title" content="{tit}">
 <meta name="twitter:description" content="{desc}">
 <script src="{prefix}journey.js" data-key="llms.surf.journey"></script>
+<style>html,body{{background:#0B0E14;color:#E6EDF3;color-scheme:dark}}</style>
+<link rel="stylesheet" href="{prefix}styles.css?v=2">
 {HEAD_FONTS}
-<link rel="stylesheet" href="{prefix}styles.css">
 {extra_head}
 </head>
 <body>
