@@ -244,7 +244,7 @@ def page(
 <title>{tit} — llms.surf</title>
 <meta name="description" content="{desc}">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0B0E14">
+<meta name="theme-color" content="#0b0b0b">
 <link rel="canonical" href="{html.escape(canonical)}">
 <link rel="icon" type="image/svg+xml" href="{prefix}logo.svg">
 <link rel="icon" type="image/png" href="{prefix}logo.png">
@@ -259,8 +259,10 @@ def page(
 <meta name="twitter:title" content="{tit}">
 <meta name="twitter:description" content="{desc}">
 <script src="{prefix}journey.js" data-key="llms.surf.journey"></script>
-<style>html,body{{background:#0B0E14;color:#E6EDF3;color-scheme:dark}}</style>
-<link rel="stylesheet" href="{prefix}styles.css?v=2">
+<style>html,body{{background:#0b0b0b!important;color:#e8e8e8!important;color-scheme:dark}}</style>
+<link rel="stylesheet" href="{prefix}styles.css?v=202609101534" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{prefix}styles.css?v=202609101534"></noscript>
+<script>(function(){{function p(){{var b=document.body;if(!b)return;var c=getComputedStyle(b).backgroundColor,m=c.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);if(!m)return;if(+m[1]+ +m[2]+ +m[3]>600){{var s=document.documentElement.style;s.setProperty("background","#0b0b0b","important");s.setProperty("color","#e8e8e8","important");b.style.setProperty("background","#0b0b0b","important");b.style.setProperty("color","#e8e8e8","important");}}}}if(document.body)p();else document.addEventListener("DOMContentLoaded",p);}})();</script>
 {HEAD_FONTS}
 {extra_head}
 </head>
