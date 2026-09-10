@@ -16,7 +16,7 @@ canonical: https://llms.surf/blog/resposta-ao-akita-harness-qwen
 
 *Em resposta a [LLM Benchmarks: Vale a Pena ($$) Misturar 2 Modelos?](https://akitaonrails.com/2026/04/25/llm-benchmarks-vale-a-pena-misturar-2-modelos/) (25 de abril de 2026).*
 
-Olá, Akita. Sem briga. Seu post de abril continua o texto mais honesto que eu li sobre “planner caro + executor barato”. Eu concordo com o miolo. Quero estender uma ponta que, no seu próprio experimento, já aparece: **o harness pesa tanto quanto o modelo**. E quero acrescentar duas exigências de produto/segurança que qualquer claim de “misturei dois modelos” deveria passar antes de ir para o Twitter.
+Olá, Akita. Seu post de abril continua o texto mais honesto que eu li sobre “planner caro + executor barato”. Eu concordo com o miolo. Quero estender uma ponta que, no seu próprio experimento, já aparece: **o harness pesa tanto quanto o modelo**. E quero acrescentar duas exigências de produto/segurança que qualquer claim de “misturei dois modelos” deveria passar antes de ir para o Twitter.
 
 Não rodei Opus planejando e Qwen executando pelo meu dispatcher. Rodei **um** 27B local em **dois** harnesses. Isso não prova mix-of-2-LLMs. Prova outra coisa, que acho que interessa ao benchmark: o mesmo modelo, na mesma família de tarefa Rails+RubyLLM, sai `failed`+cola num harness e `9/9` sem cola no outro.
 
