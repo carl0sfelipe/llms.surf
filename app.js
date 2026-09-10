@@ -430,6 +430,7 @@ function initReveal() {
     nodes.forEach(n => n.classList.add("in"));
     return;
   }
+  document.documentElement.classList.add("reveal-pending");
   const io = new IntersectionObserver(es => {
     es.forEach(e => {
       if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }

@@ -1,4 +1,5 @@
 :root{
+  color-scheme:only dark;
   --bg:#0B0E14;
   --panel:#0F131C;
   --panel-2:#121826;
@@ -18,17 +19,21 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html{
   scroll-behavior:smooth;
+  background:#0b0b0b;
   background:var(--bg);
   color:var(--text);
-  color-scheme:dark;
+  color-scheme:only dark;
+  forced-color-adjust:none;
   min-height:100%;
   -webkit-text-size-adjust:100%;
   text-size-adjust:100%;
 }
 body{
+  background:#0b0b0b;
   background:var(--bg);
   color:var(--text);
-  color-scheme:dark;
+  color-scheme:only dark;
+  forced-color-adjust:none;
   min-height:100%;
   font-family:var(--sans);
   font-size:16px;
@@ -428,8 +433,9 @@ tr.no-data td{color:var(--muted);font-style:italic}
 .blog-item h2 a:hover{color:var(--green)}
 .blog-item .chips{margin-top:14px}
 
-.reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.reveal.in{opacity:1;transform:none}
+.reveal{opacity:1;transform:none}
+html.reveal-pending .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+html.reveal-pending .reveal.in{opacity:1;transform:none}
 
 @media (max-width:960px){
   .hero{padding:56px 0 48px}
