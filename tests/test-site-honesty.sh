@@ -69,7 +69,7 @@ if grep -E 'tps: [0-9]' "$APP"; then
 fi
 
 # Pages exist.
-for f in index.html readme.html incidents.html v4-plan.html styles.css logo.svg app.js journey.js llms.txt; do
+for f in index.html readme.html incidents.html v4-plan.html blog/index.html styles.css logo.svg app.js journey.js llms.txt; do
   [ -f "$ROOT/site/$f" ] || fail "site/$f missing"
 done
 

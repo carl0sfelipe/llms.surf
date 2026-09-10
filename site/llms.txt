@@ -88,6 +88,7 @@ GitHub issue; leaving costs one click.
 - incidents/  -  the ledger; 106 postmortems in this cut
 - LICENSE  -  proprietary. Do not call this open source.
 - site/index.html?as=agent  -  HTML twin of this file
+- site/blog/  -  writing (source: site/blog/posts/*.md)
 - https://github.com/carl0sfelipe/llms.surf
 
 ## Do not

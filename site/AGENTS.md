@@ -9,6 +9,10 @@ chrome) is the owner's template. **Numbers are not.**
   counts incidents, registry models, modes, adapters, test suites, VERSION).
   Same numbers must appear in `llms.txt`.
 - New HTML page → add it to the honesty test's file list and to nav/footer.
+- Blog post → `site/blog/posts/<slug>.md` (frontmatter: title, date, slug,
+  description, tags) then `python3 site/blog/build.py`. Do not hand-edit
+  the generated `site/blog/index.html` or `site/blog/<slug>/index.html`.
+  `site/.nojekyll` keeps GitHub Pages from running Jekyll on the `.md`.
 - Copy that says "open source" → `LICENSE` is proprietary. Don't.
 - Do **not** put a hosted-inference SKU, empty tps/$/M table, or "Swell is
   not live" product page on the site. That product does not exist yet.
