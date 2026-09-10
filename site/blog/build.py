@@ -243,7 +243,8 @@ def page(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{tit} — llms.surf</title>
 <meta name="description" content="{desc}">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="only dark">
+<meta name="supported-color-schemes" content="dark">
 <meta name="theme-color" content="#0b0b0b">
 <link rel="canonical" href="{html.escape(canonical)}">
 <link rel="icon" type="image/svg+xml" href="{prefix}logo.svg">
@@ -259,10 +260,9 @@ def page(
 <meta name="twitter:title" content="{tit}">
 <meta name="twitter:description" content="{desc}">
 <script src="{prefix}journey.js" data-key="llms.surf.journey"></script>
-<style>html,body{{background:#0b0b0b!important;color:#e8e8e8!important;color-scheme:dark}}</style>
-<link rel="stylesheet" href="{prefix}styles.css?v=202609101534" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="{prefix}styles.css?v=202609101534"></noscript>
-<script>(function(){{function p(){{var b=document.body;if(!b)return;var c=getComputedStyle(b).backgroundColor,m=c.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);if(!m)return;if(+m[1]+ +m[2]+ +m[3]>600){{var s=document.documentElement.style;s.setProperty("background","#0b0b0b","important");s.setProperty("color","#e8e8e8","important");b.style.setProperty("background","#0b0b0b","important");b.style.setProperty("color","#e8e8e8","important");}}}}if(document.body)p();else document.addEventListener("DOMContentLoaded",p);}})();</script>
+<style>html,body{{background:#0b0b0b!important;background-color:#0b0b0b!important;color:#e8e8e8!important;color-scheme:only dark;min-height:100%;min-height:100dvh;forced-color-adjust:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+<link rel="stylesheet" href="{prefix}styles.css?v=202609101645">
+<script>(function(){{function p(){{var h=document.documentElement,b=document.body;h.style.setProperty("color-scheme","only dark");h.style.setProperty("background-color","#0b0b0b","important");h.style.setProperty("color","#e8e8e8","important");if(!b)return;b.style.setProperty("color-scheme","only dark");b.style.setProperty("background-color","#0b0b0b","important");b.style.setProperty("color","#e8e8e8","important");}}if(document.body)p();else document.addEventListener("DOMContentLoaded",p);}})();</script>
 {HEAD_FONTS}
 {extra_head}
 </head>
