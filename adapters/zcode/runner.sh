@@ -46,15 +46,31 @@ fi
 
 ZCODE_BIN="${ZCODE_BIN:-zcode}"
 if ! command -v "$ZCODE_BIN" >/dev/null 2>&1; then
-  ZCODE_APP="/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs"
-  if [ -f "$ZCODE_APP" ]; then
-    mkdir -p "$HOME/.local/bin"
-    ln -sfn "$ZCODE_APP" "$HOME/.local/bin/zcode"
-    ZCODE_BIN="$HOME/.local/bin/zcode"
-  else
-    echo "runner.sh (zcode): CLI zcode não encontrada (instale ZCode.app)" >&2
-    exit 3
-  fi
+  case "$(uname -s)" in
+    Darwin)
+      ZCODE_APP="/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs"
+      if [ -f "$ZCODE_APP" ]; then
+        mkdir -p "$HOME/.local/bin"
+        ln -sfn "$ZCODE_APP" "$HOME/.local/bin/zcode"
+        ZCODE_BIN="$HOME/.local/bin/zcode"
+      else
+        echo "runner.sh (zcode): CLI zcode não encontrada (instale ZCode.app)" >&2
+        exit 3
+      fi
+      ;;
+    Linux)
+      if [ -x "$HOME/.local/bin/zcode" ]; then
+        ZCODE_BIN="$HOME/.local/bin/zcode"
+      else
+        echo "runner.sh (zcode): CLI zcode não encontrada (Linux: instale o wrapper/AppImage em ~/.local/bin/zcode ou exporte ZCODE_BIN)" >&2
+        exit 3
+      fi
+      ;;
+    *)
+      echo "runner.sh (zcode): CLI zcode não encontrada e SO não suportado: $(uname -s)" >&2
+      exit 3
+      ;;
+  esac
 fi
 
 ADAPTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

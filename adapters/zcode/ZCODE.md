@@ -10,10 +10,23 @@ Flags e schema de config: [`DISCOVERY.md`](DISCOVERY.md) (Passo 0, 2026-08-04).
 
 ## Setup
 
+**macOS** (App bundle):
+
 ```bash
 # symlink (idempotente) — também feito por env.sh / install
 ln -sfn "/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs" ~/.local/bin/zcode
+```
 
+**Linux** (AppImage extraído — wrapper em `~/.local/bin/zcode`):
+
+```bash
+# nada a linkar: env.sh detecta Linux e adiciona ~/.local/bin ao PATH
+# (se o CLI não estiver em ~/.local/bin, exporte ZCODE_BIN=/caminho/do/zcode)
+```
+
+Ambos os SOs, depois:
+
+```bash
 source adapters/zcode/env.sh
 zcode login   # OAuth Z.ai — necessário para apiKey no CLI
 ```

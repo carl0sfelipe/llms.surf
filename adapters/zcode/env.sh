@@ -15,13 +15,25 @@ export DISPATCH_RUNNER_FORMAT_JSON=1
 export ORACFIT_ROOT="${ORACFIT_ROOT:-$REPO_ROOT}"
 export DISPATCH_ROOT="${DISPATCH_ROOT:-$ORACFIT_ROOT}"
 
-# Garante zcode no PATH (App bundle → ~/.local/bin)
+# Garante zcode no PATH.
+# macOS: App bundle → symlink em ~/.local/bin.
+# Linux: wrapper/AppImage vive em ~/.local/bin — só adiciona ao PATH (nada de
+# symlink para caminho inexistente).
 if ! command -v zcode >/dev/null 2>&1; then
-  ZCODE_APP="/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs"
-  if [ -f "$ZCODE_APP" ]; then
-    mkdir -p "$HOME/.local/bin"
-    ln -sfn "$ZCODE_APP" "$HOME/.local/bin/zcode"
-  fi
+  case "$(uname -s)" in
+    Darwin)
+      ZCODE_APP="/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs"
+      if [ -f "$ZCODE_APP" ]; then
+        mkdir -p "$HOME/.local/bin"
+        ln -sfn "$ZCODE_APP" "$HOME/.local/bin/zcode"
+      fi
+      ;;
+    Linux)
+      if [ -x "$HOME/.local/bin/zcode" ]; then
+        export PATH="$HOME/.local/bin:$PATH"
+      fi
+      ;;
+  esac
 fi
 
 export ZCODE_BIN="${ZCODE_BIN:-zcode}"

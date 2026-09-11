@@ -31,17 +31,32 @@ install_link() {
   echo "   installed: $DEST -> $SRC"
 }
 
-if [ -f "$ZCODE_APP" ]; then
-  if [ $DRY_RUN -eq 1 ]; then
-    echo "   [dry-run] ln -sfn $ZCODE_APP $ZCODE_LINK"
-  else
-    mkdir -p "$(dirname "$ZCODE_LINK")"
-    ln -sfn "$ZCODE_APP" "$ZCODE_LINK"
-    echo "   zcode CLI: $ZCODE_LINK -> $ZCODE_APP"
-  fi
-else
-  echo "   WARN: ZCode.app não encontrado em $ZCODE_APP"
-fi
+case "$(uname -s)" in
+  Darwin)
+    if [ -f "$ZCODE_APP" ]; then
+      if [ $DRY_RUN -eq 1 ]; then
+        echo "   [dry-run] ln -sfn $ZCODE_APP $ZCODE_LINK"
+      else
+        mkdir -p "$(dirname "$ZCODE_LINK")"
+        ln -sfn "$ZCODE_APP" "$ZCODE_LINK"
+        echo "   zcode CLI: $ZCODE_LINK -> $ZCODE_APP"
+      fi
+    else
+      echo "   WARN: ZCode.app não encontrado em $ZCODE_APP"
+    fi
+    ;;
+  Linux)
+    # Linux não tem ZCode.app: o CLI vem do AppImage/wrapper em ~/.local/bin.
+    if [ -x "$ZCODE_LINK" ]; then
+      echo "   zcode CLI: $ZCODE_LINK (ok)"
+    else
+      echo "   WARN: zcode não encontrado em $ZCODE_LINK (instale o AppImage/wrapper)"
+    fi
+    ;;
+  *)
+    echo "   WARN: SO não suportado para link do CLI: $(uname -s)"
+    ;;
+esac
 
 install_link "$ADAPTER_DIR/ZCODE.md" "$DEST_DIR/SKILL.md"
 install_link "$ADAPTER_DIR/env.sh" "$DEST_DIR/env.sh"

@@ -617,7 +617,7 @@
       "verified_at": "2026-08-30",
       "quantization": "unknown (API fechada)",
       "cli_hints": {
-        "opencode": "cheaperinference/gpt-5.6-luna"
+        "opencode": "cheaper-inference/gpt-5.6-luna"
       },
       "id_status": "",
       "verified_by": "opencode",
@@ -630,6 +630,56 @@
         "quantization": "unknown — sem catálogo público acessível sem chave"
       },
       "id_checked_at": ""
+    },
+    {
+      "id": "gpt-6-astra",
+      "provider": "cheaper-inference",
+      "tier": "paid",
+      "accuracy": null,
+      "latency_ms": null,
+      "context_window": null,
+      "rate_limit": null,
+      "best_for": [
+        "decisao de arquitetura",
+        "design detalhado antes da escrita em massa"
+      ],
+      "cli_hints": {
+        "opencode": "cheaper-inference/gpt-6-astra"
+      },
+      "id_status": "EXISTE",
+      "fallback": [
+        "gpt-5.6-luna"
+      ],
+      "source": "listado por opencode models; smoke ok em 2026-09-06"
+    },
+    {
+      "id": "qwen38-27b-exl3-3090",
+      "provider": "qwen-local",
+      "tier": "local",
+      "accuracy": null,
+      "latency_ms": null,
+      "context_window": 131072,
+      "rate_limit": "nenhuma (EXL3 local 127.0.0.1:8888, batch-1)",
+      "best_for": [
+        "coding agent",
+        "rails scaffold",
+        "tool calling"
+      ],
+      "source": "local RTX 3090 EXL3 3.5bpw + DFlash2; added 2026-09-10 for llms.surf bench dispatch",
+      "verified_at": "2026-09-10",
+      "cli_hints": {
+        "opencode": "qwen-local/qwen3.8-27b-exl3-3.5bpw-wm"
+      },
+      "fallback": [],
+      "id_status": "EXISTE",
+      "verified_by": "opencode",
+      "measured": {
+        "suite_accuracy": null,
+        "suite_n": 0,
+        "latency_ms": null,
+        "provider_observed": "exllamav3 OpenAI-compat http://127.0.0.1:8888/v1",
+        "quantization": "EXL3 3.5bpw + DFlash2 5.0bpw draft, KV Hadamard int4"
+      }
     }
   ]
 }
