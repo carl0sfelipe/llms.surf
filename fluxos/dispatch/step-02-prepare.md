@@ -44,6 +44,8 @@ Se não houver informação suficiente, HALT com status `blocked` e bloqueio `sp
 
 **Antes de seguir, pergunte:** a entrada é conhecida e a transformação é mecânica? Se for, isto é **código**, não dispatch — despachar só adiciona custo e chance de campo inventado. Incidente: `incidents/2026-07-25-dispatch-saiu-com-exit-0-sem-fazer-nada-.md`.
 
+**Dependência load-bearing fora da árvore:** se o workdir-alvo não builda porque um path/git/registry escolhido pelo dono está ausente, isso **nao substitui** a biblioteca. Publique git-dep, vendor com o tree original, ou HALT. Nunca troque por um crate homônimo de algoritmo diferente para "destravar o checkout". Evidência: `incidents/2026-09-18-agente-substituiu-dep-load-bearing.md` (bestmodel PR 2, argos-opt → optimizer).
+
 ### 3. Confirmar capacidade agêntica do runner
 
 Se o trabalho exige ler arquivo, rodar comando ou navegar o repositório, o runner precisa de ferramentas:
