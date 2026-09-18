@@ -241,6 +241,28 @@ else
   not_ "sync sem opencode: rc=$RC_NOOC, snapshot-mantido=$([ "$SHA_KB" = "$SHA_KA" ] && echo sim || echo NAO)"
 fi
 
+# ── 11. provider vazio no TSV não vira provider '1' (IFS tab) ────────────────
+# tier:expensive cai num ref fora do catálogo free. Sem credencial em arquivo
+# (o caso do CI), o gate tem de chamar o stub — não pular um provider
+# fantasma '1' porque o bash colapsou o campo vazio.
+EXP_WD="$WD/expensive-empty-prov"
+mkdir -p "$EXP_WD"
+AUTH_MISS="$WD/auth-ausente.json"
+CFG_MISS="$WD/opencode-ausente.json"
+rm -f "$AUTH_MISS" "$CFG_MISS" "$EXP_WD/.dispatch/stub-proof"
+ORACFIT_AUTH_JSON="$AUTH_MISS" ORACFIT_OPENCODE_CONFIG="$CFG_MISS" \
+ORACFIT_WORKDIR="$EXP_WD" DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh" \
+  bash "$ROOT/bin/run-with-fallback.sh" tier:expensive "$SPEC" \
+  >"$WD/expensive-out.log" 2>"$WD/expensive-err.log"
+RC_EXP=$?
+if [ "$RC_EXP" -eq 0 ] \
+   && grep -q stub_ok "$EXP_WD/.dispatch/stub-proof" 2>/dev/null \
+   && ! grep -q "provider '1'" "$WD/expensive-err.log"; then
+  ok "tier:expensive com provider vazio chama o stub (não inventa provider 1)"
+else
+  not_ "tier:expensive: rc=$RC_EXP err=$(tail -3 "$WD/expensive-err.log" 2>/dev/null)"
+fi
+
 echo ""
 echo "=== RESULTADO: $pass pass, $fail fail ==="
 if [ "$fail" -gt 0 ]; then

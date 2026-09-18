@@ -65,13 +65,19 @@ try:
         meta[m.get("ref", "")] = (m.get("provider") or "", bool(m.get("keyless")))
 except Exception:
     pass
+# US (\\x1f), NAO tab: tab e IFS whitespace e campos vazios colapsam.
+# tier:expensive resolve deepseek-v4-pro (fora do catalogo free -> provider
+# vazio, keyless default 1); com tab o bash lia KEYLESS como PROVIDER=1,
+# pulava o unico ref, e o stub nunca rodava — test-owner-question e
+# test-go-live-local vermelhos em todo push sem auth.json.
+FS = "\x1f"
 for r in refs:
     prov, keyless = meta.get(r, ("", True))
-    print("\t".join((r, statuses.get(r, ""), prov, "1" if keyless else "0")))
+    print(FS.join((r, statuses.get(r, ""), prov, "1" if keyless else "0")))
 ') || { echo "✖ cadeia do $MODEL vazia — nada despachado" >&2; exit 2; }
 
   CADEIA=""
-  while IFS="$(printf '\t')" read -r REF ST PROVIDER KEYLESS; do
+  while IFS=$'\x1f' read -r REF ST PROVIDER KEYLESS; do
     [ -n "$REF" ] || continue
     if [ "$KEYLESS" != "1" ] && [ -n "$PROVIDER" ]; then
       if ! free_cred_has_provider "$PROVIDER"; then
