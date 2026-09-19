@@ -374,13 +374,26 @@
       "incident": "T09 (2026-09-19): L4 hole pinned as P1.md decision D3 — keyless:false with unknown (null) provider passes the credential gate, mirroring run-with-fallback.sh '[ -n \"$PROVIDER\" ]'",
       "request": "tier:cheap",
       "credentials": [],
-      "catalog": {"kind": "free-catalog/1", "models": [
-        {"ref": "unknown/ref", "provider": null, "keyless": false, "context_length": 1}
-      ]},
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "unknown/ref",
+            "provider": null,
+            "keyless": false,
+            "context_length": 1
+          }
+        ]
+      },
       "expect": {
         "ok": {
           "entries": [
-            {"ref": "unknown/ref", "id_status": "", "provider": null, "keyless": false}
+            {
+              "ref": "unknown/ref",
+              "id_status": "",
+              "provider": null,
+              "keyless": false
+            }
           ],
           "skipped": []
         }
@@ -1084,13 +1097,23 @@
       "catalog": {
         "kind": "free-catalog/1",
         "models": [
-          {"ref": "nemotron-3-ultra-free", "provider": "", "keyless": true, "context_length": null}
+          {
+            "ref": "nemotron-3-ultra-free",
+            "provider": "",
+            "keyless": true,
+            "context_length": null
+          }
         ]
       },
       "expect": {
         "ok": {
           "entries": [
-            {"ref": "nemotron-3-ultra-free", "id_status": "EXISTE", "provider": null, "keyless": true}
+            {
+              "ref": "nemotron-3-ultra-free",
+              "id_status": "EXISTE",
+              "provider": null,
+              "keyless": true
+            }
           ],
           "skipped": []
         }
@@ -1137,6 +1160,199 @@
             },
             {
               "ref": "other/model",
+              "id_status": "",
+              "provider": "openrouter",
+              "keyless": false
+            }
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T10_skip_order_is_catalog_order",
+      "incident": "T10 F4: skipped is catalog_order encounter order, not reason-grouped PROMOTION NOTE (D-MERGE 2026-09-19): the cases.json `registry` override replaces (not merges with) the fixture registry, so the override was extended with mimo-v2.5-free/EXISTE and ghost-model:free/FANTASMA — the ids the verified expectation depends on.",
+      "request": "tier:cheap",
+      "credentials": [],
+      "registry": {
+        "models": [
+          {
+            "id": "alive-high",
+            "provider": "openrouter",
+            "tier": "free",
+            "id_status": "EXISTE"
+          },
+          {
+            "id": "alive-low",
+            "provider": "openrouter",
+            "tier": "free",
+            "id_status": "EXISTE"
+          },
+          {
+            "id": "mimo-v2.5-free",
+            "provider": "opencode",
+            "tier": "free",
+            "id_status": "EXISTE"
+          },
+          {
+            "id": "ghost-model:free",
+            "provider": "openrouter",
+            "tier": "free",
+            "id_status": "FANTASMA"
+          }
+        ]
+      },
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "alive-high",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 500000
+          },
+          {
+            "ref": "mimo-v2.5-free",
+            "provider": "opencode",
+            "keyless": true,
+            "context_length": null
+          },
+          {
+            "ref": "ghost-model:free",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 300000
+          },
+          {
+            "ref": "alive-low",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 100000
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "mimo-v2.5-free",
+              "id_status": "EXISTE",
+              "provider": "opencode",
+              "keyless": true
+            }
+          ],
+          "skipped": [
+            {
+              "ref": "alive-high",
+              "reason": {
+                "NoFileCredential": {
+                  "provider": "openrouter"
+                }
+              }
+            },
+            {
+              "ref": "ghost-model:free",
+              "reason": {
+                "DeadId": {
+                  "id_status": "FANTASMA"
+                }
+              }
+            },
+            {
+              "ref": "alive-low",
+              "reason": {
+                "NoFileCredential": {
+                  "provider": "openrouter"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "T10_vision_registry_first_gemini",
+      "incident": "T10 F2: vision registry-first prefers id gemini-3.6-flash; PROVAVEL is live",
+      "request": "tier:vision",
+      "credentials": [],
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "gemini-3.6-flash",
+              "id_status": "PROVAVEL",
+              "provider": null,
+              "keyless": true
+            }
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T10_expensive_prefers_id_containing_pro",
+      "incident": "T10 F2: expensive prefers a paid id containing 'frontier'/'pro' over registry order",
+      "request": "tier:expensive",
+      "credentials": [],
+      "registry": {
+        "models": [
+          {
+            "id": "claude-sonnet-5",
+            "provider": "anthropic",
+            "tier": "paid",
+            "id_status": "EXISTE"
+          },
+          {
+            "id": "qwen-pro-max",
+            "provider": "deepseek",
+            "tier": "paid",
+            "id_status": "EXISTE",
+            "best_for": [
+              "código"
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "qwen-pro-max",
+              "id_status": "EXISTE",
+              "provider": null,
+              "keyless": true
+            }
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T10_tier_id_in_catalog_takes_catalog_meta",
+      "incident": "T10 F7: tier route takes catalog provider/keyless + credential gate when id is in the catalog",
+      "request": "tier:vision",
+      "credentials": [
+        "openrouter"
+      ],
+      "registry": {
+        "models": []
+      },
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "gemini-3.6-flash",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 1000
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "gemini-3.6-flash",
               "id_status": "",
               "provider": "openrouter",
               "keyless": false
