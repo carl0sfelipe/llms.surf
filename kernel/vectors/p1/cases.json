@@ -245,25 +245,78 @@
       "name": "T06_nao_statuses_are_dead",
       "incident": "T06/M4 (gap): DEAD_ID_STATUSES has three members but vectors pinned only FANTASMA; a mutation matching only FANTASMA survived every vector",
       "request": "tier:cheap",
-      "credentials": ["openrouter"],
-      "registry": {"models": [
-        {"id": "nao-encontrado-model", "provider": "openrouter", "id_status": "NAO-ENCONTRADO"},
-        {"id": "nao-verificado-model", "provider": "openrouter", "id_status": "NAO-VERIFICADO"},
-        {"id": "live-model", "provider": "openrouter", "id_status": "EXISTE"}
-      ]},
-      "catalog": {"kind": "free-catalog/1", "models": [
-        {"ref": "nao-encontrado-model", "provider": "openrouter", "keyless": false, "context_length": 10},
-        {"ref": "nao-verificado-model", "provider": "openrouter", "keyless": false, "context_length": 9},
-        {"ref": "live-model", "provider": "openrouter", "keyless": false, "context_length": 8}
-      ]},
+      "credentials": [
+        "openrouter"
+      ],
+      "registry": {
+        "models": [
+          {
+            "id": "nao-encontrado-model",
+            "provider": "openrouter",
+            "id_status": "NAO-ENCONTRADO"
+          },
+          {
+            "id": "nao-verificado-model",
+            "provider": "openrouter",
+            "id_status": "NAO-VERIFICADO"
+          },
+          {
+            "id": "live-model",
+            "provider": "openrouter",
+            "id_status": "EXISTE"
+          }
+        ]
+      },
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "nao-encontrado-model",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 10
+          },
+          {
+            "ref": "nao-verificado-model",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 9
+          },
+          {
+            "ref": "live-model",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 8
+          }
+        ]
+      },
       "expect": {
         "ok": {
           "entries": [
-            {"ref": "live-model", "id_status": "EXISTE", "provider": "openrouter", "keyless": false}
+            {
+              "ref": "live-model",
+              "id_status": "EXISTE",
+              "provider": "openrouter",
+              "keyless": false
+            }
           ],
           "skipped": [
-            {"ref": "nao-encontrado-model", "reason": {"DeadId": {"id_status": "NAO-ENCONTRADO"}}},
-            {"ref": "nao-verificado-model", "reason": {"DeadId": {"id_status": "NAO-VERIFICADO"}}}
+            {
+              "ref": "nao-encontrado-model",
+              "reason": {
+                "DeadId": {
+                  "id_status": "NAO-ENCONTRADO"
+                }
+              }
+            },
+            {
+              "ref": "nao-verificado-model",
+              "reason": {
+                "DeadId": {
+                  "id_status": "NAO-VERIFICADO"
+                }
+              }
+            }
           ]
         }
       }
@@ -963,6 +1016,67 @@
       },
       "expect": {
         "error": "ProviderOutsideAllowlist"
+      }
+    },
+    {
+      "name": "T08_dead_keyless_leg_skipped",
+      "incident": "T08 shadow run (kernel/test-specs/reports/T08.md): real-tree cheap chain with the keyless leg stamped FANTASMA — the dead gate fires before the credential gate and keyless grants no exemption. Shell side of the same scenario swallows the E5-M2 WARN (capture_output); kernel must keep the skip pinned when the shell is replaced",
+      "request": "tier:cheap",
+      "credentials": [],
+      "registry": {
+        "models": [
+          {
+            "id": "mimo-v2.5-free",
+            "provider": "zen",
+            "tier": "free",
+            "id_status": "EXISTE"
+          },
+          {
+            "id": "nemotron-3-ultra-free",
+            "provider": "zen",
+            "tier": "free",
+            "id_status": "FANTASMA"
+          }
+        ]
+      },
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "mimo-v2.5-free",
+            "provider": "opencode",
+            "keyless": true,
+            "context_length": null
+          },
+          {
+            "ref": "nemotron-3-ultra-free",
+            "provider": "opencode",
+            "keyless": true,
+            "context_length": null
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "mimo-v2.5-free",
+              "id_status": "EXISTE",
+              "provider": "opencode",
+              "keyless": true
+            }
+          ],
+          "skipped": [
+            {
+              "ref": "nemotron-3-ultra-free",
+              "reason": {
+                "DeadId": {
+                  "id_status": "FANTASMA"
+                }
+              }
+            }
+          ]
+        }
       }
     }
   ]
