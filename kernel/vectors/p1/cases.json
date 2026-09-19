@@ -510,7 +510,7 @@
     },
     {
       "name": "T02_l3_duplicate_ref_ties_keep_file_order",
-      "incident": "T02 (p1-T02): PROPTEST_CASES=5000 breaks laws::l3_cheap_order — sort key (!keyless, ctx desc, ref) is not total when two catalog entries share ref+keyless+context; stable sort keeps FILE order. Pins today's tie behaviour; a tie-break fix must update this case consciously.",
+      "incident": "T02 (p1-T02): PROPTEST_CASES=5000 breaks laws::l3_cheap_order — sort key (!keyless, ctx desc, ref) is not total when two catalog entries share ref+keyless+context; stable sort keeps FILE order. Pins today's tie behaviour; a tie-break fix must update this case consciously. RE-PINNED under law L8/D-L3 (2026-09-19): catalog_order dedupes by ref keeping the first (= best-ranked; for this full-key tie, the file-order-first, provider null) occurrence — the second occurrence no longer enters the chain.",
       "request": "tier:cheap",
       "credentials": [
         "opencode"
@@ -549,12 +549,6 @@
               "ref": "dup-model",
               "id_status": "EXISTE",
               "provider": null,
-              "keyless": false
-            },
-            {
-              "ref": "dup-model",
-              "id_status": "EXISTE",
-              "provider": "opencode",
               "keyless": false
             }
           ],
@@ -603,7 +597,7 @@
     },
     {
       "name": "T03_duplicate_ref_gate_is_per_occurrence",
-      "incident": "T03 (kernel/test-specs/reports/T03.md): duplicate refs are gated per occurrence by their own provider/keyless; the shell reference collapses meta (last file occurrence wins) and would keep both copies",
+      "incident": "T03 (kernel/test-specs/reports/T03.md): duplicate refs are gated per occurrence by their own provider/keyless; the shell reference collapses meta (last file occurrence wins) and would keep both copies. RE-PINNED under law L8/D-L3 (2026-09-19): selection is per-ref — the best-ranked occurrence (ctx 1000000, provider null, passes the gate per D3/T09) enters; the opencode occurrence is deduped in catalog_order before the gate loop.",
       "request": "tier:cheap",
       "credentials": [],
       "registry": {
@@ -636,22 +630,13 @@
               "keyless": false
             }
           ],
-          "skipped": [
-            {
-              "ref": "dup/free-model",
-              "reason": {
-                "NoFileCredential": {
-                  "provider": "opencode"
-                }
-              }
-            }
-          ]
+          "skipped": []
         }
       }
     },
     {
       "name": "T03_duplicate_ref_shell_exit2_rust_still_ok",
-      "incident": "T03 (kernel/test-specs/reports/T03.md): on this input the shell reference exits 2 (collapsed meta gates every occurrence) while Rust keeps the keyless occurrence — decision 2026-09-19 in kernel/laws/P1.md",
+      "incident": "T03 (kernel/test-specs/reports/T03.md): on this input the shell reference exits 2 (collapsed meta gates every occurrence) while Rust keeps the keyless occurrence — decision 2026-09-19 in kernel/laws/P1.md. RE-PINNED under law L8/D-L3 (2026-09-19): the Rust expectation stands (D-L3.2); the later openrouter occurrence is deduped in catalog_order, so no skip is reported.",
       "request": "tier:cheap",
       "credentials": [],
       "registry": {
@@ -684,16 +669,7 @@
               "keyless": true
             }
           ],
-          "skipped": [
-            {
-              "ref": "dup/free-model",
-              "reason": {
-                "NoFileCredential": {
-                  "provider": "openrouter"
-                }
-              }
-            }
-          ]
+          "skipped": []
         }
       }
     },
@@ -861,7 +837,7 @@
     },
     {
       "name": "T05_duplicate_ref_keeps_both_legs",
-      "incident": "T05 catalog-13: two catalog entries with the same ref but different keyless BOTH enter the chain (parity with Python sorted, which keeps both); dedup is a candidate law, not a law yet",
+      "incident": "T05 catalog-13: two catalog entries with the same ref but different keyless BOTH enter the chain (parity with Python sorted, which keeps both); dedup is a candidate law, not a law yet. RE-PINNED under law L8 (T16)/D-L3 (2026-09-19): the name pins the SUPERSEDED parity behaviour — Rust now dedupes by ref keeping the first occurrence in catalog_order; here the keyless leg sorts first and is the one kept.",
       "request": "tier:cheap",
       "credentials": [
         "openrouter"
@@ -899,12 +875,6 @@
               "id_status": "EXISTE",
               "provider": "opencode",
               "keyless": true
-            },
-            {
-              "ref": "dup",
-              "id_status": "EXISTE",
-              "provider": "openrouter",
-              "keyless": false
             }
           ],
           "skipped": []
@@ -953,7 +923,7 @@
     },
     {
       "name": "T05_empty_provider_is_allowlist_violation",
-      "incident": "T05 catalog-16 divergence vs shell: provider \"\" (empty string, not null) is Some(\"\") in Rust and fails the allowlist loudly; run-with-fallback.sh coerces \"\" to no provider (m.get(\"provider\") or \"\") and skips the credential gate. Rust behaviour pinned here (Decisions 2026-09-19)",
+      "incident": "T05 catalog-16 divergence vs shell: provider \"\" (empty string, not null) is Some(\"\") in Rust and fails the allowlist loudly; run-with-fallback.sh coerces \"\" to no provider (m.get(\"provider\") or \"\") and skips the credential gate. Rust behaviour pinned here (Decisions 2026-09-19). RE-PINNED under T14 (2026-09-19): \"\" normalizes to null at parse time (decision T14 supersedes the \"real provider\" stance), so the entry resolves with provider null and passes the gates per D3/T09 — exact Python/shell parity",
       "request": "tier:cheap",
       "credentials": [
         "opencode",
@@ -971,7 +941,17 @@
         ]
       },
       "expect": {
-        "error": "ProviderOutsideAllowlist"
+        "ok": {
+          "entries": [
+            {
+              "ref": "m",
+              "id_status": "",
+              "provider": null,
+              "keyless": false
+            }
+          ],
+          "skipped": []
+        }
       }
     },
     {
@@ -1111,6 +1091,56 @@
         "ok": {
           "entries": [
             {"ref": "nemotron-3-ultra-free", "id_status": "EXISTE", "provider": null, "keyless": true}
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T16_duplicate_ref_first_occurrence_wins",
+      "incident": "T16 (kernel/test-specs/reports/T16.md), law L8: a chain never contains the same ref twice — the first occurrence in catalog_order decides the ref's fate. Deliberate divergence from Python (sorted keeps both legs) and it narrows T03's per-occurrence decision; why: retrying the same ref — possibly the same dead ref — twice is the E5 smell. RE-PINNED under D-L3 (2026-09-19): the dedup lives in catalog_order itself, so the later occurrence never reaches the gate loop and no DuplicateRef skip is reported on this route.",
+      "request": "tier:cheap",
+      "credentials": [
+        "openrouter"
+      ],
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "dup/model",
+            "provider": "opencode",
+            "keyless": true,
+            "context_length": 1000
+          },
+          {
+            "ref": "other/model",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 2000
+          },
+          {
+            "ref": "dup/model",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 999999
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "dup/model",
+              "id_status": "",
+              "provider": "opencode",
+              "keyless": true
+            },
+            {
+              "ref": "other/model",
+              "id_status": "",
+              "provider": "openrouter",
+              "keyless": false
+            }
           ],
           "skipped": []
         }

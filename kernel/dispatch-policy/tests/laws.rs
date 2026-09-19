@@ -3,7 +3,7 @@
 
 use dispatch_policy::{
     catalog_order, resolve, Allowlist, CatalogModel, Chain, ChainEntry, FreeCatalog, Inputs, PolicyError, Registry,
-    RegistryModel, DEAD_ID_STATUSES, US,
+    RegistryModel, SkipReason, DEAD_ID_STATUSES, US,
 };
 use proptest::prelude::*;
 use std::collections::BTreeSet;
@@ -54,7 +54,111 @@ fn registry_for(cat: &[CatalogModel], statuses: &[Option<String>]) -> Registry {
     }
 }
 
+/// Catalog whose refs come from a tiny pool, so duplicate refs are frequent
+/// (law L8 needs them; `catalog_model` alone almost never repeats a ref).
+/// Small context range on purpose: ties interact with the stable sort that
+/// defines which duplicate is "first".
+fn dup_catalog() -> impl Strategy<Value = Vec<CatalogModel>> {
+    (
+        proptest::collection::vec("[a-z]{1,3}", 1..3),
+        proptest::collection::vec(any::<bool>(), 0..8),
+        proptest::collection::vec(proptest::option::of(0u64..4), 0..8),
+    )
+        .prop_map(|(pool, keyless, ctx)| {
+            keyless
+                .iter()
+                .zip(ctx.iter().cycle())
+                .enumerate()
+                .map(|(i, (k, c))| CatalogModel {
+                    r#ref: pool[i % pool.len()].clone(),
+                    provider: Some("opencode".into()),
+                    keyless: *k,
+                    context_length: *c,
+                })
+                .collect()
+        })
+}
+
+/// Generator for the restated L3 (D-L3.3): duplicate refs are FREQUENT in
+/// the input (they must be handled), but two occurrences of one ref never
+/// tie on the full sort key — `context_length` is the distinct per-entry
+/// index — so "keep the first (= best-ranked)" is content-determined and
+/// the output is a pure function of the catalog as a set. The degenerate
+/// full-key-tie class (same ref/keyless/context, different provider) stays
+/// pinned at vector level by `T02_l3_duplicate_ref_ties_keep_file_order`.
+fn dup_ref_catalog() -> impl Strategy<Value = Vec<CatalogModel>> {
+    (
+        proptest::collection::vec("[a-z]{1,3}", 1..3),
+        proptest::collection::vec(any::<bool>(), 0..10),
+        proptest::collection::vec(
+            proptest::option::of(prop_oneof![Just("opencode".to_string()), Just("openrouter".to_string())]),
+            0..10,
+        ),
+    )
+        .prop_map(|(pool, keyless, provider)| {
+            let pick = |i: usize| provider.get(i % provider.len().max(1)).cloned().flatten();
+            keyless
+                .iter()
+                .enumerate()
+                .map(|(i, k)| CatalogModel {
+                    r#ref: pool[i % pool.len()].clone(),
+                    provider: pick(i),
+                    keyless: *k,
+                    context_length: Some(i as u64),
+                })
+                .collect()
+        })
+}
+
 proptest! {
+    /// L8 (E5): a chain never contains the same ref twice; the first
+    /// occurrence in `catalog_order` decides the ref's fate, and every later
+    /// occurrence is reported as a `DuplicateRef` skip — a dead or
+    /// uncredited first occurrence is never rescued by a duplicate.
+    #[test]
+    fn l8_first_occurrence_wins(
+        cat in dup_catalog(),
+        creds in proptest::collection::btree_set(Just("opencode".to_string()), 0..2),
+    ) {
+        let reg = registry_for(&cat, &[Some("EXISTE".into())]);
+        let catalog = FreeCatalog { kind: Some("free-catalog/1".into()), models: cat.clone() };
+        let allowlist = allow();
+        let inputs = Inputs { registry: &reg, catalog: Some(&catalog), allowlist: &allowlist, credentials: &creds };
+        match resolve("tier:cheap", &inputs) {
+            Ok(res) => {
+                let refs: Vec<&str> = res.chain.entries().iter().map(|e| e.r#ref.as_str()).collect();
+                let unique: std::collections::BTreeSet<&str> = refs.iter().copied().collect();
+                prop_assert_eq!(unique.len(), refs.len(), "duplicate ref in chain: {:?}", refs);
+                // Accounting: with every id alive, each ref contributes
+                // exactly (occurrences - 1) DuplicateRef skips.
+                let ordered = catalog_order(&cat);
+                let mut first: std::collections::BTreeMap<&str, &CatalogModel> = std::collections::BTreeMap::new();
+                let mut count: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+                for m in ordered.iter() {
+                    first.entry(m.r#ref.as_str()).or_insert(m);
+                    *count.entry(m.r#ref.as_str()).or_insert(0) += 1;
+                }
+                let mut dup_skips: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+                for s in &res.skipped {
+                    if let SkipReason::DuplicateRef {} = s.reason {
+                        *dup_skips.entry(s.r#ref.as_str()).or_insert(0) += 1;
+                    }
+                }
+                for (r, n) in &count {
+                    prop_assert_eq!(dup_skips.get(r).copied().unwrap_or(0), n - 1, "dup accounting for {:?}", r);
+                }
+                // First occurrence wins: a chain entry carries the first
+                // occurrence's metadata, never a later duplicate's.
+                for e in res.chain.entries() {
+                    let f = first[e.r#ref.as_str()];
+                    prop_assert_eq!(e.keyless, f.keyless, "not the first occurrence for {:?}", e.r#ref);
+                    prop_assert_eq!(&e.provider, &f.provider, "not the first occurrence for {:?}", e.r#ref);
+                }
+            }
+            Err(PolicyError::NoLiveRef { .. }) | Err(PolicyError::EmptyAfterCredentialGate { .. }) => {}
+            Err(other) => prop_assert!(false, "unexpected error {:?}", other),
+        }
+    }
     /// L1 (e82f008): the wire format round-trips exactly — no field can be
     /// read as another. Positional text is only ever produced/consumed by
     /// these two functions.
@@ -74,17 +178,35 @@ proptest! {
         prop_assert!(rejected);
     }
 
-    /// L3 (E5-M4/R1): keyless first, then larger context, then ref ascending;
-    /// and the order is a pure function of the content (determinism).
+    /// L3, restated per D-L3 (DECISIONS-wave1-2, 2026-09-19): the ordered
+    /// chain is a function of the set of catalog entries; refs are unique
+    /// (L8); for any two entries in the output the key is strictly
+    /// increasing. `catalog_order` sorts by the key, then dedupes by `ref`
+    /// keeping the first (= the best-ranked occurrence). The generator
+    /// keeps duplicate refs in the input (they must be handled); the
+    /// assertions are on the deduped output.
     #[test]
-    fn l3_cheap_order(cat in proptest::collection::vec(catalog_model(), 0..12)) {
+    fn l3_cheap_order(cat in dup_ref_catalog()) {
         let ordered = catalog_order(&cat);
-        for w in ordered.windows(2) {
-            let (a, b) = (w[0], w[1]);
-            let ka = (!a.keyless, std::cmp::Reverse(a.context_length.unwrap_or(0)), a.r#ref.clone());
-            let kb = (!b.keyless, std::cmp::Reverse(b.context_length.unwrap_or(0)), b.r#ref.clone());
-            prop_assert!(ka <= kb, "{:?} before {:?}", a, b);
+        // refs are unique in the output (L8 as L3's precondition).
+        let mut seen: BTreeSet<&str> = BTreeSet::new();
+        for m in &ordered {
+            prop_assert!(seen.insert(m.r#ref.as_str()), "duplicate ref in deduped output: {:?}", m.r#ref);
         }
+        // the key is STRICTLY increasing along the deduped output.
+        let key = |m: &CatalogModel| (!m.keyless, std::cmp::Reverse(m.context_length.unwrap_or(0)), m.r#ref.clone());
+        for w in ordered.windows(2) {
+            prop_assert!(key(w[0]) < key(w[1]), "key not strictly increasing: {:?} then {:?}", w[0], w[1]);
+        }
+        // the kept occurrence is the best-ranked of its ref in the input.
+        for m in &ordered {
+            for x in cat.iter().filter(|x| x.r#ref == m.r#ref) {
+                prop_assert!(key(m) <= key(x), "kept occurrence not best-ranked for ref {:?}", m.r#ref);
+            }
+        }
+        // function of the set: reversing the input file does not move the
+        // output (refs are distinct and the key is a strict total order on
+        // them, so sort+dedup is content-determined).
         let mut shuffled = cat.clone();
         shuffled.reverse();
         let again: Vec<_> = catalog_order(&shuffled).into_iter().cloned().collect();

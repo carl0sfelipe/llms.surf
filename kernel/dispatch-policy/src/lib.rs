@@ -12,6 +12,9 @@
 //! - L4  non-keyless entry requires a file credential for its provider (E5-M5)
 //! - L5  free path never reaches a provider outside the allowlist (E5-M6/R4)
 //! - L6  a chain is never empty; failure is a typed error, never a default (E5)
+//! - L8  a chain never contains the same ref twice; the first occurrence in
+//!   `catalog_order` decides the ref's fate, later occurrences are reported
+//!   (E5: retrying the same ref — possibly the same dead ref — is the smell)
 
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
@@ -202,6 +205,10 @@ impl Chain {
 pub enum SkipReason {
     DeadId { id_status: String },
     NoFileCredential { provider: String },
+    /// L8: a later catalog occurrence of a ref already seen. Dedup precedes
+    /// the gates, so a dead or uncredited first occurrence is never rescued
+    /// by a duplicate further down the file (E5 retry smell).
+    DuplicateRef {},
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -275,11 +282,18 @@ fn status_map(reg: &Registry) -> BTreeMap<&str, &str> {
         .collect()
 }
 
-/// L3: keyless first, larger context first, then ref ascending. Pure and
-/// total over the catalog content — byte-deterministic.
+/// L3 (restated per D-L3, 2026-09-19): the ordered chain is a function of
+/// the set of catalog entries — sort by the key (keyless first, larger
+/// context first, ref ascending), then dedupe by `ref` keeping the first
+/// (= the best-ranked occurrence; for full sort-key ties, the file-order
+/// first via the stable sort). Output refs are distinct (L8 is a
+/// precondition of L3), so the key is a strict total order on the output
+/// and the result is byte-deterministic.
 pub fn catalog_order(models: &[CatalogModel]) -> Vec<&CatalogModel> {
     let mut v: Vec<&CatalogModel> = models.iter().filter(|m| !m.r#ref.is_empty()).collect();
     v.sort_by_key(|m| (!m.keyless, Reverse(m.context_length.unwrap_or(0)), m.r#ref.clone()));
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    v.retain(|m| seen.insert(m.r#ref.as_str()));
     v
 }
 
@@ -291,8 +305,15 @@ fn cheap_chain(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
     let mut entries = Vec::new();
     let mut skipped = Vec::new();
     let mut live_before_credential_gate = 0usize;
+    // L8: the first occurrence of a ref in catalog_order decides its fate;
+    // every later occurrence is reported and never reaches the gates.
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
 
     for m in catalog_order(&cat.models) {
+        if !seen.insert(m.r#ref.as_str()) {
+            skipped.push(Skipped { r#ref: m.r#ref.clone(), reason: SkipReason::DuplicateRef {} });
+            continue;
+        }
         let status = statuses.get(m.r#ref.as_str()).copied().unwrap_or("");
         if is_dead(status) {
             skipped.push(Skipped { r#ref: m.r#ref.clone(), reason: SkipReason::DeadId { id_status: status.into() } });
@@ -430,6 +451,10 @@ fn direct(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
             keyless: true,
         });
     }
+    // L8 holds for every chain. The direct path has no skip channel, so a
+    // ref repeated in the fallback list collapses to its first occurrence.
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    entries.retain(|e| seen.insert(e.r#ref.clone()));
     Ok(Resolution { chain: Chain::new(request, entries)?, skipped: vec![] })
 }
 

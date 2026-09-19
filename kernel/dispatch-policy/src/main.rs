@@ -90,6 +90,10 @@ fn main() {
                         "  ↳ pulando {} — provider '{}' sem credencial em arquivo (E5-M5: env herdada não conta)",
                         s.r#ref, provider
                     ),
+                    SkipReason::DuplicateRef {} => eprintln!(
+                        "WARN: catálogo free cita '{}' mais de uma vez — a primeira ocorrência em catalog_order vence (L8)",
+                        s.r#ref
+                    ),
                 }
             }
             match format.as_str() {
