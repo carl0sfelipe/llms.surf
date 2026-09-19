@@ -1,6 +1,6 @@
 # llms.surf
 
-> Local dispatcher. Mechanical oracle. Formerly Oracfit. Public cut v3.5.0.
+> Local dispatcher. Mechanical oracle. Formerly Oracfit. Public cut v4.1.0.
 > Nothing ships on a model's word  -  not even the judge's. LICENSE is proprietary.
 
 This file is the agent surface. Humans get the HTML tour at index.html?as=human.
@@ -46,8 +46,8 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 
 ## Counts (from this git tree  -  tests/test-site-honesty.sh)
 
-- version: 3.5.0
-- incidents: 114 (excludes incidents/uso/)
+- version: 4.1.0
+- incidents: 115 (excludes incidents/uso/)
 - models in registry: 27,
 - modes: 21
 - adapters: 8 + 1 stub

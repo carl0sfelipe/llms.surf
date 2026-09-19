@@ -17,12 +17,12 @@ Orchestrate work across AI models from the CLIs you already have. Code — not t
 - Your expensive plan does the 1% that needs a brain; free models do the other 99% for cents.
 - Every task carries an **oracle**: a real command that only passes when the work exists.
 - Every run shows where the money went — per-provider token accounting, local, yours.
-- Every failure becomes an incident; every recurring incident becomes code that refuses. **114 postmortems in this cut.**
+- Every failure becomes an incident; every recurring incident becomes code that refuses. **115 postmortems in this cut.**
 - Even the AI judge is watched: one write, and code kills it.
 
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.5.0-brightgreen.svg)](VERSION)
-[![Incidents](https://img.shields.io/badge/incidents%E2%86%92mechanisms-114-orange.svg)](incidents/)
+[![Version](https://img.shields.io/badge/version-4.1.0-brightgreen.svg)](VERSION)
+[![Incidents](https://img.shields.io/badge/incidents%E2%86%92mechanisms-115-orange.svg)](incidents/)
 
 ---
 
@@ -70,7 +70,7 @@ Two nights made the law.
 An AI critic, sent to review work *read-only*, committed the work itself and
 hung the orchestrator for two hours. Another night, a dispatched model
 touched its own orchestrator's STOP file and shut down the whole run at
-07:54 — no human involved. Both are postmortems in this repo. So are 112
+07:54 — no human involved. Both are postmortems in this repo. So are 113
 others: the framework's memory is `incidents/`, its immune system is `bin/`.
 
 In July this repo had 35 written rules. Then we measured: **every recorded
@@ -114,7 +114,7 @@ resets. Only real silence dies.
   ledger.
 - **Usage hub** — token/quota tracking from local sources only, so the
   orchestrator picks the cheapest viable model per task.
-- **The memory** — 114 incident postmortems in this cut, 27 models in the registry,
+- **The memory** — 115 incident postmortems in this cut, 27 models in the registry,
   21 modes, 8 adapters + stub, 37 test suites guarding the guards.
 
 ---
@@ -144,7 +144,7 @@ bin/llms-surf gui                        # watch it live, score it after
 ```
 
 Adding your own pipeline is one YAML file (`llms-surf mode init <id>`).
-Every failure you hit: `bin/incident.sh new` — that's how the 114 in this cut happened.
+Every failure you hit: `bin/incident.sh new` — that's how the 115 in this cut happened.
 
 ---
 
@@ -155,7 +155,7 @@ Every failure you hit: `bin/incident.sh new` — that's how the 114 in this cut 
 - A rule without a mechanism is debt, not protection.
 - The critic is read-only because code kills it on the first write — not because the prompt asked nicely.
 - Rejected without naming the biggest gap? That's not rigor, that's a broken contract.
-- Every failure becomes an incident; every incident becomes a mechanism. **114 in this cut.**
+- Every failure becomes an incident; every incident becomes a mechanism. **115 in this cut.**
 
 ---
 
@@ -167,6 +167,6 @@ Every failure you hit: `bin/incident.sh new` — that's how the 114 in this cut 
 | [docs/v4-plan.md](docs/v4-plan.md) | v4: pipeline, swell roadmap, honesty tiers |
 | [docs/SMOKE-WITH-FIRE.md](docs/SMOKE-WITH-FIRE.md) | After v1 is live: Fable smokes the site, then dispatches GLM |
 | [site/](site/) | Public marketing pages |
-| [incidents/](incidents/) | 114 failures that became permanent protections |
+| [incidents/](incidents/) | 115 failures that became permanent protections |
 
 Proprietary — all rights reserved · **llms.surf — Carlos Felipe** · pattern: [gauntlet-loop](https://github.com/robonuggets/gauntlet-loop)

@@ -25,11 +25,13 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ORACFIT="$REPO_ROOT/bin/oracfit"
+# shellcheck source=lib-gui-http.sh
+source "$REPO_ROOT/tests/lib-gui-http.sh"
 pass=0
 fail=0
 
 ok() { echo "  PASS: $1"; pass=$((pass + 1)); }
-not() { echo "  FAIL: $1"; fail=$((fail + 1)); }
+not() { echo "  FAIL: $1"; fail=$((fail + 1)); gui_dump_log "${SRV_LOG:-}"; }
 
 WORK=$(mktemp -d /tmp/test-gui.XXXXXX)
 export ORACFIT_CENTRAL_LEDGER="$WORK/central.jsonl"
@@ -104,18 +106,13 @@ python3 "$REPO_ROOT/bin/oracfit-panel-server.py" \
   --port 0 --bind 127.0.0.1 > "$SRV_LOG" 2>&1 &
 SERVER_PID=$!
 
-PORT=""
-for _ in $(seq 1 40); do
-  PORT=$(grep -oE 'http://127\.0\.0\.1:[0-9]+' "$SRV_LOG" | head -1 | grep -oE '[0-9]+$' || true)
-  [ -n "$PORT" ] && curl -sf "http://127.0.0.1:$PORT/home.html" >/dev/null 2>&1 && break
-  sleep 0.2
-done
+PORT=$(gui_wait_port "$SRV_LOG" home.html || true)
 BASE="http://127.0.0.1:$PORT"
-[ -n "$PORT" ] || { not "servidor não subiu (log: $SRV_LOG)"; cat "$SRV_LOG"; exit 1; }
+[ -n "$PORT" ] || { not "servidor não subiu (log: $SRV_LOG)"; exit 1; }
 
 echo "--- T1: páginas respondem 200 com marcador ---"
 check_page() { # $1=página $2=marcador
-  body=$(curl -sf "$BASE/$1" || true)
+  body=$(gui_get "$BASE/$1" || true)
   if echo "$body" | grep -q -- "$2"; then ok "$1 (marcador '$2')"; else not "$1 sem marcador '$2'"; fi
 }
 check_page home.html "Agora"
@@ -129,7 +126,7 @@ check_page gui.css "bg-default"
 check_page gui.js "renderCapped"
 
 echo "--- T2: /api/rings extrai do ledger do alvo ---"
-RINGS=$(curl -sf "$BASE/api/rings")
+RINGS=$(gui_get "$BASE/api/rings")
 n=$(echo "$RINGS" | python3 -c "import json,sys;d=json.load(sys.stdin);print(len(d['rings']))")
 ts=$(echo "$RINGS" | python3 -c "import json,sys;print(json.load(sys.stdin)['to_score'])")
 hyp=$(echo "$RINGS" | python3 -c "import json,sys;print(json.load(sys.stdin)['rings'][0]['hypothesis'])")
@@ -160,7 +157,7 @@ if echo "$plain" | grep -qE "4[.,]6|revisor previu|nota prevista"; then
 else
   ok "plain não vaza a previsão do critic"
 fi
-curl -sf "$BASE/hitl.html" | grep -q "Em português claro" \
+gui_get "$BASE/hitl.html" | grep -q "Em português claro" \
   && ok "hitl.html renderiza o rótulo 'Em português claro'" || not "rótulo ausente no hitl.html"
 
 echo "--- T4: POST score válido grava e devolve delta ---"
@@ -231,12 +228,8 @@ python3 "$REPO_ROOT/bin/oracfit-panel-server.py" \
   --panel-dir "$REPO_ROOT/panel" --logs-dir "$LOGS" --oracfit-root "$FIXROOT" \
   --ring-target "$ALVO2" --port 0 --bind 127.0.0.1 > "$SRV2_LOG" 2>&1 &
 SERVER2_PID=$!
-PORT2=""
-for _ in $(seq 1 40); do
-  PORT2=$(grep -oE 'http://127\.0\.0\.1:[0-9]+' "$SRV2_LOG" | head -1 | grep -oE '[0-9]+$' || true)
-  [ -n "$PORT2" ] && curl -sf "http://127.0.0.1:$PORT2/api/rings" >/dev/null 2>&1 && break
-  sleep 0.2
-done
+PORT2=$(gui_wait_port "$SRV2_LOG" api/rings || true)
+[ -n "$PORT2" ] || { not "servidor 2 não subiu"; gui_dump_log "$SRV2_LOG"; }
 RES2=$(curl -s -X POST "http://127.0.0.1:$PORT2/api/ring-score" \
   -H 'Content-Type: application/json' -d '{"ring":"H-1","real":5}')
 echo "$RES2" | python3 -c "
@@ -273,7 +266,7 @@ assert d['error'].strip() not in ('', 'exit 1', 'exit 2'), d
 kill "$SERVER2_PID" 2>/dev/null; wait "$SERVER2_PID" 2>/dev/null
 
 echo "--- T6: dispatches declara as 3 fontes (regra 38) ---"
-DISP=$(curl -sf "$BASE/api/gui/dispatches")
+DISP=$(gui_get "$BASE/api/gui/dispatches")
 echo "$DISP" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
@@ -288,7 +281,7 @@ assert 'smoke-dispatch' in tasks and 'esc-1' in tasks, tasks
   || not "declaração de fontes errada: $(echo "$DISP" | head -c 300)"
 
 echo "--- T7: /api/gui/rings agrupa central por run ---"
-curl -sf "$BASE/api/gui/rings" | python3 -c "
+gui_get "$BASE/api/gui/rings" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 assert d['groups'], 'sem grupos'
@@ -298,7 +291,7 @@ assert {r['ring'] for r in g['rings']} == {'G-1', 'G-2'}, g
 " && ok "grupo do run com G-1/G-2 fechados" || not "agrupamento central errado"
 
 echo "--- T8: registry lê fixtures ---"
-curl -sf "$BASE/api/gui/registry" | python3 -c "
+gui_get "$BASE/api/gui/registry" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 ms = {m['id']: m for m in d['models']}
