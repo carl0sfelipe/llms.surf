@@ -25,6 +25,21 @@ pub const DEAD_ID_STATUSES: [&str; 3] = ["FANTASMA", "NAO-ENCONTRADO", "NAO-VERI
 
 // ---------------------------------------------------------------- inputs
 
+/// T14 decision (2026-09-19): `provider: ""` means "no provider".
+/// Python (`lib-oracfit-mode-loader.py`) treats `""` as falsy and every
+/// producer in the tree emits `""` (or omits the field) for unknown;
+/// plain `Option<String>` would deserialize `""` as `Some("")`, which then
+/// trips the L5 allowlist gate as a provider outside the allowlist — the
+/// divergence proven by T05 §16. Normalized at the parse boundary, for
+/// every `provider` field in this crate.
+fn empty_provider_is_none<'de, D>(d: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let raw: Option<String> = serde::Deserialize::deserialize(d)?;
+    Ok(raw.filter(|s| !s.is_empty()))
+}
+
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Registry {
     #[serde(default)]
@@ -35,7 +50,7 @@ pub struct Registry {
 pub struct RegistryModel {
     #[serde(default)]
     pub id: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_provider_is_none")]
     pub provider: Option<String>,
     #[serde(default)]
     pub tier: Option<String>,
@@ -61,7 +76,7 @@ pub struct FreeCatalog {
 pub struct CatalogModel {
     #[serde(rename = "ref", default)]
     pub r#ref: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_provider_is_none")]
     pub provider: Option<String>,
     #[serde(default)]
     pub keyless: bool,
@@ -93,7 +108,9 @@ pub struct ChainEntry {
     pub r#ref: String,
     /// Stamped id_status from the registry, or empty when unknown there.
     pub id_status: String,
-    /// Who serves this ref. `None` = unknown (never the string "1": e82f008).
+    /// Who serves this ref. `None` = unknown (never the string "1": e82f008,
+    /// never `Some("")`: T14).
+    #[serde(default, deserialize_with = "empty_provider_is_none")]
     pub provider: Option<String>,
     /// `true` = zero-key leg, credential gate does not apply.
     pub keyless: bool,

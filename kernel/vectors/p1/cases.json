@@ -1095,6 +1095,26 @@
           ]
         }
       }
+    },
+    {
+      "name": "T14_empty_provider_is_none",
+      "incident": "T05 §16 divergence: Rust read provider \"\" as Some(\"\") → ProviderOutsideAllowlist while Python treats \"\" as no provider. Decision T14 (2026-09-19): \"\" normalizes to null at parse time.",
+      "request": "tier:cheap",
+      "credentials": [],
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {"ref": "nemotron-3-ultra-free", "provider": "", "keyless": true, "context_length": null}
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "nemotron-3-ultra-free", "id_status": "EXISTE", "provider": null, "keyless": true}
+          ],
+          "skipped": []
+        }
+      }
     }
   ]
 }
