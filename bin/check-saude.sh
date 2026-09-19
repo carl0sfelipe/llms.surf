@@ -53,6 +53,11 @@ checar "superfície pública sem dado pessoal" bash bin/check-publico.sh --ofici
 checar "site público: números honestos"   bash tests/test-site-honesty.sh
 [ -d kernel ] && checar "kernel: cargo test (P1)" bash -c 'cd kernel && cargo test --release'   # T12: roda só quando kernel/ existe (padrão do bloco Fantasma)
 [ -f core/modes/kernel_test.yaml ] && checar "T20 kernel_test modo + ledger" bash bin/test-kernel-test-mode.sh
+# D-NEXT-3: o medidor do cutover LLMS_KERNEL=on. Self-test sempre; a leitura
+# do ledger real só quando existe linha em shadow (padrão do bloco Fantasma).
+checar "shadow ledger: medidor (D-NEXT-3)" bash bin/test-check-shadow-ledger.sh
+[ -f ledger/ledger.jsonl ] && grep -q kernel_shadow_diff ledger/ledger.jsonl \
+  && checar "shadow ledger: diff 0 no tráfego real" bash bin/check-shadow-ledger.sh
 
 echo ""
 echo "── Sintaxe ───────────────────────────────────────────"
