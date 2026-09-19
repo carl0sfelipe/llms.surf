@@ -4,45 +4,155 @@
   "fixtures": {
     "registry": {
       "models": [
-        {"id": "nemotron-3-ultra-free", "provider": "zen", "tier": "free", "id_status": "EXISTE"},
-        {"id": "mimo-v2.5-free", "provider": "zen", "tier": "free", "id_status": "EXISTE"},
-        {"id": "google/gemma-4-31b-it:free", "provider": "openrouter", "tier": "free", "id_status": "EXISTE"},
-        {"id": "cohere/north-mini-code:free", "provider": "openrouter", "tier": "free", "id_status": "EXISTE"},
-        {"id": "ghost-model:free", "provider": "openrouter", "tier": "free", "id_status": "FANTASMA"},
-        {"id": "deepseek-v4-pro", "provider": "deepseek", "tier": "paid", "id_status": "EXISTE", "fallback": ["deepseek-v4-flash-openrouter"]},
-        {"id": "deepseek-v4-flash-openrouter", "provider": "openrouter", "tier": "paid", "id_status": "EXISTE", "cli_hints": {"opencode": "openrouter/deepseek/deepseek-v4-flash"}},
-        {"id": "claude-sonnet-5", "provider": "anthropic", "tier": "paid", "id_status": "EXISTE"},
-        {"id": "gemini-3.6-flash", "provider": "google", "tier": "paid", "id_status": "PROVAVEL"}
+        {
+          "id": "nemotron-3-ultra-free",
+          "provider": "zen",
+          "tier": "free",
+          "id_status": "EXISTE"
+        },
+        {
+          "id": "mimo-v2.5-free",
+          "provider": "zen",
+          "tier": "free",
+          "id_status": "EXISTE"
+        },
+        {
+          "id": "google/gemma-4-31b-it:free",
+          "provider": "openrouter",
+          "tier": "free",
+          "id_status": "EXISTE"
+        },
+        {
+          "id": "cohere/north-mini-code:free",
+          "provider": "openrouter",
+          "tier": "free",
+          "id_status": "EXISTE"
+        },
+        {
+          "id": "ghost-model:free",
+          "provider": "openrouter",
+          "tier": "free",
+          "id_status": "FANTASMA"
+        },
+        {
+          "id": "deepseek-v4-pro",
+          "provider": "deepseek",
+          "tier": "paid",
+          "id_status": "EXISTE",
+          "fallback": [
+            "deepseek-v4-flash-openrouter"
+          ]
+        },
+        {
+          "id": "deepseek-v4-flash-openrouter",
+          "provider": "openrouter",
+          "tier": "paid",
+          "id_status": "EXISTE",
+          "cli_hints": {
+            "opencode": "openrouter/deepseek/deepseek-v4-flash"
+          }
+        },
+        {
+          "id": "claude-sonnet-5",
+          "provider": "anthropic",
+          "tier": "paid",
+          "id_status": "EXISTE"
+        },
+        {
+          "id": "gemini-3.6-flash",
+          "provider": "google",
+          "tier": "paid",
+          "id_status": "PROVAVEL"
+        }
       ]
     },
     "catalog": {
       "kind": "free-catalog/1",
       "models": [
-        {"ref": "google/gemma-4-31b-it:free", "provider": "openrouter", "keyless": false, "context_length": 262144},
-        {"ref": "mimo-v2.5-free", "provider": "opencode", "keyless": true, "context_length": null},
-        {"ref": "cohere/north-mini-code:free", "provider": "openrouter", "keyless": false, "context_length": 256000},
-        {"ref": "ghost-model:free", "provider": "openrouter", "keyless": false, "context_length": 999999},
-        {"ref": "nemotron-3-ultra-free", "provider": "opencode", "keyless": true, "context_length": null}
+        {
+          "ref": "google/gemma-4-31b-it:free",
+          "provider": "openrouter",
+          "keyless": false,
+          "context_length": 262144
+        },
+        {
+          "ref": "mimo-v2.5-free",
+          "provider": "opencode",
+          "keyless": true,
+          "context_length": null
+        },
+        {
+          "ref": "cohere/north-mini-code:free",
+          "provider": "openrouter",
+          "keyless": false,
+          "context_length": 256000
+        },
+        {
+          "ref": "ghost-model:free",
+          "provider": "openrouter",
+          "keyless": false,
+          "context_length": 999999
+        },
+        {
+          "ref": "nemotron-3-ultra-free",
+          "provider": "opencode",
+          "keyless": true,
+          "context_length": null
+        }
       ]
     },
-    "allowlist": {"providers": ["opencode", "openrouter"]}
+    "allowlist": {
+      "providers": [
+        "opencode",
+        "openrouter"
+      ]
+    }
   },
   "cases": [
     {
       "name": "cheap_with_openrouter_credential",
       "incident": "E5-M4/R1 ordering; E5-M2 dead id skipped",
       "request": "tier:cheap",
-      "credentials": ["openrouter"],
+      "credentials": [
+        "openrouter"
+      ],
       "expect": {
         "ok": {
           "entries": [
-            {"ref": "mimo-v2.5-free", "id_status": "EXISTE", "provider": "opencode", "keyless": true},
-            {"ref": "nemotron-3-ultra-free", "id_status": "EXISTE", "provider": "opencode", "keyless": true},
-            {"ref": "google/gemma-4-31b-it:free", "id_status": "EXISTE", "provider": "openrouter", "keyless": false},
-            {"ref": "cohere/north-mini-code:free", "id_status": "EXISTE", "provider": "openrouter", "keyless": false}
+            {
+              "ref": "mimo-v2.5-free",
+              "id_status": "EXISTE",
+              "provider": "opencode",
+              "keyless": true
+            },
+            {
+              "ref": "nemotron-3-ultra-free",
+              "id_status": "EXISTE",
+              "provider": "opencode",
+              "keyless": true
+            },
+            {
+              "ref": "google/gemma-4-31b-it:free",
+              "id_status": "EXISTE",
+              "provider": "openrouter",
+              "keyless": false
+            },
+            {
+              "ref": "cohere/north-mini-code:free",
+              "id_status": "EXISTE",
+              "provider": "openrouter",
+              "keyless": false
+            }
           ],
           "skipped": [
-            {"ref": "ghost-model:free", "reason": {"DeadId": {"id_status": "FANTASMA"}}}
+            {
+              "ref": "ghost-model:free",
+              "reason": {
+                "DeadId": {
+                  "id_status": "FANTASMA"
+                }
+              }
+            }
           ]
         }
       }
@@ -55,13 +165,44 @@
       "expect": {
         "ok": {
           "entries": [
-            {"ref": "mimo-v2.5-free", "id_status": "EXISTE", "provider": "opencode", "keyless": true},
-            {"ref": "nemotron-3-ultra-free", "id_status": "EXISTE", "provider": "opencode", "keyless": true}
+            {
+              "ref": "mimo-v2.5-free",
+              "id_status": "EXISTE",
+              "provider": "opencode",
+              "keyless": true
+            },
+            {
+              "ref": "nemotron-3-ultra-free",
+              "id_status": "EXISTE",
+              "provider": "opencode",
+              "keyless": true
+            }
           ],
           "skipped": [
-            {"ref": "ghost-model:free", "reason": {"DeadId": {"id_status": "FANTASMA"}}},
-            {"ref": "google/gemma-4-31b-it:free", "reason": {"NoFileCredential": {"provider": "openrouter"}}},
-            {"ref": "cohere/north-mini-code:free", "reason": {"NoFileCredential": {"provider": "openrouter"}}}
+            {
+              "ref": "ghost-model:free",
+              "reason": {
+                "DeadId": {
+                  "id_status": "FANTASMA"
+                }
+              }
+            },
+            {
+              "ref": "google/gemma-4-31b-it:free",
+              "reason": {
+                "NoFileCredential": {
+                  "provider": "openrouter"
+                }
+              }
+            },
+            {
+              "ref": "cohere/north-mini-code:free",
+              "reason": {
+                "NoFileCredential": {
+                  "provider": "openrouter"
+                }
+              }
+            }
           ]
         }
       }
@@ -70,40 +211,83 @@
       "name": "cheap_without_catalog_is_loud",
       "incident": "E5: never degrade to hardcoded defaults",
       "request": "tier:cheap",
-      "credentials": ["openrouter"],
+      "credentials": [
+        "openrouter"
+      ],
       "catalog": null,
-      "expect": {"error": "CatalogMissing"}
+      "expect": {
+        "error": "CatalogMissing"
+      }
     },
     {
       "name": "cheap_all_dead_is_loud",
       "incident": "E5-M2: zero live ref = exit 2",
       "request": "tier:cheap",
-      "credentials": ["openrouter"],
-      "catalog": {"kind": "free-catalog/1", "models": [
-        {"ref": "ghost-model:free", "provider": "openrouter", "keyless": false, "context_length": 1}
-      ]},
-      "expect": {"error": "NoLiveRef"}
+      "credentials": [
+        "openrouter"
+      ],
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "ghost-model:free",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 1
+          }
+        ]
+      },
+      "expect": {
+        "error": "NoLiveRef"
+      }
     },
     {
       "name": "cheap_keyed_only_no_credential_is_loud",
       "incident": "E5-M5: empty after credential gate",
       "request": "tier:cheap",
       "credentials": [],
-      "catalog": {"kind": "free-catalog/1", "models": [
-        {"ref": "google/gemma-4-31b-it:free", "provider": "openrouter", "keyless": false, "context_length": 262144}
-      ]},
-      "expect": {"error": "EmptyAfterCredentialGate"}
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "google/gemma-4-31b-it:free",
+            "provider": "openrouter",
+            "keyless": false,
+            "context_length": 262144
+          }
+        ]
+      },
+      "expect": {
+        "error": "EmptyAfterCredentialGate"
+      }
     },
     {
       "name": "cheap_provider_outside_allowlist_is_loud",
       "incident": "E5-M6/R4: tampered allowlist/catalog is a violation, not a fallback",
       "request": "tier:cheap",
-      "credentials": ["openrouter"],
-      "catalog": {"kind": "free-catalog/1", "models": [
-        {"ref": "mimo-v2.5-free", "provider": "opencode", "keyless": true, "context_length": null},
-        {"ref": "some/paid-model", "provider": "paidcorp", "keyless": false, "context_length": 1}
-      ]},
-      "expect": {"error": "ProviderOutsideAllowlist"}
+      "credentials": [
+        "openrouter"
+      ],
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "mimo-v2.5-free",
+            "provider": "opencode",
+            "keyless": true,
+            "context_length": null
+          },
+          {
+            "ref": "some/paid-model",
+            "provider": "paidcorp",
+            "keyless": false,
+            "context_length": 1
+          }
+        ]
+      },
+      "expect": {
+        "error": "ProviderOutsideAllowlist"
+      }
     },
     {
       "name": "expensive_outside_catalog_typed_unknown_provider",
@@ -113,7 +297,12 @@
       "expect": {
         "ok": {
           "entries": [
-            {"ref": "deepseek-v4-pro", "id_status": "EXISTE", "provider": null, "keyless": true}
+            {
+              "ref": "deepseek-v4-pro",
+              "id_status": "EXISTE",
+              "provider": null,
+              "keyless": true
+            }
           ],
           "skipped": []
         }
@@ -124,48 +313,196 @@
       "incident": "resolve_tier port: registry-first rule",
       "request": "tier:mid",
       "credentials": [],
-      "expect": {"ok": {"entries": [{"ref": "deepseek-v4-pro", "id_status": "EXISTE", "provider": null, "keyless": true}], "skipped": []}}
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "deepseek-v4-pro",
+              "id_status": "EXISTE",
+              "provider": null,
+              "keyless": true
+            }
+          ],
+          "skipped": []
+        }
+      }
     },
     {
       "name": "vision_default_when_registry_empty",
       "incident": "resolve_tier port: stamped defaults",
       "request": "tier:vision",
       "credentials": [],
-      "registry": {"models": []},
-      "expect": {"ok": {"entries": [{"ref": "gemini-3.6-flash", "id_status": "", "provider": null, "keyless": true}], "skipped": []}}
+      "registry": {
+        "models": []
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "gemini-3.6-flash",
+              "id_status": "",
+              "provider": null,
+              "keyless": true
+            }
+          ],
+          "skipped": []
+        }
+      }
     },
     {
       "name": "unknown_tier_is_loud",
       "incident": "resolve_tier port: no silent tier",
       "request": "tier:ultra",
       "credentials": [],
-      "expect": {"error": "NoModelForTier"}
+      "expect": {
+        "error": "NoModelForTier"
+      }
     },
     {
       "name": "direct_id_with_fallback_and_statuses",
       "incident": "run-with-fallback direct path: fallbacks carry stamped status",
       "request": "deepseek-v4-pro",
       "credentials": [],
-      "expect": {"ok": {"entries": [
-        {"ref": "deepseek-v4-pro", "id_status": "EXISTE", "provider": "deepseek", "keyless": true},
-        {"ref": "deepseek-v4-flash-openrouter", "id_status": "EXISTE", "provider": "openrouter", "keyless": true}
-      ], "skipped": []}}
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "deepseek-v4-pro",
+              "id_status": "EXISTE",
+              "provider": "deepseek",
+              "keyless": true
+            },
+            {
+              "ref": "deepseek-v4-flash-openrouter",
+              "id_status": "EXISTE",
+              "provider": "openrouter",
+              "keyless": true
+            }
+          ],
+          "skipped": []
+        }
+      }
     },
     {
       "name": "direct_cli_hint_resolves_to_id",
       "incident": "run-with-fallback direct path: cli_hints values are aliases",
       "request": "openrouter/deepseek/deepseek-v4-flash",
       "credentials": [],
-      "expect": {"ok": {"entries": [
-        {"ref": "deepseek-v4-flash-openrouter", "id_status": "EXISTE", "provider": "openrouter", "keyless": true}
-      ], "skipped": []}}
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "deepseek-v4-flash-openrouter",
+              "id_status": "EXISTE",
+              "provider": "openrouter",
+              "keyless": true
+            }
+          ],
+          "skipped": []
+        }
+      }
     },
     {
       "name": "direct_unknown_model_is_loud",
       "incident": "registry-with-model-id-inexistente (2026-07-25)",
       "request": "does-not-exist",
       "credentials": [],
-      "expect": {"error": "UnknownModel"}
+      "expect": {
+        "error": "UnknownModel"
+      }
+    },
+    {
+      "name": "T02_l3_duplicate_ref_ties_keep_file_order",
+      "incident": "T02 (p1-T02): PROPTEST_CASES=5000 breaks laws::l3_cheap_order — sort key (!keyless, ctx desc, ref) is not total when two catalog entries share ref+keyless+context; stable sort keeps FILE order. Pins today's tie behaviour; a tie-break fix must update this case consciously.",
+      "request": "tier:cheap",
+      "credentials": [
+        "opencode"
+      ],
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "dup-model",
+            "provider": null,
+            "keyless": false,
+            "context_length": null
+          },
+          {
+            "ref": "dup-model",
+            "provider": "opencode",
+            "keyless": false,
+            "context_length": null
+          }
+        ]
+      },
+      "registry": {
+        "models": [
+          {
+            "id": "dup-model",
+            "provider": "opencode",
+            "tier": "free",
+            "id_status": "EXISTE"
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "dup-model",
+              "id_status": "EXISTE",
+              "provider": null,
+              "keyless": false
+            },
+            {
+              "ref": "dup-model",
+              "id_status": "EXISTE",
+              "provider": "opencode",
+              "keyless": false
+            }
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T02_keyed_entry_unknown_provider_skips_credential_gate",
+      "incident": "T02 (p1-T02): L4 gate only applies when the catalog entry has a known provider — a keyless=false entry with provider null enters the cheap chain uncredentialed and renders as provider '' + keyless 0 on the wire. Pinned as-is; see P1.md Decisions.",
+      "request": "tier:cheap",
+      "credentials": [],
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "mystery-free",
+            "provider": null,
+            "keyless": false,
+            "context_length": 1000
+          }
+        ]
+      },
+      "registry": {
+        "models": [
+          {
+            "id": "mystery-free",
+            "tier": "free",
+            "id_status": "EXISTE"
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "mystery-free",
+              "id_status": "EXISTE",
+              "provider": null,
+              "keyless": false
+            }
+          ],
+          "skipped": []
+        }
+      }
     }
   ]
 }

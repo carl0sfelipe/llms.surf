@@ -2,10 +2,15 @@
 
 One row per measurement: date, machine, subject/size → number.
 Feeding rule: every perf/build finding from `kernel/test-specs/` lands
-here (README rule 1).
+here (README rule 1). Numbers are from worktrees on this repo; absolute
+values are machine-specific — compare only before/after on the same
+machine.
 
 | Date | Machine | Subject | Size | Result |
 |---|---|---|---|---|
 | 2026-09-19 | Omarchy (Arch), Linux 7.1.9-arch1-2, x86_64, 28 cores, 32 GB RAM, rustc 1.98.1 | cold `cargo build --release` (kernel workspace) | 9 normal deps (serde + serde_json closure) | 6.6 s wall, 0 warnings (T01) |
 | 2026-09-19 | same | `cargo clean && cargo build --release --offline` | — | exit 0, 6.6 s wall; lockfile complete (T01) |
 | 2026-09-19 | same | `target/release/dispatch-policy` | 774,504 B | sha256 `681be081…cf3e23` identical across 3 builds (online ×2, offline ×1); dynamic deps: linux-vdso, libgcc_s, libc only; RSS: n/a (GNU time not installed) (T01) |
+| 2026-09-19 | same | `cargo test --release --test laws`, default 256 cases x 6 properties | — | 0.02–0.03 s test binary wall (~20 % of runs red: see T02, L3) (T02) |
+| 2026-09-19 | same | `PROPTEST_CASES=5000 cargo test --release --test laws` (30 000 property executions) | — | red (L3); 0.39–0.41 s test binary wall, ~0.46–0.48 s incl. cargo harness, 3/3 runs (T02) |
+| 2026-09-19 | same | cold `cargo test --release` build of the workspace (deps + 2 test binaries) | — | 12.6 s compile (T02) |
