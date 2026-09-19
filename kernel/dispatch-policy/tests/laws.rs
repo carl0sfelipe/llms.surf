@@ -1,0 +1,160 @@
+//! Laws of P1 as universally quantified properties (sampled by proptest).
+//! Each law names the incident it closes. See `kernel/laws/P1.md`.
+
+use dispatch_policy::{
+    catalog_order, resolve, Allowlist, CatalogModel, Chain, ChainEntry, FreeCatalog, Inputs, PolicyError, Registry,
+    RegistryModel, DEAD_ID_STATUSES, US,
+};
+use proptest::prelude::*;
+use std::collections::BTreeSet;
+
+fn field() -> impl Strategy<Value = String> {
+    // Any text except the two wire delimiters (those are rejected by Chain::new — law L1b).
+    "[a-zA-Z0-9:/._ -]{1,24}"
+}
+
+fn provider() -> impl Strategy<Value = Option<String>> {
+    prop_oneof![Just(None), Just(Some("opencode".into())), Just(Some("openrouter".into()))]
+}
+
+fn catalog_model() -> impl Strategy<Value = CatalogModel> {
+    ("[a-z0-9:/.-]{1,16}", provider(), any::<bool>(), proptest::option::of(0u64..2_000_000)).prop_map(
+        |(r, provider, keyless, context_length)| CatalogModel { r#ref: r, provider, keyless, context_length },
+    )
+}
+
+fn status() -> impl Strategy<Value = Option<String>> {
+    prop_oneof![
+        Just(None),
+        Just(Some("EXISTE".into())),
+        Just(Some("PROVAVEL".into())),
+        Just(Some("FANTASMA".into())),
+        Just(Some("NAO-ENCONTRADO".into())),
+        Just(Some("NAO-VERIFICADO".into())),
+    ]
+}
+
+fn entry() -> impl Strategy<Value = ChainEntry> {
+    (field(), field(), proptest::option::of(field()), any::<bool>())
+        .prop_map(|(r, id_status, provider, keyless)| ChainEntry { r#ref: r, id_status, provider, keyless })
+}
+
+fn allow() -> Allowlist {
+    Allowlist { providers: vec!["opencode".into(), "openrouter".into()] }
+}
+
+/// Registry whose statuses cover the catalog refs (so dead-id gating is exercised).
+fn registry_for(cat: &[CatalogModel], statuses: &[Option<String>]) -> Registry {
+    Registry {
+        models: cat
+            .iter()
+            .zip(statuses.iter().cycle())
+            .map(|(m, st)| RegistryModel { id: m.r#ref.clone(), id_status: st.clone(), ..Default::default() })
+            .collect(),
+    }
+}
+
+proptest! {
+    /// L1 (e82f008): the wire format round-trips exactly — no field can be
+    /// read as another. Positional text is only ever produced/consumed by
+    /// these two functions.
+    #[test]
+    fn l1_us_wire_roundtrip(entries in proptest::collection::vec(entry(), 1..8)) {
+        let chain = Chain::new("tier:cheap", entries).unwrap();
+        let text = chain.render_us();
+        let back = Chain::parse_us("tier:cheap", &text).unwrap();
+        prop_assert_eq!(back, chain);
+    }
+
+    /// L1b: a field containing a delimiter cannot become a chain.
+    #[test]
+    fn l1b_delimiters_are_rejected(mut e in entry(), which in 0u8..3) {
+        match which { 0 => e.r#ref.push(US), 1 => e.id_status.push('\n'), _ => e.provider = Some(format!("x{US}y")) }
+        let rejected = matches!(Chain::new("r", vec![e]), Err(PolicyError::MalformedField { .. }));
+        prop_assert!(rejected);
+    }
+
+    /// L3 (E5-M4/R1): keyless first, then larger context, then ref ascending;
+    /// and the order is a pure function of the content (determinism).
+    #[test]
+    fn l3_cheap_order(cat in proptest::collection::vec(catalog_model(), 0..12)) {
+        let ordered = catalog_order(&cat);
+        for w in ordered.windows(2) {
+            let (a, b) = (w[0], w[1]);
+            let ka = (!a.keyless, std::cmp::Reverse(a.context_length.unwrap_or(0)), a.r#ref.clone());
+            let kb = (!b.keyless, std::cmp::Reverse(b.context_length.unwrap_or(0)), b.r#ref.clone());
+            prop_assert!(ka <= kb, "{:?} before {:?}", a, b);
+        }
+        let mut shuffled = cat.clone();
+        shuffled.reverse();
+        let again: Vec<_> = catalog_order(&shuffled).into_iter().cloned().collect();
+        let first: Vec<_> = ordered.into_iter().cloned().collect();
+        prop_assert_eq!(first, again);
+    }
+
+    /// L2 + L4 + L5 + L6 on the cheap route, for any catalog/registry/credentials:
+    /// - no dead id in the chain (E5-M2)
+    /// - every non-keyless entry has a file credential for its provider (E5-M5)
+    /// - every provider in the chain is in the allowlist (E5-M6/R4)
+    /// - success implies a non-empty chain; failure is a typed error (E5)
+    /// - the chain is a subsequence of catalog_order (no reordering by gates)
+    #[test]
+    fn l2_l4_l5_l6_cheap_gates(
+        cat in proptest::collection::vec(catalog_model(), 0..12),
+        statuses in proptest::collection::vec(status(), 1..4),
+        creds in proptest::collection::btree_set(prop_oneof![Just("opencode".to_string()), Just("openrouter".to_string())], 0..3),
+    ) {
+        let reg = registry_for(&cat, &statuses);
+        let catalog = FreeCatalog { kind: Some("free-catalog/1".into()), models: cat.clone() };
+        let allowlist = allow();
+        let inputs = Inputs { registry: &reg, catalog: Some(&catalog), allowlist: &allowlist, credentials: &creds };
+        match resolve("tier:cheap", &inputs) {
+            Ok(res) => {
+                prop_assert!(!res.chain.entries().is_empty());
+                let order: Vec<&str> = catalog_order(&cat).into_iter().map(|m| m.r#ref.as_str()).collect();
+                let mut cursor = 0usize;
+                for e in res.chain.entries() {
+                    prop_assert!(!DEAD_ID_STATUSES.iter().any(|d| e.id_status.contains(d)), "dead id leaked: {:?}", e);
+                    if let Some(p) = &e.provider {
+                        prop_assert!(allowlist.providers.contains(p), "provider outside allowlist: {:?}", e);
+                        if !e.keyless { prop_assert!(creds.contains(p), "keyed entry without credential: {:?}", e); }
+                    }
+                    let want = e.r#ref.as_str();
+                    let pos = order[cursor..].iter().position(|r| *r == want);
+                    prop_assert!(pos.is_some(), "chain reordered or invented {:?}", e);
+                    cursor += pos.unwrap() + 1;
+                }
+            }
+            Err(PolicyError::NoLiveRef { .. }) | Err(PolicyError::EmptyAfterCredentialGate { .. }) => {}
+            Err(other) => prop_assert!(false, "unexpected error {:?}", other),
+        }
+    }
+
+    /// L5 strict: a catalog citing a provider outside the allowlist is a
+    /// violation, never a silent skip and never a chain.
+    #[test]
+    fn l5_outside_allowlist_is_a_violation(cat in proptest::collection::vec(catalog_model(), 0..6), idx in 0usize..6) {
+        let mut cat = cat;
+        let intruder = CatalogModel { r#ref: "intruder/paid".into(), provider: Some("paidcorp".into()), keyless: false, context_length: Some(1) };
+        let at = idx.min(cat.len());
+        cat.insert(at, intruder);
+        let reg = registry_for(&cat, &[Some("EXISTE".into())]);
+        let catalog = FreeCatalog { kind: Some("free-catalog/1".into()), models: cat };
+        let allowlist = allow();
+        let creds: BTreeSet<String> = ["openrouter".to_string()].into_iter().collect();
+        let inputs = Inputs { registry: &reg, catalog: Some(&catalog), allowlist: &allowlist, credentials: &creds };
+        let violation = matches!(resolve("tier:cheap", &inputs), Err(PolicyError::ProviderOutsideAllowlist { .. }));
+        prop_assert!(violation);
+    }
+
+    /// L6 (E5): the free route without a catalog is CatalogMissing for any
+    /// registry — never a hardcoded default.
+    #[test]
+    fn l6_no_catalog_never_defaults(n in 0usize..5) {
+        let reg = Registry { models: (0..n).map(|i| RegistryModel { id: format!("m{i}"), ..Default::default() }).collect() };
+        let allowlist = allow();
+        let creds = BTreeSet::new();
+        let inputs = Inputs { registry: &reg, catalog: None, allowlist: &allowlist, credentials: &creds };
+        prop_assert_eq!(resolve("tier:cheap", &inputs), Err(PolicyError::CatalogMissing));
+    }
+}

@@ -1,0 +1,171 @@
+{
+  "kind": "p1-vectors/1",
+  "note": "Shared conformance vectors for kernel P1 (dispatch policy). Consumed by the Rust crate (tests/vectors.rs) and by the Bend lab. Each case = inputs + expected resolution. Add a case for every incident; never delete one.",
+  "fixtures": {
+    "registry": {
+      "models": [
+        {"id": "nemotron-3-ultra-free", "provider": "zen", "tier": "free", "id_status": "EXISTE"},
+        {"id": "mimo-v2.5-free", "provider": "zen", "tier": "free", "id_status": "EXISTE"},
+        {"id": "google/gemma-4-31b-it:free", "provider": "openrouter", "tier": "free", "id_status": "EXISTE"},
+        {"id": "cohere/north-mini-code:free", "provider": "openrouter", "tier": "free", "id_status": "EXISTE"},
+        {"id": "ghost-model:free", "provider": "openrouter", "tier": "free", "id_status": "FANTASMA"},
+        {"id": "deepseek-v4-pro", "provider": "deepseek", "tier": "paid", "id_status": "EXISTE", "fallback": ["deepseek-v4-flash-openrouter"]},
+        {"id": "deepseek-v4-flash-openrouter", "provider": "openrouter", "tier": "paid", "id_status": "EXISTE", "cli_hints": {"opencode": "openrouter/deepseek/deepseek-v4-flash"}},
+        {"id": "claude-sonnet-5", "provider": "anthropic", "tier": "paid", "id_status": "EXISTE"},
+        {"id": "gemini-3.6-flash", "provider": "google", "tier": "paid", "id_status": "PROVAVEL"}
+      ]
+    },
+    "catalog": {
+      "kind": "free-catalog/1",
+      "models": [
+        {"ref": "google/gemma-4-31b-it:free", "provider": "openrouter", "keyless": false, "context_length": 262144},
+        {"ref": "mimo-v2.5-free", "provider": "opencode", "keyless": true, "context_length": null},
+        {"ref": "cohere/north-mini-code:free", "provider": "openrouter", "keyless": false, "context_length": 256000},
+        {"ref": "ghost-model:free", "provider": "openrouter", "keyless": false, "context_length": 999999},
+        {"ref": "nemotron-3-ultra-free", "provider": "opencode", "keyless": true, "context_length": null}
+      ]
+    },
+    "allowlist": {"providers": ["opencode", "openrouter"]}
+  },
+  "cases": [
+    {
+      "name": "cheap_with_openrouter_credential",
+      "incident": "E5-M4/R1 ordering; E5-M2 dead id skipped",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "mimo-v2.5-free", "id_status": "EXISTE", "provider": "opencode", "keyless": true},
+            {"ref": "nemotron-3-ultra-free", "id_status": "EXISTE", "provider": "opencode", "keyless": true},
+            {"ref": "google/gemma-4-31b-it:free", "id_status": "EXISTE", "provider": "openrouter", "keyless": false},
+            {"ref": "cohere/north-mini-code:free", "id_status": "EXISTE", "provider": "openrouter", "keyless": false}
+          ],
+          "skipped": [
+            {"ref": "ghost-model:free", "reason": {"DeadId": {"id_status": "FANTASMA"}}}
+          ]
+        }
+      }
+    },
+    {
+      "name": "cheap_zero_key_only",
+      "incident": "E5-M5: keyed refs skipped without file credential; keyless leg survives",
+      "request": "tier:cheap",
+      "credentials": [],
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "mimo-v2.5-free", "id_status": "EXISTE", "provider": "opencode", "keyless": true},
+            {"ref": "nemotron-3-ultra-free", "id_status": "EXISTE", "provider": "opencode", "keyless": true}
+          ],
+          "skipped": [
+            {"ref": "ghost-model:free", "reason": {"DeadId": {"id_status": "FANTASMA"}}},
+            {"ref": "google/gemma-4-31b-it:free", "reason": {"NoFileCredential": {"provider": "openrouter"}}},
+            {"ref": "cohere/north-mini-code:free", "reason": {"NoFileCredential": {"provider": "openrouter"}}}
+          ]
+        }
+      }
+    },
+    {
+      "name": "cheap_without_catalog_is_loud",
+      "incident": "E5: never degrade to hardcoded defaults",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "catalog": null,
+      "expect": {"error": "CatalogMissing"}
+    },
+    {
+      "name": "cheap_all_dead_is_loud",
+      "incident": "E5-M2: zero live ref = exit 2",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "ghost-model:free", "provider": "openrouter", "keyless": false, "context_length": 1}
+      ]},
+      "expect": {"error": "NoLiveRef"}
+    },
+    {
+      "name": "cheap_keyed_only_no_credential_is_loud",
+      "incident": "E5-M5: empty after credential gate",
+      "request": "tier:cheap",
+      "credentials": [],
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "google/gemma-4-31b-it:free", "provider": "openrouter", "keyless": false, "context_length": 262144}
+      ]},
+      "expect": {"error": "EmptyAfterCredentialGate"}
+    },
+    {
+      "name": "cheap_provider_outside_allowlist_is_loud",
+      "incident": "E5-M6/R4: tampered allowlist/catalog is a violation, not a fallback",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "mimo-v2.5-free", "provider": "opencode", "keyless": true, "context_length": null},
+        {"ref": "some/paid-model", "provider": "paidcorp", "keyless": false, "context_length": 1}
+      ]},
+      "expect": {"error": "ProviderOutsideAllowlist"}
+    },
+    {
+      "name": "expensive_outside_catalog_typed_unknown_provider",
+      "incident": "e82f008: expensive resolves a ref outside the free catalog; provider is None and keyless=true, never the text '1'",
+      "request": "tier:expensive",
+      "credentials": [],
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "deepseek-v4-pro", "id_status": "EXISTE", "provider": null, "keyless": true}
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "mid_prefers_deepseek_v4_pro",
+      "incident": "resolve_tier port: registry-first rule",
+      "request": "tier:mid",
+      "credentials": [],
+      "expect": {"ok": {"entries": [{"ref": "deepseek-v4-pro", "id_status": "EXISTE", "provider": null, "keyless": true}], "skipped": []}}
+    },
+    {
+      "name": "vision_default_when_registry_empty",
+      "incident": "resolve_tier port: stamped defaults",
+      "request": "tier:vision",
+      "credentials": [],
+      "registry": {"models": []},
+      "expect": {"ok": {"entries": [{"ref": "gemini-3.6-flash", "id_status": "", "provider": null, "keyless": true}], "skipped": []}}
+    },
+    {
+      "name": "unknown_tier_is_loud",
+      "incident": "resolve_tier port: no silent tier",
+      "request": "tier:ultra",
+      "credentials": [],
+      "expect": {"error": "NoModelForTier"}
+    },
+    {
+      "name": "direct_id_with_fallback_and_statuses",
+      "incident": "run-with-fallback direct path: fallbacks carry stamped status",
+      "request": "deepseek-v4-pro",
+      "credentials": [],
+      "expect": {"ok": {"entries": [
+        {"ref": "deepseek-v4-pro", "id_status": "EXISTE", "provider": "deepseek", "keyless": true},
+        {"ref": "deepseek-v4-flash-openrouter", "id_status": "EXISTE", "provider": "openrouter", "keyless": true}
+      ], "skipped": []}}
+    },
+    {
+      "name": "direct_cli_hint_resolves_to_id",
+      "incident": "run-with-fallback direct path: cli_hints values are aliases",
+      "request": "openrouter/deepseek/deepseek-v4-flash",
+      "credentials": [],
+      "expect": {"ok": {"entries": [
+        {"ref": "deepseek-v4-flash-openrouter", "id_status": "EXISTE", "provider": "openrouter", "keyless": true}
+      ], "skipped": []}}
+    },
+    {
+      "name": "direct_unknown_model_is_loud",
+      "incident": "registry-with-model-id-inexistente (2026-07-25)",
+      "request": "does-not-exist",
+      "credentials": [],
+      "expect": {"error": "UnknownModel"}
+    }
+  ]
+}
