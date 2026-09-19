@@ -112,11 +112,14 @@ fn dup_catalog() -> impl Strategy<Value = Vec<CatalogModel>> {
 
 /// Generator for the restated L3 (D-L3.3): duplicate refs are FREQUENT in
 /// the input (they must be handled), but two occurrences of one ref never
-/// tie on the full sort key — `context_length` is the distinct per-entry
+/// tie on the full sort key — `context_length` is the per-ref occurrence
 /// index — so "keep the first (= best-ranked)" is content-determined and
-/// the output is a pure function of the catalog as a set. The degenerate
-/// full-key-tie class (same ref/keyless/context, different provider) stays
-/// pinned at vector level by `T02_l3_duplicate_ref_ties_keep_file_order`.
+/// the output is a pure function of the catalog as a set. Different refs DO
+/// share `(keyless, context)` values, which keeps the `ref` leg of the sort
+/// key observable (strictly increasing key along the output). The
+/// degenerate full-key-tie class (same ref/keyless/context, different
+/// provider) stays pinned at vector level by
+/// `T02_l3_duplicate_ref_ties_keep_file_order`.
 fn dup_ref_catalog() -> impl Strategy<Value = Vec<CatalogModel>> {
     (
         proptest::collection::vec("[a-z]{1,3}", 1..3),
@@ -131,14 +134,22 @@ fn dup_ref_catalog() -> impl Strategy<Value = Vec<CatalogModel>> {
     )
         .prop_map(|(pool, keyless, provider)| {
             let pick = |i: usize| provider.get(i % provider.len().max(1)).cloned().flatten();
+            let mut occurrence: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
             keyless
                 .iter()
                 .enumerate()
-                .map(|(i, k)| CatalogModel {
-                    r#ref: pool[i % pool.len()].clone(),
-                    provider: pick(i),
-                    keyless: *k,
-                    context_length: Some(i as u64),
+                .map(|(i, k)| {
+                    let r = pool[i % pool.len()].clone();
+                    let n = occurrence.entry(r.clone()).or_insert(0);
+                    let ctx = *n;
+                    *n += 1;
+                    CatalogModel {
+                        r#ref: r,
+                        provider: pick(i),
+                        keyless: *k,
+                        context_length: Some(ctx),
+                    }
                 })
                 .collect()
         })
