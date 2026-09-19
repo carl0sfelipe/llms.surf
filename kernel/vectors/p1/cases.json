@@ -166,6 +166,59 @@
       "request": "does-not-exist",
       "credentials": [],
       "expect": {"error": "UnknownModel"}
+    },
+    {
+      "name": "T03_duplicate_ref_gate_is_per_occurrence",
+      "incident": "T03 (kernel/test-specs/reports/T03.md): duplicate refs are gated per occurrence by their own provider/keyless; the shell reference collapses meta (last file occurrence wins) and would keep both copies",
+      "request": "tier:cheap",
+      "credentials": [],
+      "registry": {"models": []},
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "dup/free-model", "provider": "opencode", "keyless": false, "context_length": 1},
+        {"ref": "dup/free-model", "provider": null, "keyless": false, "context_length": 1000000}
+      ]},
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "dup/free-model", "id_status": "", "provider": null, "keyless": false}
+          ],
+          "skipped": [
+            {"ref": "dup/free-model", "reason": {"NoFileCredential": {"provider": "opencode"}}}
+          ]
+        }
+      }
+    },
+    {
+      "name": "T03_duplicate_ref_shell_exit2_rust_still_ok",
+      "incident": "T03 (kernel/test-specs/reports/T03.md): on this input the shell reference exits 2 (collapsed meta gates every occurrence) while Rust keeps the keyless occurrence — decision 2026-09-19 in kernel/laws/P1.md",
+      "request": "tier:cheap",
+      "credentials": [],
+      "registry": {"models": []},
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "dup/free-model", "provider": "opencode", "keyless": true, "context_length": 1},
+        {"ref": "dup/free-model", "provider": "openrouter", "keyless": false, "context_length": 1}
+      ]},
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "dup/free-model", "id_status": "", "provider": "opencode", "keyless": true}
+          ],
+          "skipped": [
+            {"ref": "dup/free-model", "reason": {"NoFileCredential": {"provider": "openrouter"}}}
+          ]
+        }
+      }
+    },
+    {
+      "name": "T03_dead_id_gate_precedes_allowlist",
+      "incident": "T03 (kernel/test-specs/reports/T03.md): a DEAD id whose provider is outside the allowlist is skipped at the L2 door (NoLiveRef), never reported as ProviderOutsideAllowlist — gate order L2 before L5",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "registry": {"models": [{"id": "ghost/paid", "id_status": "FANTASMA"}]},
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "ghost/paid", "provider": "paidcorp", "keyless": false, "context_length": 1}
+      ]},
+      "expect": {"error": "NoLiveRef"}
     }
   ]
 }
