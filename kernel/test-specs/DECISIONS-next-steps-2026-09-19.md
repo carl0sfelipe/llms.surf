@@ -150,6 +150,53 @@ existir.
 Nada desta sessão altera D6: o gate do 2.0 continua com seis
 precondições, e D-NEXT-4 é o caminho da quinta.
 
+## D-SHIP — o MVP é esta estrutura; Bend sai do caminho crítico; bestmodel vem depois (dono, 2026-09-19 21:33 UTC)
+
+Decisão do dono, na hora: Bend está imaturo demais para receber atenção
+agora. O que se shipa é o llms.surf com a estrutura nova — leis em
+`kernel/laws/`, vetores em `kernel/vectors/`, kernel Rust atrás da flag
+— desenhada para uma migração futura possível, não iniciada. Com esse
+MVP no ar, a prioridade seguinte é terminar de polir o bestmodel usando o
+próprio llms.surf como ferramenta.
+
+Efeito sobre D7: o item 3 (E1/E2 do Bend) deixa de ser o próximo e fica
+sem data; D6 permanece como gate do 2.0, apenas não há trabalho de lab
+agendado. Nada no produto passa a depender de Bend. O ativo de prontidão
+para a migração continua sendo o mesmo de D5 — leis + vetores como spec
+única — e a única obrigação que fica é a de D-NEXT-6: os nove achados de
+T10 virarem vetor ou frase de spec, porque isso é qualidade da spec, não
+trabalho de Bend.
+
+O que "shipado" significa, verificável na árvore:
+
+1. #3, #5, #6, #7 e #4 mergeados em `main` na ordem de D-NEXT-1.
+2. `LLMS_KERNEL` default `off` no corte. O kernel shipa presente e
+   observável (shadow), não decidindo. O cutover segue D-NEXT-3, depois
+   do corte, quando o ledger do dono responder.
+3. O flake de GUI de D-NEXT-2 consertado antes da tag — cortar release
+   com `suites` vermelho é a classe do incidente do autarca. Cinco
+   execuções consecutivas verdes das três suítes no SHA da tag.
+4. `check-saude.sh` 0, `kernel gates` 0 e `suites` 0 no SHA da tag, os
+   três recibos no corpo do release; `check-docs.sh` e
+   `test-site-honesty.sh` com os números do corte (hoje 114 incidentes,
+   21 modos, 37 suítes na pilha; 115 se o incidente do flake entrar).
+5. Copy pública continua dizendo "degrau", nunca "provado" — risco 3 de
+   `direction-kernel-rust-bend-lab-2026-09-19.md`.
+
+Número de versão: decisão do dono; `VERSION` hoje é 3.5.0 e o corte
+adiciona kernel + modo novo sem quebrar interface — o record não fixa
+o número.
+
+Sobre bestmodel: continua vinculante não tocar PR #2, optimizer 1.0.1 e
+L03A 355 até ordem contrária. O polimento passa a ser feito **por**
+llms.surf — specs com footprint e comando de aceitação despachadas em
+modo dev (a forma de `kernel_test`), com ledger. Pré-condição única para
+qualquer trabalho de nuvem lá: write de `cursor[bot]` no repositório
+bestmodel (sessão anterior). Sem isso, o polimento é na máquina do dono.
+
+Rejeitado: E1/E2 do Bend antes do corte; cutover do kernel no mesmo
+corte que o introduz; tag com `suites` vermelho "porque é flake".
+
 ## Fora deste record
 
 bestmodel PR #2, optimizer 1.0.1, L03A 355 (vinculantes da sessão
