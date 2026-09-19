@@ -259,7 +259,7 @@ proptest! {
     /// - every non-keyless entry has a file credential for its provider (E5-M5)
     /// - every provider in the chain is in the allowlist (E5-M6/R4)
     /// - success implies a non-empty chain; failure is a typed error (E5)
-    /// - the chain is a subsequence of catalog_order (no reordering by gates)
+    /// - L7: the chain is a subsequence of catalog_order (no reordering by gates)
     #[test]
     fn l2_l4_l5_l6_cheap_gates(
         cat in proptest::collection::vec(catalog_model(), 0..12),
