@@ -1,0 +1,34 @@
+# T20 — P1 battery as a product mode (BMAD cheap/dev shape).
+# mecanismo(oracle): kernel/test-specs/oracle.sh
+#
+# writes: none (the mode file itself is the artifact)
+# reads: kernel/test-specs/<ID>-*.md, kernel/test-specs/reports/<ID>.md
+# oracle: bin/lib-oracfit-mode-loader.py validate core/modes/kernel_test.yaml
+#
+# Same YAML grammar as docs/research/bmad-tiers-2026-09-19.md: cheap run
+# on one spec, then a command: acceptance oracle. owner_question: once on
+# the command stage is the human gate when the report is BLOCKED.
+
+id: kernel_test
+version: "1"
+name: kernel_test
+description: >
+  Run one P1 spec on tier:cheap, then judge it with
+  kernel/test-specs/oracle.sh (report + verdict + promoted + cargo test).
+  Reusable shape for BMAD cheap/dev modes. Closes p1-inc-1 (mode YAML for
+  the battery) and unlocks E5 measurement.
+max_attempts: 3
+gauntlet:
+  enabled: false
+on_fail: halt
+stages:
+  - role: run
+    model_ref: tier:cheap
+    oracle: true
+    max_attempts: 3
+    input: kernel/test-specs
+  - role: run
+    command: bash "$ORACFIT_ROOT/kernel/test-specs/oracle.sh" "${KERNEL_TEST_ID:-T01}"
+    oracle: true
+    owner_question: once
+    max_attempts: 1

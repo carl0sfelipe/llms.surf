@@ -52,6 +52,7 @@ checar "caminho free íntegro (E5-D5)"     bash bin/test-free-path.sh
 checar "superfície pública sem dado pessoal" bash bin/check-publico.sh --oficina
 checar "site público: números honestos"   bash tests/test-site-honesty.sh
 [ -d kernel ] && checar "kernel: cargo test (P1)" bash -c 'cd kernel && cargo test --release'   # T12: roda só quando kernel/ existe (padrão do bloco Fantasma)
+[ -f core/modes/kernel_test.yaml ] && checar "T20 kernel_test modo + ledger" bash bin/test-kernel-test-mode.sh
 
 echo ""
 echo "── Sintaxe ───────────────────────────────────────────"

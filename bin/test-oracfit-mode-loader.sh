@@ -12,6 +12,11 @@ not() { echo "  FAIL: $1"; fail=$((fail + 1)); }
 
 echo "=== test-oracfit-mode-loader ==="
 
+echo "--- validate kernel_test.yaml (T20) ---"
+rc=0
+python3 "$LOADER" validate "$ROOT/core/modes/kernel_test.yaml" 2>&1 || rc=$?
+if [ "$rc" -eq 0 ]; then ok "kernel_test.yaml validates"; else not "kernel_test.yaml should validate (rc=$rc)"; fi
+
 echo "--- validate normal.yaml ---"
 rc=0
 python3 "$LOADER" validate "$ROOT/core/modes/normal.yaml" 2>&1 || rc=$?

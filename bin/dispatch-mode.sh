@@ -229,6 +229,10 @@ else
   RUN_ID="$(oracfit_mint_run_id)"
   export ORACFIT_RUN_ID="$RUN_ID"
 fi
+# T20: run-with-fallback writes who served; mode ledger records it (E5).
+export DISPATCH_EFETIVO_FILE="$ORACFIT_WORKDIR/.dispatch/pids/mode-${RUN_ID}.efetivo"
+mkdir -p "$(dirname "$DISPATCH_EFETIVO_FILE")"
+rm -f "$DISPATCH_EFETIVO_FILE"
 t_run0=$(python3 -c 'import time; print(time.time())')
 
 # Persiste mode/spec/task por run_id — sem isso `oracfit resume` não teria
@@ -520,6 +524,11 @@ frontier_wait_s=$(python3 -c "print(round(float('$t_run1')-float('$t_run0'), 3))
 # stub/free cost table = 0
 estimated_cost="0"
 
+PROVIDER_EFETIVO=""
+REF_EFETIVO=""
+if [ -f "${DISPATCH_EFETIVO_FILE:-}" ]; then
+  IFS=$'\t' read -r REF_EFETIVO PROVIDER_EFETIVO < "$DISPATCH_EFETIVO_FILE" || true
+fi
 oracfit_emit_metric_and_ledger \
   mode_id="$mode_id" \
   stage=run \
@@ -530,7 +539,9 @@ oracfit_emit_metric_and_ledger \
   frontier_wait_s="$frontier_wait_s" \
   estimated_cost="$estimated_cost" \
   task="$task_name" \
-  status="$final_status"
+  status="$final_status" \
+  provider_efetivo="${PROVIDER_EFETIVO}" \
+  provider_efetivo_ref="${REF_EFETIVO}"
 
 oracfit_emit_event run_finished status="$final_status" attempt="$attempt" oracle_exit="$oracle_exit"
 

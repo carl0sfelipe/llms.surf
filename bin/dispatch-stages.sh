@@ -18,6 +18,14 @@ source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
 
+oracfit_stages_read_efetivo() {
+  PROVIDER_EFETIVO=""
+  REF_EFETIVO=""
+  if [ -f "${DISPATCH_EFETIVO_FILE:-}" ]; then
+    IFS=$'\t' read -r REF_EFETIVO PROVIDER_EFETIVO < "$DISPATCH_EFETIVO_FILE" || true
+  fi
+}
+
 mode_id=""
 spec_file=""
 task_name=""
@@ -124,6 +132,10 @@ if [ -n "$resume_run_id" ]; then
   RUN_ID="$resume_run_id"
 fi
 export ORACFIT_RUN_ID="$RUN_ID"
+# T20: run-with-fallback writes who served; mode ledger records it (E5).
+export DISPATCH_EFETIVO_FILE="$ORACFIT_WORKDIR/.dispatch/pids/mode-${RUN_ID}.efetivo"
+mkdir -p "$(dirname "$DISPATCH_EFETIVO_FILE")"
+rm -f "$DISPATCH_EFETIVO_FILE"
 # Thinking no painel: o tee do runner opencode (oracfit-thinking-tee.py) só emite
 # eventos thinking/tool_call com ORACFIT_RUN_ID E ORACFIT_EVENTS_FILE setados.
 # dispatch-mode.sh:363 exporta os dois; aqui faltava este — todo run multi-stage
@@ -157,6 +169,7 @@ oracfit_stages_emergency_epilogue() {
   fi
   oracfit_emit_event run_finished status=fail reason=abnormal_exit \
     stages="${stage_count:-0}" duration_s="$dur_abn" 2>/dev/null || true
+  oracfit_stages_read_efetivo
   oracfit_emit_metric_and_ledger \
     mode_id="${mode_id:-}" \
     stage=multi \
@@ -167,7 +180,9 @@ oracfit_stages_emergency_epilogue() {
     frontier_wait_s=0 \
     estimated_cost=0 \
     task="${task_name:-}" \
-    status=fail 2>/dev/null || true
+    status=fail \
+    provider_efetivo="${PROVIDER_EFETIVO}" \
+    provider_efetivo_ref="${REF_EFETIVO}" 2>/dev/null || true
   echo "run_id: ${RUN_ID:-}"
   echo "status: fail"
   return 0
@@ -440,6 +455,7 @@ for line in open(sys.argv[1]):
         t_oq=$(python3 -c 'import time; print(time.time())')
         dur_oq=$(python3 -c "print(round(float('$t_oq')-float('$t0'), 3))")
         oracfit_emit_event run_finished status=owner_question stages="$stage_count" duration_s="$dur_oq"
+        oracfit_stages_read_efetivo
         oracfit_emit_metric_and_ledger \
           mode_id="$mode_id" \
           stage=multi \
@@ -450,7 +466,9 @@ for line in open(sys.argv[1]):
           frontier_wait_s=0 \
           estimated_cost=0 \
           task="$task_name" \
-          status=owner_question || true
+          status=owner_question \
+          provider_efetivo="${PROVIDER_EFETIVO}" \
+          provider_efetivo_ref="${REF_EFETIVO}" || true
         epilogue_done=1
         echo "run_id: $RUN_ID"
         echo "status: owner_question (pausado — pergunta do dono no inbox)"
@@ -634,6 +652,7 @@ done
 t1=$(python3 -c 'import time; print(time.time())')
 dur=$(python3 -c "print(round(float('$t1')-float('$t0'), 3))")
 oracfit_emit_event run_finished status="$final_status" stages="$stage_count" duration_s="$dur"
+oracfit_stages_read_efetivo
 oracfit_emit_metric_and_ledger \
   mode_id="$mode_id" \
   stage=multi \
@@ -644,7 +663,9 @@ oracfit_emit_metric_and_ledger \
   frontier_wait_s=0 \
   estimated_cost=0 \
   task="$task_name" \
-  status="$final_status" || true
+  status="$final_status" \
+  provider_efetivo="${PROVIDER_EFETIVO}" \
+  provider_efetivo_ref="${REF_EFETIVO}" || true
 
 # Tier-0 behavior scan (advisory — nunca altera exit code do dispatch).
 _behavior_events="$(oracfit_events_path 2>/dev/null || true)"
