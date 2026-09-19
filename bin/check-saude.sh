@@ -51,6 +51,7 @@ checar "caminho free íntegro (E5-D5)"     bash bin/test-free-path.sh
 # incidents/2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego.md
 checar "superfície pública sem dado pessoal" bash bin/check-publico.sh --oficina
 checar "site público: números honestos"   bash tests/test-site-honesty.sh
+[ -d kernel ] && checar "kernel: cargo test (P1)" bash -c 'cd kernel && cargo test --release'   # T12: roda só quando kernel/ existe (padrão do bloco Fantasma)
 
 echo ""
 echo "── Sintaxe ───────────────────────────────────────────"

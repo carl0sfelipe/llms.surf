@@ -29,30 +29,36 @@ struct Case {
     catalog: Override,
     #[serde(default, deserialize_with = "deserialize_override")]
     registry: Override,
+    /// Override; absent = fixture. Never `null` in practice (no "no allowlist" case exists).
+    #[serde(default, deserialize_with = "deserialize_override")]
+    allowlist: Override,
     expect: Expect,
 }
 
+#[derive(Default)]
 enum Override {
+    #[default]
     Fixture,
     Null,
     Value(serde_json::Value),
 }
 
-impl Default for Override {
-    fn default() -> Self {
-        Override::Fixture
-    }
-}
-
 fn deserialize_override<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Override, D::Error> {
     let v = serde_json::Value::deserialize(d)?;
-    Ok(if v.is_null() { Override::Null } else { Override::Value(v) })
+    Ok(if v.is_null() {
+        Override::Null
+    } else {
+        Override::Value(v)
+    })
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum Expect {
-    Ok { entries: Vec<ChainEntry>, skipped: Vec<Skipped> },
+    Ok {
+        entries: Vec<ChainEntry>,
+        skipped: Vec<Skipped>,
+    },
     Error(String),
 }
 
@@ -67,23 +73,40 @@ fn pick(o: &Override, fixture: &serde_json::Value) -> Option<serde_json::Value> 
 #[test]
 fn all_p1_vectors_conform() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../vectors/p1/cases.json");
-    let file: File = serde_json::from_str(&std::fs::read_to_string(path).expect("vectors file")).expect("vectors json");
-    let allowlist: Allowlist = serde_json::from_value(file.fixtures.allowlist.clone()).unwrap();
+    let file: File = serde_json::from_str(&std::fs::read_to_string(path).expect("vectors file"))
+        .expect("vectors json");
+    let allowlist_default = file.fixtures.allowlist.clone();
     let mut failures = Vec::new();
 
     for case in &file.cases {
-        let registry: Registry =
-            serde_json::from_value(pick(&case.registry, &file.fixtures.registry).expect("registry never null")).unwrap();
+        let registry: Registry = serde_json::from_value(
+            pick(&case.registry, &file.fixtures.registry).expect("registry never null"),
+        )
+        .unwrap();
         let catalog: Option<FreeCatalog> =
             pick(&case.catalog, &file.fixtures.catalog).map(|v| serde_json::from_value(v).unwrap());
+        let allowlist: Allowlist = serde_json::from_value(
+            pick(&case.allowlist, &allowlist_default).expect("allowlist never null"),
+        )
+        .unwrap();
         let credentials: BTreeSet<String> = case.credentials.iter().cloned().collect();
-        let inputs = Inputs { registry: &registry, catalog: catalog.as_ref(), allowlist: &allowlist, credentials: &credentials };
+        let inputs = Inputs {
+            registry: &registry,
+            catalog: catalog.as_ref(),
+            allowlist: &allowlist,
+            credentials: &credentials,
+        };
 
         let got = dispatch_policy::resolve(&case.request, &inputs);
         let ok = match (&case.expect, &got) {
-            (Expect::Ok { entries, skipped }, Ok(res)) => res.chain.entries() == entries.as_slice() && &res.skipped == skipped,
+            (Expect::Ok { entries, skipped }, Ok(res)) => {
+                res.chain.entries() == entries.as_slice() && &res.skipped == skipped
+            }
             (Expect::Error(variant), Err(e)) => {
-                let tag = serde_json::to_value(e).unwrap()["error"].as_str().unwrap().to_string();
+                let tag = serde_json::to_value(e).unwrap()["error"]
+                    .as_str()
+                    .unwrap()
+                    .to_string();
                 &tag == variant
             }
             _ => false,
@@ -92,5 +115,9 @@ fn all_p1_vectors_conform() {
             failures.push(format!("{}: got {:#?}", case.name, got));
         }
     }
-    assert!(failures.is_empty(), "vector failures:\n{}", failures.join("\n\n"));
+    assert!(
+        failures.is_empty(),
+        "vector failures:\n{}",
+        failures.join("\n\n")
+    );
 }
