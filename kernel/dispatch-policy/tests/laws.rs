@@ -374,21 +374,38 @@ fn cli_unreadable_input_exit_3() {
 /// unexpected kind is WARNed as absent, then the policy error is loud
 /// (`✖ rota free sem catálogo`), exit 2, stdout empty — never a default.
 #[test]
-fn cli_catalog_trouble_is_warn_then_loud() {
+fn cli_catalog_absence_vs_corruption_split() {
+    // D-EXIT (T05, 2026-09-19): absent file → CatalogMissing, exit 2;
+    // present but unreadable / invalid JSON / wrong `kind` → typed ERROR,
+    // exit 3, stdout empty. Corruption is never downgraded to absence.
     let (r, c, a) = cli_fixtures();
     let badkind = cli_fixture(
         "badkind.json",
         &serde_json::json!({"kind": "something-else/1", "models": []}),
     );
-    for catalog in ["/nonexistent".to_string(), badkind.to_str().unwrap().to_string()] {
+    let badjson = cli_fixture("badjson.json", &serde_json::json!({"kind": "free-catalog/1"}));
+    std::fs::write(&badjson, "{not json").unwrap();
+    let unreadable = std::env::temp_dir().join(format!("p1-t04-{}-dir", std::process::id()));
+    std::fs::create_dir_all(&unreadable).unwrap();
+
+    // Absent: exit 2, CatalogMissing.
+    let (code, stdout, stderr) = cli_run(&[
+        "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", "/nonexistent",
+        "--allowlist", a.to_str().unwrap(), "--credentials", "openrouter",
+    ]);
+    assert_eq!(code, 2);
+    assert!(stdout.is_empty());
+    assert!(stderr.contains("✖ rota free sem catálogo"), "{stderr:?}");
+
+    // Corrupt (wrong kind / invalid JSON / unreadable): exit 3, stdout empty.
+    for catalog in [badkind.to_str().unwrap().to_string(), badjson.to_str().unwrap().to_string(), unreadable.to_str().unwrap().to_string()] {
         let (code, stdout, stderr) = cli_run(&[
             "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", &catalog,
             "--allowlist", a.to_str().unwrap(), "--credentials", "openrouter",
         ]);
-        assert_eq!(code, 2, "catalog {catalog}");
+        assert_eq!(code, 3, "catalog {catalog}");
         assert!(stdout.is_empty(), "catalog {catalog}");
-        assert!(stderr.contains("tratado como ausente"), "catalog {catalog}: {stderr:?}");
-        assert!(stderr.contains("✖ rota free sem catálogo"), "catalog {catalog}: {stderr:?}");
+        assert!(stderr.contains("ERROR"), "catalog {catalog}: {stderr:?}");
     }
     let _ = c;
 }

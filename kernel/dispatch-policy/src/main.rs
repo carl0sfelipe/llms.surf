@@ -60,19 +60,45 @@ fn main() {
             exit(3)
         }
     };
-    // Catalog: absent or unreadable both mean "missing" — the policy decides
-    // loudly (CatalogMissing) instead of this shell degrading to defaults.
-    let catalog: Option<FreeCatalog> = catalog.and_then(|p| match read_json::<FreeCatalog>(&p, "free catalog") {
-        Ok(c) if c.kind.as_deref().map(|k| k.starts_with("free-catalog/")).unwrap_or(true) => Some(c),
-        Ok(_) => {
-            eprintln!("WARN: catálogo {p} com kind inesperado — tratado como ausente");
-            None
+    // D-EXIT (T05, 2026-09-19): absence and corruption are different things;
+    // "never degrade" includes never downgrading corruption to absence.
+    // No --catalog flag at all, or a path that does not exist → absence: the
+    // policy decides loudly (CatalogMissing, exit 2). A --catalog path that
+    // exists but is unreadable / invalid JSON / wrong `kind` → typed ERROR,
+    // exit 3, stdout empty.
+    let catalog: Option<FreeCatalog> = match catalog {
+        None => None,
+        Some(p) => {
+            let text: Option<String> = match std::fs::read_to_string(&p) {
+                Ok(text) => Some(text),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    eprintln!("WARN: catálogo livre {p} não existe — tratado como ausente");
+                    None
+                }
+                Err(e) => {
+                    eprintln!("ERROR: cannot read free catalog {p}: {e}");
+                    exit(3)
+                }
+            };
+            match text {
+                None => None,
+                Some(text) => match serde_json::from_str::<FreeCatalog>(&text) {
+                    Ok(c) => match c.kind.as_deref() {
+                        None => Some(c),
+                        Some(k) if k.starts_with("free-catalog/") => Some(c),
+                        Some(other) => {
+                            eprintln!("ERROR: catálogo livre {p} com kind inesperado ('{other}') — corrupção nunca é tratada como ausência (D-EXIT)");
+                            exit(3)
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("ERROR: cannot parse free catalog {p}: {e}");
+                        exit(3)
+                    }
+                },
+            }
         }
-        Err(e) => {
-            eprintln!("WARN: {e} — tratado como ausente");
-            None
-        }
-    });
+    };
     let credentials: BTreeSet<String> =
         credentials.split(',').map(str::trim).filter(|s| !s.is_empty()).map(String::from).collect();
 
