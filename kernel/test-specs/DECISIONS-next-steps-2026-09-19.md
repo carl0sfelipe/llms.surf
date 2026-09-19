@@ -54,8 +54,14 @@ asserção que falha lê uma página logo após o servidor subir. A casa já
 tem o incidente irmão `2026-08-12-autarca-oraculo-verde-2x-no-mesmo-
 minuto-aprovou-assercao-flaky` — verde duas vezes não prova nada.
 
+Terceira ocorrência na mesma família, mesma hora: `tests/test-corte-
+review.sh` T9b (`curl` em `corte.html` sem tentativa) vermelho no push de
+#7 `8cbae42`, run 35469954265; o `suites` do evento pull_request do
+mesmo SHA passou.
+
 Mecanismo exigido, tier:cheap via `dispatch-mode` (footprint
-`tests/test-gui.sh`, `tests/test-gui-todo.sh`, `incidents/`): a espera
+`tests/test-gui.sh`, `tests/test-gui-todo.sh`, `tests/test-corte-review.sh`,
+`incidents/`): a espera
 de prontidão do servidor tem de sondar a própria página sob teste, não só
 `home.html`/`todo.html`; cada `curl` de asserção ganha tentativa com
 recuo; o oráculo da spec é cinco execuções consecutivas de cada suíte
