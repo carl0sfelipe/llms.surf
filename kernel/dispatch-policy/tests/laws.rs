@@ -2,8 +2,8 @@
 //! Each law names the incident it closes. See `kernel/laws/P1.md`.
 
 use dispatch_policy::{
-    catalog_order, resolve, Allowlist, CatalogModel, Chain, ChainEntry, FreeCatalog, Inputs, PolicyError, Registry,
-    RegistryModel, SkipReason, DEAD_ID_STATUSES, US,
+    catalog_order, resolve, Allowlist, CatalogModel, Chain, ChainEntry, FreeCatalog, Inputs,
+    PolicyError, Registry, RegistryModel, SkipReason, DEAD_ID_STATUSES, US,
 };
 use proptest::prelude::*;
 use std::collections::BTreeSet;
@@ -14,13 +14,26 @@ fn field() -> impl Strategy<Value = String> {
 }
 
 fn provider() -> impl Strategy<Value = Option<String>> {
-    prop_oneof![Just(None), Just(Some("opencode".into())), Just(Some("openrouter".into()))]
+    prop_oneof![
+        Just(None),
+        Just(Some("opencode".into())),
+        Just(Some("openrouter".into()))
+    ]
 }
 
 fn catalog_model() -> impl Strategy<Value = CatalogModel> {
-    ("[a-z0-9:/.-]{1,16}", provider(), any::<bool>(), proptest::option::of(0u64..2_000_000)).prop_map(
-        |(r, provider, keyless, context_length)| CatalogModel { r#ref: r, provider, keyless, context_length },
+    (
+        "[a-z0-9:/.-]{1,16}",
+        provider(),
+        any::<bool>(),
+        proptest::option::of(0u64..2_000_000),
     )
+        .prop_map(|(r, provider, keyless, context_length)| CatalogModel {
+            r#ref: r,
+            provider,
+            keyless,
+            context_length,
+        })
 }
 
 fn status() -> impl Strategy<Value = Option<String>> {
@@ -37,12 +50,24 @@ fn status() -> impl Strategy<Value = Option<String>> {
 fn entry() -> impl Strategy<Value = ChainEntry> {
     // keyless generates the full tri-state (Some(true)/Some(false)/None =
     // wire `1`/`0`/`-`, T15) so the L1 round-trip covers every wire value.
-    (field(), field(), proptest::option::of(field()), proptest::option::of(any::<bool>()))
-        .prop_map(|(r, id_status, provider, keyless)| ChainEntry { r#ref: r, id_status, provider, keyless })
+    (
+        field(),
+        field(),
+        proptest::option::of(field()),
+        proptest::option::of(any::<bool>()),
+    )
+        .prop_map(|(r, id_status, provider, keyless)| ChainEntry {
+            r#ref: r,
+            id_status,
+            provider,
+            keyless,
+        })
 }
 
 fn allow() -> Allowlist {
-    Allowlist { providers: vec!["opencode".into(), "openrouter".into()] }
+    Allowlist {
+        providers: vec!["opencode".into(), "openrouter".into()],
+    }
 }
 
 /// Registry whose statuses cover the catalog refs (so dead-id gating is exercised).
@@ -51,7 +76,11 @@ fn registry_for(cat: &[CatalogModel], statuses: &[Option<String>]) -> Registry {
         models: cat
             .iter()
             .zip(statuses.iter().cycle())
-            .map(|(m, st)| RegistryModel { id: m.r#ref.clone(), id_status: st.clone(), ..Default::default() })
+            .map(|(m, st)| RegistryModel {
+                id: m.r#ref.clone(),
+                id_status: st.clone(),
+                ..Default::default()
+            })
             .collect(),
     }
 }
@@ -93,7 +122,10 @@ fn dup_ref_catalog() -> impl Strategy<Value = Vec<CatalogModel>> {
         proptest::collection::vec("[a-z]{1,3}", 1..3),
         proptest::collection::vec(any::<bool>(), 0..10),
         proptest::collection::vec(
-            proptest::option::of(prop_oneof![Just("opencode".to_string()), Just("openrouter".to_string())]),
+            proptest::option::of(prop_oneof![
+                Just("opencode".to_string()),
+                Just("openrouter".to_string())
+            ]),
             0..10,
         ),
     )
@@ -299,7 +331,10 @@ proptest! {
 
 fn cli_run(args: &[&str]) -> (i32, String, String) {
     use std::process::Command;
-    let out = Command::new(env!("CARGO_BIN_EXE_dispatch-policy")).args(args).output().unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_dispatch-policy"))
+        .args(args)
+        .output()
+        .unwrap();
     (
         out.status.code().expect("killed by signal"),
         String::from_utf8(out.stdout).unwrap(),
@@ -316,7 +351,8 @@ fn cli_fixture(name: &str, value: &serde_json::Value) -> std::path::PathBuf {
 /// Fixtures straight from the shared vectors file (single source of truth).
 fn cli_fixtures() -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../vectors/p1/cases.json");
-    let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let f = &v["fixtures"];
     (
         cli_fixture("registry.json", &f["registry"]),
@@ -337,11 +373,28 @@ fn cli_argument_errors_are_usage_exit_2() {
     let cases: &[&[&str]] = &[
         &[],
         &["resolve"],
-        &["resolve", "tier:cheap"],                                   // no --registry
-        &["resolve", "tier:cheap", "--registry"],                     // dangling flag
+        &["resolve", "tier:cheap"],               // no --registry
+        &["resolve", "tier:cheap", "--registry"], // dangling flag
         &["resolve", "tier:cheap", "--registry", r.to_str().unwrap()], // no --allowlist
-        &["resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--allowlist", a.to_str().unwrap(), "--foo", "x"],
-        &["resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--allowlist", a.to_str().unwrap(), "extra"],
+        &[
+            "resolve",
+            "tier:cheap",
+            "--registry",
+            r.to_str().unwrap(),
+            "--allowlist",
+            a.to_str().unwrap(),
+            "--foo",
+            "x",
+        ],
+        &[
+            "resolve",
+            "tier:cheap",
+            "--registry",
+            r.to_str().unwrap(),
+            "--allowlist",
+            a.to_str().unwrap(),
+            "extra",
+        ],
         &["resolve", "-h"],
     ];
     for args in cases {
@@ -358,16 +411,34 @@ fn cli_argument_errors_are_usage_exit_2() {
 fn cli_unreadable_input_exit_3() {
     let (_r, _c, a) = cli_fixtures();
     let bad = cli_fixture("bad.json", &serde_json::Value::String("{oops".into()));
-    let (code, stdout, stderr) =
-        cli_run(&["resolve", "tier:cheap", "--registry", "/nonexistent", "--allowlist", a.to_str().unwrap()]);
+    let (code, stdout, stderr) = cli_run(&[
+        "resolve",
+        "tier:cheap",
+        "--registry",
+        "/nonexistent",
+        "--allowlist",
+        a.to_str().unwrap(),
+    ]);
     assert_eq!(code, 3);
     assert!(stdout.is_empty());
-    assert!(stderr.starts_with("ERROR: cannot read registry"), "{stderr:?}");
-    let (code, stdout, stderr) =
-        cli_run(&["resolve", "tier:cheap", "--registry", bad.to_str().unwrap(), "--allowlist", a.to_str().unwrap()]);
+    assert!(
+        stderr.starts_with("ERROR: cannot read registry"),
+        "{stderr:?}"
+    );
+    let (code, stdout, stderr) = cli_run(&[
+        "resolve",
+        "tier:cheap",
+        "--registry",
+        bad.to_str().unwrap(),
+        "--allowlist",
+        a.to_str().unwrap(),
+    ]);
     assert_eq!(code, 3);
     assert!(stdout.is_empty());
-    assert!(stderr.starts_with("ERROR: cannot parse registry"), "{stderr:?}");
+    assert!(
+        stderr.starts_with("ERROR: cannot parse registry"),
+        "{stderr:?}"
+    );
 }
 
 /// T04 checks 6, 7, 14: a free route whose catalog is unreadable or of an
@@ -383,25 +454,48 @@ fn cli_catalog_absence_vs_corruption_split() {
         "badkind.json",
         &serde_json::json!({"kind": "something-else/1", "models": []}),
     );
-    let badjson = cli_fixture("badjson.json", &serde_json::json!({"kind": "free-catalog/1"}));
+    let badjson = cli_fixture(
+        "badjson.json",
+        &serde_json::json!({"kind": "free-catalog/1"}),
+    );
     std::fs::write(&badjson, "{not json").unwrap();
     let unreadable = std::env::temp_dir().join(format!("p1-t04-{}-dir", std::process::id()));
     std::fs::create_dir_all(&unreadable).unwrap();
 
     // Absent: exit 2, CatalogMissing.
     let (code, stdout, stderr) = cli_run(&[
-        "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", "/nonexistent",
-        "--allowlist", a.to_str().unwrap(), "--credentials", "openrouter",
+        "resolve",
+        "tier:cheap",
+        "--registry",
+        r.to_str().unwrap(),
+        "--catalog",
+        "/nonexistent",
+        "--allowlist",
+        a.to_str().unwrap(),
+        "--credentials",
+        "openrouter",
     ]);
     assert_eq!(code, 2);
     assert!(stdout.is_empty());
     assert!(stderr.contains("✖ rota free sem catálogo"), "{stderr:?}");
 
     // Corrupt (wrong kind / invalid JSON / unreadable): exit 3, stdout empty.
-    for catalog in [badkind.to_str().unwrap().to_string(), badjson.to_str().unwrap().to_string(), unreadable.to_str().unwrap().to_string()] {
+    for catalog in [
+        badkind.to_str().unwrap().to_string(),
+        badjson.to_str().unwrap().to_string(),
+        unreadable.to_str().unwrap().to_string(),
+    ] {
         let (code, stdout, stderr) = cli_run(&[
-            "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", &catalog,
-            "--allowlist", a.to_str().unwrap(), "--credentials", "openrouter",
+            "resolve",
+            "tier:cheap",
+            "--registry",
+            r.to_str().unwrap(),
+            "--catalog",
+            &catalog,
+            "--allowlist",
+            a.to_str().unwrap(),
+            "--credentials",
+            "openrouter",
         ]);
         assert_eq!(code, 3, "catalog {catalog}");
         assert!(stdout.is_empty(), "catalog {catalog}");
@@ -418,10 +512,17 @@ fn cli_catalog_absence_vs_corruption_split() {
 fn cli_happy_path_wire_and_formats() {
     let (r, c, a) = cli_fixtures();
     let base = [
-        "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", c.to_str().unwrap(),
-        "--allowlist", a.to_str().unwrap(),
+        "resolve",
+        "tier:cheap",
+        "--registry",
+        r.to_str().unwrap(),
+        "--catalog",
+        c.to_str().unwrap(),
+        "--allowlist",
+        a.to_str().unwrap(),
     ];
-    let (code, stdout, _stderr) = cli_run(&[base.as_slice(), &["--credentials", "openrouter"]].concat());
+    let (code, stdout, _stderr) =
+        cli_run(&[base.as_slice(), &["--credentials", "openrouter"]].concat());
     assert_eq!(code, 0);
     assert!(stdout.ends_with('\n'));
     let mut last_field_ok = true;
@@ -435,20 +536,40 @@ fn cli_happy_path_wire_and_formats() {
     }
     assert!(last_field_ok, "keyless field not 0/1 in {stdout:?}");
 
-    let messy = cli_run(&[base.as_slice(), &["--credentials", " openrouter , ,opencode "]].concat());
+    let messy = cli_run(
+        &[
+            base.as_slice(),
+            &["--credentials", " openrouter , ,opencode "],
+        ]
+        .concat(),
+    );
     let clean = cli_run(&[base.as_slice(), &["--credentials", "openrouter,opencode"]].concat());
     assert_eq!(messy, clean, "messy credentials must equal clean ones");
 
-    let (code, stdout, _stderr) =
-        cli_run(&[base.as_slice(), &["--credentials", "openrouter", "--format", "json"]].concat());
+    let (code, stdout, _stderr) = cli_run(
+        &[
+            base.as_slice(),
+            &["--credentials", "openrouter", "--format", "json"],
+        ]
+        .concat(),
+    );
     assert_eq!(code, 0);
     let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid json");
     assert!(v["chain"]["request"].is_string());
     assert!(v["chain"]["entries"].is_array());
     assert!(v["skipped"].is_array());
     let entry = &v["chain"]["entries"][0];
-    let keys: Vec<&str> = entry.as_object().unwrap().keys().map(String::as_str).collect();
-    assert_eq!(keys, vec!["id_status", "keyless", "provider", "ref"], "entry keys exactly the typed four");
+    let keys: Vec<&str> = entry
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    assert_eq!(
+        keys,
+        vec!["id_status", "keyless", "provider", "ref"],
+        "entry keys exactly the typed four"
+    );
 }
 
 /// T04 decision D1 (this branch): an unknown `--format` value falls back to
@@ -458,13 +579,24 @@ fn cli_happy_path_wire_and_formats() {
 fn cli_unknown_format_value_falls_back_to_us() {
     let (r, c, a) = cli_fixtures();
     let base = [
-        "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", c.to_str().unwrap(),
-        "--allowlist", a.to_str().unwrap(), "--credentials", "openrouter",
+        "resolve",
+        "tier:cheap",
+        "--registry",
+        r.to_str().unwrap(),
+        "--catalog",
+        c.to_str().unwrap(),
+        "--allowlist",
+        a.to_str().unwrap(),
+        "--credentials",
+        "openrouter",
     ];
     let default_us = cli_run(&base);
     let unknown = cli_run(&[base.as_slice(), &["--format", "xml"]].concat());
     assert_eq!(unknown.0, 0);
-    assert_eq!(unknown.1, default_us.1, "unknown --format renders the US wire format");
+    assert_eq!(
+        unknown.1, default_us.1,
+        "unknown --format renders the US wire format"
+    );
 }
 
 /// L4 (E5-M5): the environment is never a credential input. Found by T06/M9:
@@ -474,33 +606,74 @@ fn cli_unknown_format_value_falls_back_to_us() {
 fn l4_env_is_never_an_input() {
     std::env::set_var("opencode", "present-but-ignored");
     std::env::set_var("openrouter", "present-but-ignored");
-    let keyed = CatalogModel { r#ref: "keyed".into(), provider: Some("openrouter".into()), keyless: false, context_length: Some(1) };
-    let zero = CatalogModel { r#ref: "zero".into(), provider: Some("opencode".into()), keyless: true, context_length: Some(2) };
+    let keyed = CatalogModel {
+        r#ref: "keyed".into(),
+        provider: Some("openrouter".into()),
+        keyless: false,
+        context_length: Some(1),
+    };
+    let zero = CatalogModel {
+        r#ref: "zero".into(),
+        provider: Some("opencode".into()),
+        keyless: true,
+        context_length: Some(2),
+    };
     let reg = Registry {
         models: vec![
-            RegistryModel { id: "keyed".into(), id_status: Some("EXISTE".into()), ..Default::default() },
-            RegistryModel { id: "zero".into(), id_status: Some("EXISTE".into()), ..Default::default() },
+            RegistryModel {
+                id: "keyed".into(),
+                id_status: Some("EXISTE".into()),
+                ..Default::default()
+            },
+            RegistryModel {
+                id: "zero".into(),
+                id_status: Some("EXISTE".into()),
+                ..Default::default()
+            },
         ],
     };
     let allowlist = allow();
     let creds = BTreeSet::new();
     // Env vars for both providers are set, yet carry no credential: the keyed
     // ref must still be gated out, and only the zero-key leg survives.
-    let cat = FreeCatalog { kind: Some("free-catalog/1".into()), models: vec![keyed.clone(), zero] };
-    let inputs = Inputs { registry: &reg, catalog: Some(&cat), allowlist: &allowlist, credentials: &creds };
+    let cat = FreeCatalog {
+        kind: Some("free-catalog/1".into()),
+        models: vec![keyed.clone(), zero],
+    };
+    let inputs = Inputs {
+        registry: &reg,
+        catalog: Some(&cat),
+        allowlist: &allowlist,
+        credentials: &creds,
+    };
     match resolve("tier:cheap", &inputs) {
         Ok(res) => assert!(
-            res.chain.entries() == [ChainEntry {
-                r#ref: "zero".into(), id_status: "EXISTE".into(), provider: Some("opencode".into()), keyless: Some(true),
-            }],
+            res.chain.entries()
+                == [ChainEntry {
+                    r#ref: "zero".into(),
+                    id_status: "EXISTE".into(),
+                    provider: Some("opencode".into()),
+                    keyless: Some(true),
+                }],
             "env leaked into the credential gate: {res:?}"
         ),
         other => panic!("env leaked into the credential gate: {other:?}"),
     }
     // A keyed-only catalog stays loud even with the env set.
-    let cat = FreeCatalog { kind: Some("free-catalog/1".into()), models: vec![keyed] };
-    let inputs = Inputs { registry: &reg, catalog: Some(&cat), allowlist: &allowlist, credentials: &creds };
-    assert!(matches!(resolve("tier:cheap", &inputs), Err(PolicyError::EmptyAfterCredentialGate { .. })));
+    let cat = FreeCatalog {
+        kind: Some("free-catalog/1".into()),
+        models: vec![keyed],
+    };
+    let inputs = Inputs {
+        registry: &reg,
+        catalog: Some(&cat),
+        allowlist: &allowlist,
+        credentials: &creds,
+    };
+    assert!(matches!(
+        resolve("tier:cheap", &inputs),
+        Err(PolicyError::EmptyAfterCredentialGate { .. })
+    ));
     std::env::remove_var("opencode");
     std::env::remove_var("openrouter");
 }
@@ -510,9 +683,23 @@ fn l4_env_is_never_an_input() {
 /// test ever constructed such a chain, so deleting either guard stayed green.
 #[test]
 fn l6_chain_new_rejects_empty() {
-    let empty_ref = ChainEntry { r#ref: String::new(), id_status: String::new(), provider: None, keyless: Some(true) };
-    assert!(matches!(Chain::new("r", vec![]), Err(PolicyError::NoLiveRef { .. })));
-    assert!(matches!(Chain::new("r", vec![empty_ref]), Err(PolicyError::MalformedField { .. })));
+    let empty_ref = ChainEntry {
+        r#ref: String::new(),
+        id_status: String::new(),
+        provider: None,
+        keyless: Some(true),
+    };
+    assert!(matches!(
+        Chain::new("r", vec![]),
+        Err(PolicyError::NoLiveRef { .. })
+    ));
+    assert!(matches!(
+        Chain::new("r", vec![empty_ref]),
+        Err(PolicyError::MalformedField { .. })
+    ));
     // Parsing an empty wire text is the same property via the wire door.
-    assert!(matches!(Chain::parse_us("r", ""), Err(PolicyError::NoLiveRef { .. })));
+    assert!(matches!(
+        Chain::parse_us("r", ""),
+        Err(PolicyError::NoLiveRef { .. })
+    ));
 }

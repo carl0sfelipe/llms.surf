@@ -18,7 +18,8 @@ fn usage() -> ! {
 }
 
 fn read_json<T: serde::de::DeserializeOwned>(path: &str, what: &str) -> Result<T, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {what} {path}: {e}"))?;
+    let text =
+        std::fs::read_to_string(path).map_err(|e| format!("cannot read {what} {path}: {e}"))?;
     serde_json::from_str(&text).map_err(|e| format!("cannot parse {what} {path}: {e}"))
 }
 
@@ -99,10 +100,19 @@ fn main() {
             }
         }
     };
-    let credentials: BTreeSet<String> =
-        credentials.split(',').map(str::trim).filter(|s| !s.is_empty()).map(String::from).collect();
+    let credentials: BTreeSet<String> = credentials
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .collect();
 
-    let inputs = Inputs { registry: &registry, catalog: catalog.as_ref(), allowlist: &allowlist, credentials: &credentials };
+    let inputs = Inputs {
+        registry: &registry,
+        catalog: catalog.as_ref(),
+        allowlist: &allowlist,
+        credentials: &credentials,
+    };
 
     match dispatch_policy::resolve(&request, &inputs) {
         Ok(res) => {
@@ -123,7 +133,10 @@ fn main() {
                 }
             }
             match format.as_str() {
-                "json" => println!("{}", serde_json::to_string_pretty(&res).expect("serializable")),
+                "json" => println!(
+                    "{}",
+                    serde_json::to_string_pretty(&res).expect("serializable")
+                ),
                 _ => print!("{}", res.chain.render_us()),
             }
         }
@@ -131,7 +144,10 @@ fn main() {
             if let PolicyError::EmptyAfterCredentialGate { skipped, .. } = &err {
                 for s in skipped {
                     if let SkipReason::NoFileCredential { provider } = &s.reason {
-                        eprintln!("  ↳ pulando {} — provider '{}' sem credencial em arquivo (E5-M5)", s.r#ref, provider);
+                        eprintln!(
+                            "  ↳ pulando {} — provider '{}' sem credencial em arquivo (E5-M5)",
+                            s.r#ref, provider
+                        );
                     }
                 }
             }

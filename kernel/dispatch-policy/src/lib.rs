@@ -147,11 +147,17 @@ impl Chain {
                 // so a lone CR inside a field survives the round-trip as a
                 // shifted field.
                 if value.contains(US) || value.contains('\n') || value.contains('\r') {
-                    return Err(PolicyError::MalformedField { field: field.to_string(), value: value.to_string() });
+                    return Err(PolicyError::MalformedField {
+                        field: field.to_string(),
+                        value: value.to_string(),
+                    });
                 }
             }
             if e.r#ref.is_empty() {
-                return Err(PolicyError::MalformedField { field: "ref".into(), value: String::new() });
+                return Err(PolicyError::MalformedField {
+                    field: "ref".into(),
+                    value: String::new(),
+                });
             }
         }
         Ok(Self { request, entries })
@@ -194,20 +200,30 @@ impl Chain {
             }
             let fields: Vec<&str> = line.split(US).collect();
             if fields.len() != 4 {
-                return Err(PolicyError::MalformedField { field: "line".into(), value: line.to_string() });
+                return Err(PolicyError::MalformedField {
+                    field: "line".into(),
+                    value: line.to_string(),
+                });
             }
             let keyless = match fields[3] {
                 "1" => Some(true),
                 "0" => Some(false),
                 "-" => None,
                 other => {
-                    return Err(PolicyError::MalformedField { field: "keyless".into(), value: other.to_string() })
+                    return Err(PolicyError::MalformedField {
+                        field: "keyless".into(),
+                        value: other.to_string(),
+                    })
                 }
             };
             entries.push(ChainEntry {
                 r#ref: fields[0].to_string(),
                 id_status: fields[1].to_string(),
-                provider: if fields[2].is_empty() { None } else { Some(fields[2].to_string()) },
+                provider: if fields[2].is_empty() {
+                    None
+                } else {
+                    Some(fields[2].to_string())
+                },
                 keyless,
             });
         }
@@ -218,8 +234,12 @@ impl Chain {
 /// Why an entry of the free catalog was left out (reported, never silent).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SkipReason {
-    DeadId { id_status: String },
-    NoFileCredential { provider: String },
+    DeadId {
+        id_status: String,
+    },
+    NoFileCredential {
+        provider: String,
+    },
     /// L8: a later catalog occurrence of a ref already seen. Dedup precedes
     /// the gates, so a dead or uncredited first occurrence is never rescued
     /// by a duplicate further down the file (E5 retry smell).
@@ -244,14 +264,29 @@ pub enum PolicyError {
     /// Free route without a readable stamped catalog. Never falls back to defaults (E5).
     CatalogMissing,
     /// Nothing survived the door gates.
-    NoLiveRef { request: String },
+    NoLiveRef {
+        request: String,
+    },
     /// Live refs existed but none had a file credential (E5-M5).
-    EmptyAfterCredentialGate { request: String, skipped: Vec<Skipped> },
+    EmptyAfterCredentialGate {
+        request: String,
+        skipped: Vec<Skipped>,
+    },
     /// Free catalog cites a provider the owner never allowed (E5-M6/R4).
-    ProviderOutsideAllowlist { r#ref: String, provider: String },
-    NoModelForTier { tier: String },
-    UnknownModel { request: String },
-    MalformedField { field: String, value: String },
+    ProviderOutsideAllowlist {
+        r#ref: String,
+        provider: String,
+    },
+    NoModelForTier {
+        tier: String,
+    },
+    UnknownModel {
+        request: String,
+    },
+    MalformedField {
+        field: String,
+        value: String,
+    },
 }
 
 impl std::fmt::Display for PolicyError {
@@ -306,7 +341,13 @@ fn status_map(reg: &Registry) -> BTreeMap<&str, &str> {
 /// and the result is byte-deterministic.
 pub fn catalog_order(models: &[CatalogModel]) -> Vec<&CatalogModel> {
     let mut v: Vec<&CatalogModel> = models.iter().filter(|m| !m.r#ref.is_empty()).collect();
-    v.sort_by_key(|m| (!m.keyless, Reverse(m.context_length.unwrap_or(0)), m.r#ref.clone()));
+    v.sort_by_key(|m| {
+        (
+            !m.keyless,
+            Reverse(m.context_length.unwrap_or(0)),
+            m.r#ref.clone(),
+        )
+    });
     let mut seen: BTreeSet<&str> = BTreeSet::new();
     v.retain(|m| seen.insert(m.r#ref.as_str()));
     v
@@ -326,17 +367,28 @@ fn cheap_chain(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
 
     for m in catalog_order(&cat.models) {
         if !seen.insert(m.r#ref.as_str()) {
-            skipped.push(Skipped { r#ref: m.r#ref.clone(), reason: SkipReason::DuplicateRef {} });
+            skipped.push(Skipped {
+                r#ref: m.r#ref.clone(),
+                reason: SkipReason::DuplicateRef {},
+            });
             continue;
         }
         let status = statuses.get(m.r#ref.as_str()).copied().unwrap_or("");
         if is_dead(status) {
-            skipped.push(Skipped { r#ref: m.r#ref.clone(), reason: SkipReason::DeadId { id_status: status.into() } });
+            skipped.push(Skipped {
+                r#ref: m.r#ref.clone(),
+                reason: SkipReason::DeadId {
+                    id_status: status.into(),
+                },
+            });
             continue;
         }
         if let Some(p) = &m.provider {
             if !allow.contains(p.as_str()) {
-                return Err(PolicyError::ProviderOutsideAllowlist { r#ref: m.r#ref.clone(), provider: p.clone() });
+                return Err(PolicyError::ProviderOutsideAllowlist {
+                    r#ref: m.r#ref.clone(),
+                    provider: p.clone(),
+                });
             }
         }
         live_before_credential_gate += 1;
@@ -345,7 +397,9 @@ fn cheap_chain(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
                 if !inp.credentials.contains(p) {
                     skipped.push(Skipped {
                         r#ref: m.r#ref.clone(),
-                        reason: SkipReason::NoFileCredential { provider: p.clone() },
+                        reason: SkipReason::NoFileCredential {
+                            provider: p.clone(),
+                        },
                     });
                     continue;
                 }
@@ -360,12 +414,20 @@ fn cheap_chain(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
     }
 
     if live_before_credential_gate == 0 {
-        return Err(PolicyError::NoLiveRef { request: request.to_string() });
+        return Err(PolicyError::NoLiveRef {
+            request: request.to_string(),
+        });
     }
     if entries.is_empty() {
-        return Err(PolicyError::EmptyAfterCredentialGate { request: request.to_string(), skipped });
+        return Err(PolicyError::EmptyAfterCredentialGate {
+            request: request.to_string(),
+            skipped,
+        });
     }
-    Ok(Resolution { chain: Chain::new(request, entries)?, skipped })
+    Ok(Resolution {
+        chain: Chain::new(request, entries)?,
+        skipped,
+    })
 }
 
 /// Port of the registry-first rules for `mid` / `expensive` / `vision`
@@ -373,7 +435,9 @@ fn cheap_chain(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
 fn single_tier_id(tier: &str, reg: &Registry) -> Option<String> {
     let models = &reg.models;
     let by_id = |id: &str| models.iter().find(|m| m.id == id).map(|m| m.id.clone());
-    let by_best_for = |pred: &dyn Fn(&RegistryModel) -> bool| models.iter().find(|m| pred(m)).map(|m| m.id.clone());
+    let by_best_for = |pred: &dyn Fn(&RegistryModel) -> bool| {
+        models.iter().find(|m| pred(m)).map(|m| m.id.clone())
+    };
 
     if !models.is_empty() {
         let found = match tier {
@@ -382,19 +446,23 @@ fn single_tier_id(tier: &str, reg: &Registry) -> Option<String> {
                 .or_else(|| {
                     by_best_for(&|m| {
                         let bf = &m.best_for;
-                        (bf.iter().any(|b| b == "raciocínio médio") || bf.iter().any(|b| b == "código"))
+                        (bf.iter().any(|b| b == "raciocínio médio")
+                            || bf.iter().any(|b| b == "código"))
                             && matches!(m.tier.as_deref(), Some("paid") | Some("free"))
                     })
                 }),
             "expensive" => by_best_for(&|m| {
                 let mid = m.id.to_lowercase();
-                m.tier.as_deref() == Some("paid") && (mid.contains("frontier") || mid.contains("pro"))
+                m.tier.as_deref() == Some("paid")
+                    && (mid.contains("frontier") || mid.contains("pro"))
             })
             .or_else(|| by_id("claude-sonnet-5"))
             .or_else(|| by_best_for(&|m| m.best_for.iter().any(|b| b == "melhor qualidade"))),
             "vision" => by_id("gemini-3.6-flash").or_else(|| {
                 by_best_for(&|m| {
-                    m.best_for.iter().any(|b| b.contains("visão") || b.contains("vision"))
+                    m.best_for
+                        .iter()
+                        .any(|b| b.contains("visão") || b.contains("vision"))
                         || m.id.to_lowercase().contains("vision")
                         || m.id.to_lowercase().contains("visão")
                 })
@@ -414,11 +482,14 @@ fn single_tier_id(tier: &str, reg: &Registry) -> Option<String> {
 }
 
 fn single_tier(request: &str, tier: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
-    let id = single_tier_id(tier, inp.registry).ok_or_else(|| PolicyError::NoModelForTier { tier: tier.into() })?;
+    let id = single_tier_id(tier, inp.registry)
+        .ok_or_else(|| PolicyError::NoModelForTier { tier: tier.into() })?;
     let statuses = status_map(inp.registry);
     // Provider/keyless come from the free catalog when the ref is there;
     // otherwise unknown provider + keyless (the e82f008 case, now typed).
-    let meta = inp.catalog.and_then(|c| c.models.iter().find(|m| m.r#ref == id));
+    let meta = inp
+        .catalog
+        .and_then(|c| c.models.iter().find(|m| m.r#ref == id));
     let (provider, keyless) = match meta {
         Some(m) => (m.provider.clone(), m.keyless),
         None => (None, true),
@@ -426,8 +497,16 @@ fn single_tier(request: &str, tier: &str, inp: &Inputs) -> Result<Resolution, Po
     if !keyless {
         if let Some(p) = &provider {
             if !inp.credentials.contains(p) {
-                let skipped = vec![Skipped { r#ref: id.clone(), reason: SkipReason::NoFileCredential { provider: p.clone() } }];
-                return Err(PolicyError::EmptyAfterCredentialGate { request: request.into(), skipped });
+                let skipped = vec![Skipped {
+                    r#ref: id.clone(),
+                    reason: SkipReason::NoFileCredential {
+                        provider: p.clone(),
+                    },
+                }];
+                return Err(PolicyError::EmptyAfterCredentialGate {
+                    request: request.into(),
+                    skipped,
+                });
             }
         }
     }
@@ -437,7 +516,10 @@ fn single_tier(request: &str, tier: &str, inp: &Inputs) -> Result<Resolution, Po
         provider,
         keyless: Some(keyless),
     };
-    Ok(Resolution { chain: Chain::new(request, vec![entry])?, skipped: vec![] })
+    Ok(Resolution {
+        chain: Chain::new(request, vec![entry])?,
+        skipped: vec![],
+    })
 }
 
 /// Direct model id (or a `cli_hints` value): the model followed by its
@@ -453,11 +535,22 @@ fn direct(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
         .models
         .iter()
         .find(|m| m.id == request || m.cli_hints.values().any(|v| v.as_str() == Some(request)))
-        .ok_or_else(|| PolicyError::UnknownModel { request: request.into() })?;
-    let provider_of = |id: &str| reg.models.iter().find(|m| m.id == id).and_then(|m| m.provider.clone());
+        .ok_or_else(|| PolicyError::UnknownModel {
+            request: request.into(),
+        })?;
+    let provider_of = |id: &str| {
+        reg.models
+            .iter()
+            .find(|m| m.id == id)
+            .and_then(|m| m.provider.clone())
+    };
     let mut entries = vec![ChainEntry {
         r#ref: model.id.clone(),
-        id_status: statuses.get(model.id.as_str()).copied().unwrap_or("").to_string(),
+        id_status: statuses
+            .get(model.id.as_str())
+            .copied()
+            .unwrap_or("")
+            .to_string(),
         provider: model.provider.clone(),
         keyless: None,
     }];
@@ -473,7 +566,10 @@ fn direct(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
     // ref repeated in the fallback list collapses to its first occurrence.
     let mut seen: BTreeSet<String> = BTreeSet::new();
     entries.retain(|e| seen.insert(e.r#ref.clone()));
-    Ok(Resolution { chain: Chain::new(request, entries)?, skipped: vec![] })
+    Ok(Resolution {
+        chain: Chain::new(request, entries)?,
+        skipped: vec![],
+    })
 }
 
 /// The P1 entry point. Pure.

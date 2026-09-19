@@ -13,7 +13,8 @@
 //! poisoning and assertions happen on one thread, in one test.
 
 use dispatch_policy::{
-    resolve, Allowlist, CatalogModel, FreeCatalog, Inputs, PolicyError, Registry, RegistryModel, SkipReason,
+    resolve, Allowlist, CatalogModel, FreeCatalog, Inputs, PolicyError, Registry, RegistryModel,
+    SkipReason,
 };
 use std::collections::BTreeSet;
 
@@ -39,7 +40,11 @@ fn registry_for(cat: &[CatalogModel]) -> Registry {
     Registry {
         models: cat
             .iter()
-            .map(|m| RegistryModel { id: m.r#ref.clone(), id_status: Some("EXISTE".into()), ..Default::default() })
+            .map(|m| RegistryModel {
+                id: m.r#ref.clone(),
+                id_status: Some("EXISTE".into()),
+                ..Default::default()
+            })
             .collect(),
     }
 }
@@ -82,12 +87,19 @@ fn l4_holds_regardless_of_env() {
     poison_env();
     let cat = catalog();
     let reg = registry_for(&cat.models);
-    let allowlist = Allowlist { providers: vec!["opencode".into(), "openrouter".into()] };
+    let allowlist = Allowlist {
+        providers: vec!["opencode".into(), "openrouter".into()],
+    };
     let creds: BTreeSet<String> = BTreeSet::new(); // empty FILE credential set
 
     // Cheap route, mixed catalog: the keyless leg survives, both keyed
     // legs are skipped as NoFileCredential — never admitted via env.
-    let inputs = Inputs { registry: &reg, catalog: Some(&cat), allowlist: &allowlist, credentials: &creds };
+    let inputs = Inputs {
+        registry: &reg,
+        catalog: Some(&cat),
+        allowlist: &allowlist,
+        credentials: &creds,
+    };
     let res = resolve("tier:cheap", &inputs)
         .expect("keyless leg must survive the credential gate with empty FILE credentials");
     for e in res.chain.entries() {
@@ -102,7 +114,11 @@ fn l4_holds_regardless_of_env() {
         .filter(|s| matches!(s.reason, SkipReason::NoFileCredential { .. }))
         .map(|s| s.r#ref.as_str())
         .collect();
-    assert_eq!(skipped_keyed, keyed_refs(), "every non-keyless entry must be skipped, via env alone");
+    assert_eq!(
+        skipped_keyed,
+        keyed_refs(),
+        "every non-keyless entry must be skipped, via env alone"
+    );
 
     // Keyed-only catalog: the resolution must fail loud and typed —
     // never fall back to the environment to build a chain (E5-M5).
@@ -110,12 +126,19 @@ fn l4_holds_regardless_of_env() {
         kind: Some("free-catalog/1".into()),
         models: cat.models.iter().filter(|m| !m.keyless).cloned().collect(),
     };
-    let inputs = Inputs { registry: &reg, catalog: Some(&keyed_only), allowlist: &allowlist, credentials: &creds };
+    let inputs = Inputs {
+        registry: &reg,
+        catalog: Some(&keyed_only),
+        allowlist: &allowlist,
+        credentials: &creds,
+    };
     match resolve("tier:cheap", &inputs) {
         Err(PolicyError::EmptyAfterCredentialGate { skipped, .. }) => {
             let got: BTreeSet<&str> = skipped.iter().map(|s| s.r#ref.as_str()).collect();
             assert_eq!(got, keyed_refs(), "skipped list must name every keyed ref");
         }
-        other => panic!("keyed-only catalog under poisoned env must be EmptyAfterCredentialGate, got {other:?}"),
+        other => panic!(
+            "keyed-only catalog under poisoned env must be EmptyAfterCredentialGate, got {other:?}"
+        ),
     }
 }
