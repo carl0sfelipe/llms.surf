@@ -21,11 +21,13 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=lib-gui-http.sh
+source "$REPO_ROOT/tests/lib-gui-http.sh"
 pass=0
 fail=0
 
 ok() { echo "  PASS: $1"; pass=$((pass + 1)); }
-not() { echo "  FAIL: $1"; fail=$((fail + 1)); }
+not() { echo "  FAIL: $1"; fail=$((fail + 1)); gui_dump_log "${SRV_LOG:-}"; }
 
 WORK=$(mktemp -d /tmp/test-gui-todo.XXXXXX)
 SERVER_PID=""
@@ -91,27 +93,22 @@ python3 "$REPO_ROOT/bin/oracfit-todo-server.py" \
   --panel-dir "$REPO_ROOT/panel" --logs-dir "$LOGS" --oracfit-root "$WORK/root" \
   --ring-target "$TARGET" --port 0 --bind 127.0.0.1 > "$SRV_LOG" 2>&1 &
 SERVER_PID=$!
-PORT=""
-for _ in $(seq 1 40); do
-  PORT=$(grep -oE 'http://127\.0\.0\.1:[0-9]+' "$SRV_LOG" | head -1 | grep -oE '[0-9]+$' || true)
-  [ -n "$PORT" ] && curl -sf "http://127.0.0.1:$PORT/todo.html" >/dev/null 2>&1 && break
-  sleep 0.2
-done
+PORT=$(gui_wait_port "$SRV_LOG" todo.html || true)
 BASE="http://127.0.0.1:$PORT"
-[ -n "$PORT" ] || { not "servidor não subiu (log: $SRV_LOG)"; cat "$SRV_LOG"; exit 1; }
+[ -n "$PORT" ] || { not "servidor não subiu (log: $SRV_LOG)"; exit 1; }
 
 echo "--- T1: página + herança do servidor base ---"
-curl -sf "$BASE/todo.html" | grep -q "backlog de anéis" \
+gui_get "$BASE/todo.html" | grep -q "backlog de anéis" \
   && ok "/todo.html com marcador" || not "/todo.html sem marcador"
-curl -sf "$BASE/api/gui/home" | grep -q '"ok": true' \
+gui_get "$BASE/api/gui/home" | grep -q '"ok": true' \
   && ok "/api/gui/home herdado responde" || not "/api/gui/home quebrou na herança"
-curl -sf "$BASE/gui.css" | grep -q "bg-default" \
+gui_get "$BASE/gui.css" | grep -q "bg-default" \
   && ok "gui.css servido" || not "gui.css não servido"
-curl -sf "$BASE/runtime-config.json" | grep -q '"todo": true' \
+gui_get "$BASE/runtime-config.json" | grep -q '"todo": true' \
   && ok "runtime-config declara todo" || not "runtime-config sem todo"
 
 echo "--- T2: backlog × ledger — estados, contadores, detalhe do close ---"
-TODO=$(curl -sf "$BASE/api/gui/todo")
+TODO=$(gui_get "$BASE/api/gui/todo")
 echo "$TODO" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
@@ -154,15 +151,10 @@ python3 "$REPO_ROOT/bin/oracfit-todo-server.py" \
   --panel-dir "$REPO_ROOT/panel" --logs-dir "$LOGS" --oracfit-root "$WORK/root" \
   --ring-target "$NORING" --port 0 --bind 127.0.0.1 > "$SRV2_LOG" 2>&1 &
 SERVER2_PID=$!
-PORT2=""
-for _ in $(seq 1 40); do
-  PORT2=$(grep -oE 'http://127\.0\.0\.1:[0-9]+' "$SRV2_LOG" | head -1 | grep -oE '[0-9]+$' || true)
-  [ -n "$PORT2" ] && curl -sf "http://127.0.0.1:$PORT2/api/gui/todo" >/dev/null 2>&1 && break
-  sleep 0.2
-done
-[ -n "$PORT2" ] && ok "servidor sobe com alvo sem ring/" || not "servidor recusou alvo sem ring/"
+PORT2=$(gui_wait_port "$SRV2_LOG" api/gui/todo || true)
+[ -n "$PORT2" ] && ok "servidor sobe com alvo sem ring/" || { not "servidor recusou alvo sem ring/"; gui_dump_log "$SRV2_LOG"; }
 grep -q "WARN" "$SRV2_LOG" && ok "boot avisa que falta ring init" || not "sem WARN no boot"
-curl -sf "http://127.0.0.1:$PORT2/api/gui/todo" | python3 -c "
+gui_get "http://127.0.0.1:$PORT2/api/gui/todo" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 assert d['ok'] and d['ring_initialized'] is False, d
@@ -172,7 +164,7 @@ assert d['items'][0]['id'] == 'N-1' and d['items'][0]['status'] == 'fila', d['it
 kill "$SERVER2_PID" 2>/dev/null; wait "$SERVER2_PID" 2>/dev/null; SERVER2_PID=""
 
 echo "--- T5: frota — irmão wt-* sem backlog declara ausência ---"
-curl -sf "$BASE/api/gui/todo?project=semback" | python3 -c "
+gui_get "$BASE/api/gui/todo?project=semback" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 assert d['ok'] and d['project'] == 'semback', d

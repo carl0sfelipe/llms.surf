@@ -20,11 +20,13 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REVIEW="$REPO_ROOT/bin/corte-review.py"
+# shellcheck source=lib-gui-http.sh
+source "$REPO_ROOT/tests/lib-gui-http.sh"
 pass=0
 fail=0
 
 ok() { echo "  PASS: $1"; pass=$((pass + 1)); }
-not() { echo "  FAIL: $1"; fail=$((fail + 1)); }
+not() { echo "  FAIL: $1"; fail=$((fail + 1)); gui_dump_log "${SRV_LOG:-}"; }
 
 WORK=$(mktemp -d /tmp/test-corte-review.XXXXXX)
 SERVER_PID=""
@@ -149,22 +151,22 @@ assert len(d["checks"]) == 5
 ' 2>/dev/null && ok "T8 --json tem o contrato completo" || not "T8 contrato do JSON"
 
 # ── T9: GUI — API + página + nav ────────────────────────────────────────────
-PORT=8797
+# Porta efêmera (--port 0), como as outras suítes de GUI: 8797 fixa colidia
+# com qualquer servidor deixado vivo por outra suíte no mesmo runner.
+SRV_LOG="$WORK/server.log"
 ORACFIT_CORTE_DIR="$CORTE" python3 "$REPO_ROOT/bin/oracfit-todo-server.py" \
-  --panel-dir "$REPO_ROOT/panel" --logs-dir "$WORK/logs" --port "$PORT" \
-  > "$WORK/server.log" 2>&1 &
+  --panel-dir "$REPO_ROOT/panel" --logs-dir "$WORK/logs" --port 0 --bind 127.0.0.1 \
+  > "$SRV_LOG" 2>&1 &
 SERVER_PID=$!
-for _ in $(seq 1 20); do
-  curl -sf "http://127.0.0.1:$PORT/runtime-config.json" > /dev/null && break
-  sleep 0.3
-done
-GUI=$(curl -s "http://127.0.0.1:$PORT/api/gui/corte")
+PORT=$(gui_wait_port "$SRV_LOG" corte.html || true)
+[ -n "$PORT" ] || not "T9 servidor da GUI não subiu"
+GUI=$(gui_get "http://127.0.0.1:$PORT/api/gui/corte" || true)
 echo "$GUI" | python3 -c '
 import json, sys
 d = json.load(sys.stdin)
 assert d.get("ok") and d.get("verdict") in ("APPROVED", "REJECTED"), d.get("error")
 ' 2>/dev/null && ok "T9 /api/gui/corte ok+verdict" || not "T9 API: $GUI"
-curl -s "http://127.0.0.1:$PORT/corte.html" | grep -q "Corte público — revisão de versão" \
+gui_get "http://127.0.0.1:$PORT/corte.html" | grep -q "Corte público — revisão de versão" \
   && ok "T9b /corte.html servida" || not "T9b página"
 grep -q 'corte.html" label: "Corte público"' "$REPO_ROOT/panel/gui.js" 2>/dev/null
 grep -q '"corte.html", label: "Corte público"' "$REPO_ROOT/panel/gui.js" \
