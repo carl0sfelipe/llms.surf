@@ -467,13 +467,13 @@
               "ref": "deepseek-v4-pro",
               "id_status": "EXISTE",
               "provider": "deepseek",
-              "keyless": true
+              "keyless": null
             },
             {
               "ref": "deepseek-v4-flash-openrouter",
               "id_status": "EXISTE",
               "provider": "openrouter",
-              "keyless": true
+              "keyless": null
             }
           ],
           "skipped": []
@@ -492,7 +492,7 @@
               "ref": "deepseek-v4-flash-openrouter",
               "id_status": "EXISTE",
               "provider": "openrouter",
-              "keyless": true
+              "keyless": null
             }
           ],
           "skipped": []
@@ -771,7 +771,7 @@
     },
     {
       "name": "T05_cli_hints_non_string_ignored",
-      "incident": "T05 registry-6: cli_hints with nested objects/numbers parse without crashing and never alias; only string values are aliases (request resolves by id)",
+      "incident": "T05 registry-6: cli_hints with nested objects/numbers parse without crashing and never alias; only string values are aliases (request resolves by id). RE-PINNED under T15/D-WIRE (2026-09-19): direct-path entries stamp keyless null (wire '-', gate not applicable) instead of the old unconditional true",
       "request": "m1",
       "credentials": [],
       "registry": {
@@ -796,7 +796,7 @@
               "ref": "m1",
               "id_status": "",
               "provider": null,
-              "keyless": true
+              "keyless": null
             }
           ],
           "skipped": []

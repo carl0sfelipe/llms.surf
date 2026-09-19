@@ -35,7 +35,9 @@ fn status() -> impl Strategy<Value = Option<String>> {
 }
 
 fn entry() -> impl Strategy<Value = ChainEntry> {
-    (field(), field(), proptest::option::of(field()), any::<bool>())
+    // keyless generates the full tri-state (Some(true)/Some(false)/None =
+    // wire `1`/`0`/`-`, T15) so the L1 round-trip covers every wire value.
+    (field(), field(), proptest::option::of(field()), proptest::option::of(any::<bool>()))
         .prop_map(|(r, id_status, provider, keyless)| ChainEntry { r#ref: r, id_status, provider, keyless })
 }
 
@@ -151,7 +153,7 @@ proptest! {
                 // occurrence's metadata, never a later duplicate's.
                 for e in res.chain.entries() {
                     let f = first[e.r#ref.as_str()];
-                    prop_assert_eq!(e.keyless, f.keyless, "not the first occurrence for {:?}", e.r#ref);
+                    prop_assert_eq!(e.keyless, Some(f.keyless), "not the first occurrence for {:?}", e.r#ref);
                     prop_assert_eq!(&e.provider, &f.provider, "not the first occurrence for {:?}", e.r#ref);
                 }
             }
@@ -239,7 +241,9 @@ proptest! {
                     prop_assert!(!DEAD_ID_STATUSES.iter().any(|d| e.id_status.contains(d)), "dead id leaked: {:?}", e);
                     if let Some(p) = &e.provider {
                         prop_assert!(allowlist.providers.contains(p), "provider outside allowlist: {:?}", e);
-                        if !e.keyless { prop_assert!(creds.contains(p), "keyed entry without credential: {:?}", e); }
+                        if e.keyless == Some(false) {
+                            prop_assert!(creds.contains(p), "keyed entry without credential: {:?}", e);
+                        }
                     }
                     let want = e.r#ref.as_str();
                     let pos = order[cursor..].iter().position(|r| *r == want);
@@ -464,7 +468,7 @@ fn l4_env_is_never_an_input() {
     match resolve("tier:cheap", &inputs) {
         Ok(res) => assert!(
             res.chain.entries() == [ChainEntry {
-                r#ref: "zero".into(), id_status: "EXISTE".into(), provider: Some("opencode".into()), keyless: true,
+                r#ref: "zero".into(), id_status: "EXISTE".into(), provider: Some("opencode".into()), keyless: Some(true),
             }],
             "env leaked into the credential gate: {res:?}"
         ),
@@ -483,7 +487,7 @@ fn l4_env_is_never_an_input() {
 /// test ever constructed such a chain, so deleting either guard stayed green.
 #[test]
 fn l6_chain_new_rejects_empty() {
-    let empty_ref = ChainEntry { r#ref: String::new(), id_status: String::new(), provider: None, keyless: true };
+    let empty_ref = ChainEntry { r#ref: String::new(), id_status: String::new(), provider: None, keyless: Some(true) };
     assert!(matches!(Chain::new("r", vec![]), Err(PolicyError::NoLiveRef { .. })));
     assert!(matches!(Chain::new("r", vec![empty_ref]), Err(PolicyError::MalformedField { .. })));
     // Parsing an empty wire text is the same property via the wire door.

@@ -115,8 +115,11 @@ pub struct ChainEntry {
     /// never `Some("")`: T14).
     #[serde(default, deserialize_with = "empty_provider_is_none")]
     pub provider: Option<String>,
-    /// `true` = zero-key leg, credential gate does not apply.
-    pub keyless: bool,
+    /// Credential-gate tri-state (decision D2, T09/T15): `Some(true)` =
+    /// zero-key leg; `Some(false)` = keyed leg, gate applies; `None` = gate
+    /// not applicable (direct ids — the policy made no credential
+    /// determination here). Wire: `1` / `0` / `-`.
+    pub keyless: Option<bool>,
 }
 
 /// Ordered fallback chain. Non-empty by construction (L6): the only way to
@@ -155,7 +158,10 @@ impl Chain {
     }
 
     /// Wire format consumed by `run-with-fallback.sh`:
-    /// `ref US id_status US provider US keyless(1|0)` per line.
+    /// `ref US id_status US provider US keyless(1|0|-)` per line. `-` (gate
+    /// not applicable, direct ids) keeps the shell's existing
+    /// `[ "$KEYLESS" != "1" ]` credential gate armed — a third value can
+    /// never unlock a leg, only `1` does (failsafe; the shell is unchanged).
     pub fn render_us(&self) -> String {
         let mut out = String::new();
         for e in &self.entries {
@@ -165,7 +171,11 @@ impl Chain {
             out.push(US);
             out.push_str(e.provider.as_deref().unwrap_or(""));
             out.push(US);
-            out.push(if e.keyless { '1' } else { '0' });
+            out.push(match e.keyless {
+                Some(true) => '1',
+                Some(false) => '0',
+                None => '-',
+            });
             out.push('\n');
         }
         out
@@ -183,8 +193,9 @@ impl Chain {
                 return Err(PolicyError::MalformedField { field: "line".into(), value: line.to_string() });
             }
             let keyless = match fields[3] {
-                "1" => true,
-                "0" => false,
+                "1" => Some(true),
+                "0" => Some(false),
+                "-" => None,
                 other => {
                     return Err(PolicyError::MalformedField { field: "keyless".into(), value: other.to_string() })
                 }
@@ -340,7 +351,7 @@ fn cheap_chain(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
             r#ref: m.r#ref.clone(),
             id_status: status.to_string(),
             provider: m.provider.clone(),
-            keyless: m.keyless,
+            keyless: Some(m.keyless),
         });
     }
 
@@ -420,14 +431,17 @@ fn single_tier(request: &str, tier: &str, inp: &Inputs) -> Result<Resolution, Po
         r#ref: id.clone(),
         id_status: statuses.get(id.as_str()).copied().unwrap_or("").to_string(),
         provider,
-        keyless,
+        keyless: Some(keyless),
     };
     Ok(Resolution { chain: Chain::new(request, vec![entry])?, skipped: vec![] })
 }
 
 /// Direct model id (or a `cli_hints` value): the model followed by its
 /// declared `fallback` ids, each carrying its stamped status. No credential
-/// gate applies on this path today (mirrors run-with-fallback.sh).
+/// gate applies on this path today (mirrors run-with-fallback.sh), so every
+/// entry is stamped `keyless: None` — wire `-`, "gate not applicable"
+/// (decision D2) — never the unconditional `keyless: true` it used to lie
+/// with (T15).
 fn direct(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
     let reg = inp.registry;
     let statuses = status_map(reg);
@@ -441,14 +455,14 @@ fn direct(request: &str, inp: &Inputs) -> Result<Resolution, PolicyError> {
         r#ref: model.id.clone(),
         id_status: statuses.get(model.id.as_str()).copied().unwrap_or("").to_string(),
         provider: model.provider.clone(),
-        keyless: true,
+        keyless: None,
     }];
     for f in &model.fallback {
         entries.push(ChainEntry {
             r#ref: f.clone(),
             id_status: statuses.get(f.as_str()).copied().unwrap_or("").to_string(),
             provider: provider_of(f),
-            keyless: true,
+            keyless: None,
         });
     }
     // L8 holds for every chain. The direct path has no skip channel, so a

@@ -38,8 +38,12 @@ Python for the `tier:*` branch; behaviour unchanged; laws now guard prod.
    `lib-free-credentials.sh` that prints the providers with file
    credentials (the lib stays the single reader; the kernel never opens
    auth files — L4).
-3. The loop that consumed `CHAIN_META` stays as is (same US format). Delete
-   the inline Python.
+3. The loop that consumed `CHAIN_META` stays as is (same US format); the
+   loop treats `-` as `1`. Delete the inline Python. (Wire note, T15/D2:
+   tier routes emit `1|0` only; direct ids emit `-` = "gate not
+   applicable" — until that rewiring lands, the unchanged
+   `[ "$KEYLESS" != "1" ]` check keeps `-` inside the credential gate,
+   so the shell can ignore the third value safely.)
 4. Add to `bin/test-free-path.sh` a leg that runs both (Python
    `resolve-tier` and the binary) and diffs — keep for one release, then
    delete `resolve_tier` from the Python loader (the `mode validate` part
