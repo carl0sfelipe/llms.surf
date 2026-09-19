@@ -166,6 +166,124 @@
       "request": "does-not-exist",
       "credentials": [],
       "expect": {"error": "UnknownModel"}
+    },
+    {
+      "name": "T05_empty_registry_cheap",
+      "incident": "T05 registry-1: registry {} is an empty registry, not an error; cheap chain forms with id_status \"\" (and the dead gate never fires)",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "registry": {"models": []},
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "mimo-v2.5-free", "id_status": "", "provider": "opencode", "keyless": true},
+            {"ref": "nemotron-3-ultra-free", "id_status": "", "provider": "opencode", "keyless": true},
+            {"ref": "ghost-model:free", "id_status": "", "provider": "openrouter", "keyless": false},
+            {"ref": "google/gemma-4-31b-it:free", "id_status": "", "provider": "openrouter", "keyless": false},
+            {"ref": "cohere/north-mini-code:free", "id_status": "", "provider": "openrouter", "keyless": false}
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T05_direct_empty_id_is_malformed_not_chain",
+      "incident": "T05 registry-3: a registry entry missing id has id \"\"; direct request \"\" must never become a chain with an empty ref — typed MalformedField (not UnknownModel; Decisions 2026-09-19)",
+      "request": "",
+      "credentials": [],
+      "registry": {"models": [{"provider": "zen", "tier": "free", "id_status": "EXISTE"}]},
+      "expect": {"error": "MalformedField"}
+    },
+    {
+      "name": "T05_cli_hints_non_string_ignored",
+      "incident": "T05 registry-6: cli_hints with nested objects/numbers parse without crashing and never alias; only string values are aliases (request resolves by id)",
+      "request": "m1",
+      "credentials": [],
+      "registry": {"models": [{"id": "m1", "cli_hints": {"opencode": {"nested": {"deep": "x/y"}}, "num": 7}}]},
+      "expect": {"ok": {"entries": [{"ref": "m1", "id_status": "", "provider": null, "keyless": true}], "skipped": []}}
+    },
+    {
+      "name": "T05_duplicate_id_last_status_wins",
+      "incident": "T05 registry-7: duplicate registry ids — the LAST id_status wins (status_map last-write), deterministically; here FANTASMA last kills the ref (NoLiveRef)",
+      "request": "tier:cheap",
+      "credentials": [],
+      "registry": {"models": [{"id": "dup", "id_status": "EXISTE"}, {"id": "dup", "id_status": "FANTASMA"}]},
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "dup", "provider": "opencode", "keyless": true, "context_length": null}
+      ]},
+      "expect": {"error": "NoLiveRef"}
+    },
+    {
+      "name": "T05_duplicate_ref_keeps_both_legs",
+      "incident": "T05 catalog-13: two catalog entries with the same ref but different keyless BOTH enter the chain (parity with Python sorted, which keeps both); dedup is a candidate law, not a law yet",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "registry": {"models": [{"id": "dup", "id_status": "EXISTE"}]},
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "dup", "provider": "openrouter", "keyless": false, "context_length": 1000},
+        {"ref": "dup", "provider": "opencode", "keyless": true, "context_length": null}
+      ]},
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "dup", "id_status": "EXISTE", "provider": "opencode", "keyless": true},
+            {"ref": "dup", "id_status": "EXISTE", "provider": "openrouter", "keyless": false}
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T05_ref_with_us_delimiter_is_malformed",
+      "incident": "T05 catalog-14 / L1b end-to-end: a catalog ref containing \\u001f is a typed MalformedField (CLI: exit 2, stdout empty), never a chain",
+      "request": "tier:cheap",
+      "credentials": [],
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "a\u001fb", "provider": "opencode", "keyless": true, "context_length": null}
+      ]},
+      "expect": {"error": "MalformedField"}
+    },
+    {
+      "name": "T05_ref_with_newline_is_malformed",
+      "incident": "T05 catalog-15 / L1b end-to-end: a catalog ref containing \\n is a typed MalformedField (CLI: exit 2, stdout empty), never a chain",
+      "request": "tier:cheap",
+      "credentials": [],
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "a\nb", "provider": "opencode", "keyless": true, "context_length": null}
+      ]},
+      "expect": {"error": "MalformedField"}
+    },
+    {
+      "name": "T05_empty_provider_is_allowlist_violation",
+      "incident": "T05 catalog-16 divergence vs shell: provider \"\" (empty string, not null) is Some(\"\") in Rust and fails the allowlist loudly; run-with-fallback.sh coerces \"\" to no provider (m.get(\"provider\") or \"\") and skips the credential gate. Rust behaviour pinned here (Decisions 2026-09-19)",
+      "request": "tier:cheap",
+      "credentials": ["opencode", "openrouter"],
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "m", "provider": "", "keyless": false, "context_length": null}
+      ]},
+      "expect": {"error": "ProviderOutsideAllowlist"}
+    },
+    {
+      "name": "T05_empty_allowlist_keyless_providerless",
+      "incident": "T05 allowlist-17: empty allowlist makes every provider-bearing entry a violation (keyless with Some(provider) included); only a keyless entry with provider null still forms a chain",
+      "request": "tier:cheap",
+      "credentials": [],
+      "allowlist": {"providers": []},
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "anon", "provider": null, "keyless": true, "context_length": null}
+      ]},
+      "expect": {"ok": {"entries": [{"ref": "anon", "id_status": "", "provider": null, "keyless": true}], "skipped": []}}
+    },
+    {
+      "name": "T05_allowlist_whitespace_not_trimmed",
+      "incident": "T05 allowlist-18: allowlist providers are matched verbatim — \"openrouter \" (trailing space) does not cover \"openrouter\" and is a violation; duplicates are harmless (BTreeSet)",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "allowlist": {"providers": ["opencode", "openrouter "]},
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "g", "provider": "openrouter", "keyless": false, "context_length": 1}
+      ]},
+      "expect": {"error": "ProviderOutsideAllowlist"}
     }
   ]
 }
