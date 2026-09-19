@@ -31,9 +31,48 @@ Common rules (every subagent):
 | T09 | `T09-law-review.md` | Read-only: does each law's statement match its mechanism? | 45 min |
 | T10 | `T10-vectors-portability.md` | Can a non-Rust consumer (Python) run the vectors identically? (Bend-lab readiness) | 45 min |
 
+## Two rules that make this dogfooding instead of noise
+
+**1. Nothing ends as prose.** Every report's last section is
+`## Promoted`, listing the permanent artifacts the run produced, each as a
+path in a branch `p1-<ID>`:
+
+| Finding kind | Must become |
+|---|---|
+| a wrong/unexpected output | a new case in `kernel/vectors/p1/cases.json` (name = `<ID>_<slug>`, `incident` = the report) |
+| a law that did not bite | a new/changed test in `tests/laws.rs`, or a row in `P1.md` "Not laws (yet)" with the proposed mechanism |
+| a design divergence (e.g. `provider: ""`) | an entry in `kernel/laws/P1.md` **Decisions** table: behaviour, why, date — plus the vector that pins it |
+| a docs gap (T09/T10) | the sentence added to `P1.md` or the spec, in the same branch |
+| a perf/build number | a row in `kernel/BENCH.md` (date, machine, size → ms/RSS) |
+
+A finding without a promoted artifact does not count. `## Verdict` may be
+PASS with zero promotions only when the spec found literally nothing.
+
+**2. Run it through llms.surf, not beside it.** Each spec is dispatched as
+a task with a mechanical oracle so the ledger records tier, model,
+attempts and cost — this battery *is* research §6 E5's shape (10 tasks,
+cheap tier, fast judge). Use `T20` (mode YAML) once it exists; until then:
+
+```bash
+bin/dispatch.sh tier:cheap kernel/test-specs/<ID>-*.md p1-<ID>   # paddle
+```
+
+Oracle for every spec (mechanical, in the mode): the report file exists,
+its first `## Verdict:` line is `PASS|FAIL|BLOCKED`, `## Promoted` is
+non-empty or Verdict is PASS, and `cd kernel && cargo test --release`
+still exits 0 on the branch. After the battery, the ledger answers: which
+tier closed which spec, in how many attempts, at what cost.
+
 Dispatcher prompt (paste to each subagent, replacing `<ID>`):
 
 > Read `kernel/test-specs/README.md` then `kernel/test-specs/<ID>-*.md`.
-> Execute only that spec, in a worktree. Write the report to
-> `kernel/test-specs/reports/<ID>.md` in the exact format. Do not modify
-> the kernel. Do not run other specs.
+> Execute only that spec, in a worktree on branch `p1-<ID>`. Write the
+> report to `kernel/test-specs/reports/<ID>.md` in the exact format and
+> promote every finding per README rule 1 (vectors, laws, decisions,
+> BENCH) in the same branch. Do not modify `src/` (T06 works on a copy).
+> Do not run other specs. Commit the branch; do not merge.
+
+## Second wave — T11–T20 (each leaves a permanent artifact by design)
+
+See `T11-T20-second-wave.md`. Run after the first wave's branches exist;
+T11 consumes them.
