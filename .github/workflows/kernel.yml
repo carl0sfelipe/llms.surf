@@ -1,0 +1,67 @@
+# kernel.yml — CI for kernel/** (P1 dispatch policy).
+# Spec: kernel/test-specs/T11-T20-second-wave.md §T12 (30 min).
+#
+# Gates, in order: cargo fmt --check, clippy -D warnings, the T13
+# law-presence check (kernel/scripts/check-laws.sh, self-skipping until
+# that spec lands), cargo test --release, and the laws proptest pinned at
+# PROPTEST_CASES=2000.
+#
+# Known state at birth (2026-09-19, kernel/test-specs/reports/T12.md):
+# fmt --check, clippy -D warnings and laws@2000 are RED on the current
+# tree — that is documented wave-1 evidence, not a workflow bug. The gates
+# stay as written; going green is the owner's call (fix the lint/fmt,
+# scope-or-tiebreak L3), never a gate weakening.
+# Integration note (D-MERGE 2026-09-19, p1-integrate): resolved GREEN the
+# same day — fmt + clippy by D-QUALITY, laws@2000 by D-L3 (L8 dedup as L3
+# precondition). All gates now pass.
+name: kernel
+
+on:
+  push:
+    paths:
+      - "kernel/**"
+      - ".github/workflows/kernel.yml"
+
+jobs:
+  kernel:
+    name: kernel gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kernel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: kernel
+
+      - name: cargo fmt --check
+        run: cargo fmt --check
+
+      - name: cargo clippy -D warnings
+        run: cargo clippy --all-targets -- -D warnings
+
+      # T13 owns kernel/scripts/check-laws.sh; until that branch lands the
+      # step reports its own skip instead of failing the job on a file
+      # another spec has not merged yet.
+      - name: law-presence (T13 check-laws.sh when present)
+        run: |
+          if [ -f scripts/check-laws.sh ]; then
+            bash scripts/check-laws.sh
+          else
+            echo "kernel/scripts/check-laws.sh not on this branch yet (T13 pending) — skipped"
+          fi
+
+      - name: cargo test --release
+        run: cargo test --release
+
+      - name: laws proptest @ PROPTEST_CASES=2000
+        run: cargo test --release --test laws
+        env:
+          PROPTEST_CASES: "2000"
