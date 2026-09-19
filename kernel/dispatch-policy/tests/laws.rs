@@ -158,3 +158,53 @@ proptest! {
         prop_assert_eq!(resolve("tier:cheap", &inputs), Err(PolicyError::CatalogMissing));
     }
 }
+
+/// L4 (E5-M5): the environment is never a credential input. Found by T06/M9:
+/// a fallback to `std::env::var(p)` inside the credential gate survives every
+/// other shipped test, because nothing else ever sets the env.
+#[test]
+fn l4_env_is_never_an_input() {
+    std::env::set_var("opencode", "present-but-ignored");
+    std::env::set_var("openrouter", "present-but-ignored");
+    let keyed = CatalogModel { r#ref: "keyed".into(), provider: Some("openrouter".into()), keyless: false, context_length: Some(1) };
+    let zero = CatalogModel { r#ref: "zero".into(), provider: Some("opencode".into()), keyless: true, context_length: Some(2) };
+    let reg = Registry {
+        models: vec![
+            RegistryModel { id: "keyed".into(), id_status: Some("EXISTE".into()), ..Default::default() },
+            RegistryModel { id: "zero".into(), id_status: Some("EXISTE".into()), ..Default::default() },
+        ],
+    };
+    let allowlist = allow();
+    let creds = BTreeSet::new();
+    // Env vars for both providers are set, yet carry no credential: the keyed
+    // ref must still be gated out, and only the zero-key leg survives.
+    let cat = FreeCatalog { kind: Some("free-catalog/1".into()), models: vec![keyed.clone(), zero] };
+    let inputs = Inputs { registry: &reg, catalog: Some(&cat), allowlist: &allowlist, credentials: &creds };
+    match resolve("tier:cheap", &inputs) {
+        Ok(res) => assert!(
+            res.chain.entries() == [ChainEntry {
+                r#ref: "zero".into(), id_status: "EXISTE".into(), provider: Some("opencode".into()), keyless: true,
+            }],
+            "env leaked into the credential gate: {res:?}"
+        ),
+        other => panic!("env leaked into the credential gate: {other:?}"),
+    }
+    // A keyed-only catalog stays loud even with the env set.
+    let cat = FreeCatalog { kind: Some("free-catalog/1".into()), models: vec![keyed] };
+    let inputs = Inputs { registry: &reg, catalog: Some(&cat), allowlist: &allowlist, credentials: &creds };
+    assert!(matches!(resolve("tier:cheap", &inputs), Err(PolicyError::EmptyAfterCredentialGate { .. })));
+    std::env::remove_var("opencode");
+    std::env::remove_var("openrouter");
+}
+
+/// L6 (E5): `Chain::new` rejects an empty entry list and an empty `ref` with
+/// typed errors. Found by T06/M12: both guards were dead code — no shipped
+/// test ever constructed such a chain, so deleting either guard stayed green.
+#[test]
+fn l6_chain_new_rejects_empty() {
+    let empty_ref = ChainEntry { r#ref: String::new(), id_status: String::new(), provider: None, keyless: true };
+    assert!(matches!(Chain::new("r", vec![]), Err(PolicyError::NoLiveRef { .. })));
+    assert!(matches!(Chain::new("r", vec![empty_ref]), Err(PolicyError::MalformedField { .. })));
+    // Parsing an empty wire text is the same property via the wire door.
+    assert!(matches!(Chain::parse_us("r", ""), Err(PolicyError::NoLiveRef { .. })));
+}
