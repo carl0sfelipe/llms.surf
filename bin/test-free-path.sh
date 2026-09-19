@@ -180,6 +180,17 @@ else
   not_ "ISCA VAZOU — código do caminho free leu credencial de env"
 fi
 
+# T19: flag off → no policy_version field (schema not weakened: field is absent).
+if printf '%s' "$LEDGER_LINE" | python3 -c '
+import json, sys
+r = json.loads(sys.stdin.read())
+sys.exit(0 if "policy_version" not in r else 1)
+'; then
+  ok "T19: dispatch sem LLMS_KERNEL não grava policy_version"
+else
+  not_ "T19: policy_version apareceu com a flag off"
+fi
+
 # ── 8. allowlist adulterada → violado ────────────────────────────────────────
 TAMPER="$WD/allowlist-tampered.json"
 cat > "$TAMPER" <<'EOT'
@@ -327,6 +338,22 @@ if [ "$SHADOW_DIFF" = "0" ]; then
 else
   not_ "shadow dispatch: kernel_shadow_diff='$SHADOW_DIFF' (esperado 0). log:"
   sed 's/^/    /' "$WD/t18-shadow.log" 2>/dev/null | head -20
+fi
+
+WANT_SHA="$(git -C "$ROOT" rev-parse HEAD:kernel 2>/dev/null || true)"
+WANT_CRATE="$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$ROOT/kernel/dispatch-policy/Cargo.toml" | head -1)"
+PV_OK=$(printf '%s' "$SHADOW_LINE" | WANT_SHA="$WANT_SHA" WANT_CRATE="$WANT_CRATE" python3 -c '
+import json, os, sys
+r = json.loads(sys.stdin.read())
+pv = r.get("policy_version")
+if not isinstance(pv, dict):
+    print("ausente"); sys.exit(0)
+print("ok" if pv.get("crate")==os.environ["WANT_CRATE"] and pv.get("kernel_sha")==os.environ["WANT_SHA"] else "mismatch:%s" % pv)
+')
+if [ "$PV_OK" = "ok" ]; then
+  ok "T19: shadow grava policy_version crate=$WANT_CRATE kernel_sha"
+else
+  not_ "T19: policy_version no shadow = $PV_OK (esperado crate=$WANT_CRATE sha=$WANT_SHA)"
 fi
 
 echo ""
