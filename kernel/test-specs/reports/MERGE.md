@@ -60,6 +60,10 @@ LAWS_EXIT=0
   call (`p1-t04-{pid}-{n}-{name}`); unreadable-dir catalog unique per
   call. `src/**` untouched.
 
+`README.md`, `site/app.js`, `site/llms.txt`: incident count 111 → 114
+(three promoted D-DISPATCH files). `bin/check-docs.sh` and
+`tests/test-site-honesty.sh` require the copy to match the tree.
+
 ## Out of scope (by D-MERGE-APPROVE)
 
 - T18 / T19 / T20 (next, one PR each).
