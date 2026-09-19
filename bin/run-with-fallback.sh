@@ -123,17 +123,26 @@ sys.stderr.write(out.stderr)
     done
   }
 
-  write_kernel_shadow_diff() {
-    local diff="$1"
-    if [ -n "${DISPATCH_EFETIVO_FILE:-}" ]; then
-      printf 'kernel_shadow_diff=%s\n' "$diff" > "${DISPATCH_EFETIVO_FILE%.efetivo}.kernel"
-    fi
+  write_kernel_sidecar() {
+    # T18: kernel_shadow_diff. T19: policy_version (crate + kernel/ tree sha).
+    local diff="${1:-}"
+    local dest crate ksha
+    [ -n "${DISPATCH_EFETIVO_FILE:-}" ] || return 0
+    dest="${DISPATCH_EFETIVO_FILE%.efetivo}.kernel"
+    crate="$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$REPO_ROOT/kernel/dispatch-policy/Cargo.toml" | head -1)"
+    ksha="$(git -C "$REPO_ROOT" rev-parse HEAD:kernel 2>/dev/null || true)"
+    {
+      [ -n "$diff" ] && printf 'kernel_shadow_diff=%s\n' "$diff"
+      [ -n "$crate" ] && printf 'policy_version_crate=%s\n' "$crate"
+      [ -n "$ksha" ] && printf 'policy_version_sha=%s\n' "$ksha"
+    } >"$dest"
   }
 
   case "$KERNEL_MODE" in
     on)
       require_kernel_bin
       CHAIN_META="$(kernel_tier_us)" || { echo "✖ cadeia do $MODEL vazia (kernel) — nada despachado" >&2; exit 2; }
+      write_kernel_sidecar ""
       ;;
     shadow)
       require_kernel_bin
@@ -141,9 +150,9 @@ sys.stderr.write(out.stderr)
       KERNEL_US="$(kernel_tier_us)" || KERNEL_US=""
       PYTHON_GATED="$(printf '%s\n' "$CHAIN_META" | filter_us_by_file_creds)"
       if [ "$(printf '%s\n' "$PYTHON_GATED")" = "$(printf '%s\n' "$KERNEL_US")" ]; then
-        write_kernel_shadow_diff 0
+        write_kernel_sidecar 0
       else
-        write_kernel_shadow_diff 1
+        write_kernel_sidecar 1
       fi
       ;;
     off|"")

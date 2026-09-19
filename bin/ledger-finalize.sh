@@ -131,8 +131,12 @@ PROVIDER_EFETIVO=""
 ALLOWLIST_STATUS="fora-do-escopo"
 KERNEL_FILE="$PID_DIR/dispatch-${TASK_NAME}.kernel"
 KERNEL_SHADOW_DIFF=""
+POLICY_VERSION_CRATE=""
+POLICY_VERSION_SHA=""
 if [ -f "$KERNEL_FILE" ]; then
   KERNEL_SHADOW_DIFF="$(sed -n 's/^kernel_shadow_diff=//p' "$KERNEL_FILE" | head -1)"
+  POLICY_VERSION_CRATE="$(sed -n 's/^policy_version_crate=//p' "$KERNEL_FILE" | head -1)"
+  POLICY_VERSION_SHA="$(sed -n 's/^policy_version_sha=//p' "$KERNEL_FILE" | head -1)"
 fi
 
 if [ -f "$EFETIVO_FILE" ]; then
@@ -172,6 +176,7 @@ export TOKENS_INPUT TOKENS_OUTPUT TOKENS_REASONING TOKENS_CACHE_READ TOKENS_CACH
 export RUNNER_NAME="${DISPATCH_RUNNER_NAME:-}"
 export RUNNER_EXIT ORACLE_EXIT ORACLE_EXPECT="$ORACULO_EXPECT" ORACLE_STATUS ORACLE_CMD="$ORACULO_CMD"
 export REF_EFETIVO PROVIDER_EFETIVO ALLOWLIST_STATUS KERNEL_SHADOW_DIFF
+export POLICY_VERSION_CRATE POLICY_VERSION_SHA
 
 python3 -c '
 import json, os
@@ -221,6 +226,11 @@ record["allowlist_status"] = os.environ.get("ALLOWLIST_STATUS", "fora-do-escopo"
 ksd = os.environ.get("KERNEL_SHADOW_DIFF", "")
 if ksd != "":
     record["kernel_shadow_diff"] = int(ksd) if ksd.isdigit() else ksd
+# T19: additive; absent when LLMS_KERNEL is off / sidecar missing.
+pvc = os.environ.get("POLICY_VERSION_CRATE", "")
+pvs = os.environ.get("POLICY_VERSION_SHA", "")
+if pvc or pvs:
+    record["policy_version"] = {"crate": pvc, "kernel_sha": pvs}
 
 with open(os.environ["LEDGER_FILE"], "a") as f:
     f.write(json.dumps(record, ensure_ascii=False) + "\n")

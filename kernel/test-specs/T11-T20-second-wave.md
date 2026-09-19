@@ -95,6 +95,12 @@ first day the laws watch production traffic.
 
 ## T19 — `policy_version` in the ledger (20 min)
 
+```
+writes: bin/run-with-fallback.sh, bin/ledger-finalize.sh, bin/test-free-path.sh, kernel/test-specs/reports/T19.md
+reads: kernel/dispatch-policy/Cargo.toml, kernel/
+oracle: test-free-path T19 legs (shadow has field, off has no field)
+```
+
 Additive field: the ledger entry records the kernel crate version and the
 git sha of `kernel/` when `LLMS_KERNEL` is `shadow|on`. Oracle: a run in
 shadow mode shows the field; a run with the flag off shows no field; the
