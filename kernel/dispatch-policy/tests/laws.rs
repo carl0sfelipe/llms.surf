@@ -158,3 +158,162 @@ proptest! {
         prop_assert_eq!(resolve("tier:cheap", &inputs), Err(PolicyError::CatalogMissing));
     }
 }
+
+// ---------------------------------------------------------------- CLI contract
+// Promoted by the P1 battery spec T04 (kernel/test-specs/reports/T04.md,
+// 2026-09-19). The shared vector schema (`p1-vectors/1`) can only pin
+// resolution semantics, so exit codes, usage text and wire framing are
+// pinned here against the real binary instead.
+
+fn cli_run(args: &[&str]) -> (i32, String, String) {
+    use std::process::Command;
+    let out = Command::new(env!("CARGO_BIN_EXE_dispatch-policy")).args(args).output().unwrap();
+    (
+        out.status.code().expect("killed by signal"),
+        String::from_utf8(out.stdout).unwrap(),
+        String::from_utf8(out.stderr).unwrap(),
+    )
+}
+
+fn cli_fixture(name: &str, value: &serde_json::Value) -> std::path::PathBuf {
+    let p = std::env::temp_dir().join(format!("p1-t04-{}-{name}", std::process::id()));
+    std::fs::write(&p, value.to_string()).unwrap();
+    p
+}
+
+/// Fixtures straight from the shared vectors file (single source of truth).
+fn cli_fixtures() -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../vectors/p1/cases.json");
+    let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let f = &v["fixtures"];
+    (
+        cli_fixture("registry.json", &f["registry"]),
+        cli_fixture("catalog.json", &f["catalog"]),
+        cli_fixture("allowlist.json", &f["allowlist"]),
+    )
+}
+
+fn usage_starts(s: &str) -> bool {
+    s.starts_with("usage: dispatch-policy resolve <request>")
+}
+
+/// T04 checks 1, 2, 5, 11, 12 + bare `-h`: argument errors are usage on
+/// stderr, exit 2, nothing on stdout, no panic.
+#[test]
+fn cli_argument_errors_are_usage_exit_2() {
+    let (r, _c, a) = cli_fixtures();
+    let cases: &[&[&str]] = &[
+        &[],
+        &["resolve"],
+        &["resolve", "tier:cheap"],                                   // no --registry
+        &["resolve", "tier:cheap", "--registry"],                     // dangling flag
+        &["resolve", "tier:cheap", "--registry", r.to_str().unwrap()], // no --allowlist
+        &["resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--allowlist", a.to_str().unwrap(), "--foo", "x"],
+        &["resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--allowlist", a.to_str().unwrap(), "extra"],
+        &["resolve", "-h"],
+    ];
+    for args in cases {
+        let (code, stdout, stderr) = cli_run(args);
+        assert_eq!(code, 2, "exit for {args:?}");
+        assert!(stdout.is_empty(), "stdout non-empty for {args:?}");
+        assert!(usage_starts(&stderr), "stderr for {args:?}: {stderr:?}");
+    }
+}
+
+/// T04 checks 3, 4: unreadable / unparseable required input is a typed
+/// `ERROR: cannot …` with exit 3, stdout empty.
+#[test]
+fn cli_unreadable_input_exit_3() {
+    let (_r, _c, a) = cli_fixtures();
+    let bad = cli_fixture("bad.json", &serde_json::Value::String("{oops".into()));
+    let (code, stdout, stderr) =
+        cli_run(&["resolve", "tier:cheap", "--registry", "/nonexistent", "--allowlist", a.to_str().unwrap()]);
+    assert_eq!(code, 3);
+    assert!(stdout.is_empty());
+    assert!(stderr.starts_with("ERROR: cannot read registry"), "{stderr:?}");
+    let (code, stdout, stderr) =
+        cli_run(&["resolve", "tier:cheap", "--registry", bad.to_str().unwrap(), "--allowlist", a.to_str().unwrap()]);
+    assert_eq!(code, 3);
+    assert!(stdout.is_empty());
+    assert!(stderr.starts_with("ERROR: cannot parse registry"), "{stderr:?}");
+}
+
+/// T04 checks 6, 7, 14: a free route whose catalog is unreadable or of an
+/// unexpected kind is WARNed as absent, then the policy error is loud
+/// (`✖ rota free sem catálogo`), exit 2, stdout empty — never a default.
+#[test]
+fn cli_catalog_trouble_is_warn_then_loud() {
+    let (r, c, a) = cli_fixtures();
+    let badkind = cli_fixture(
+        "badkind.json",
+        &serde_json::json!({"kind": "something-else/1", "models": []}),
+    );
+    for catalog in ["/nonexistent".to_string(), badkind.to_str().unwrap().to_string()] {
+        let (code, stdout, stderr) = cli_run(&[
+            "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", &catalog,
+            "--allowlist", a.to_str().unwrap(), "--credentials", "openrouter",
+        ]);
+        assert_eq!(code, 2, "catalog {catalog}");
+        assert!(stdout.is_empty(), "catalog {catalog}");
+        assert!(stderr.contains("tratado como ausente"), "catalog {catalog}: {stderr:?}");
+        assert!(stderr.contains("✖ rota free sem catálogo"), "catalog {catalog}: {stderr:?}");
+    }
+    let _ = c;
+}
+
+/// T04 check 8 + 9 + 10: happy path wire format — exactly one line per
+/// entry with exactly 3 US separators, last field ∈ {0,1}, `\n`-terminated;
+/// `--format json` has `chain.request`, `chain.entries[]`, `skipped[]`;
+/// messy credentials parse to the same set as clean ones.
+#[test]
+fn cli_happy_path_wire_and_formats() {
+    let (r, c, a) = cli_fixtures();
+    let base = [
+        "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", c.to_str().unwrap(),
+        "--allowlist", a.to_str().unwrap(),
+    ];
+    let (code, stdout, _stderr) = cli_run(&[base.as_slice(), &["--credentials", "openrouter"]].concat());
+    assert_eq!(code, 0);
+    assert!(stdout.ends_with('\n'));
+    let mut last_field_ok = true;
+    let lines: Vec<&str> = stdout.trim_end_matches('\n').split('\n').collect();
+    assert_eq!(lines.len(), 4, "4 entries expected, got {stdout:?}");
+    for line in &lines {
+        let fields: Vec<&str> = line.split(US).collect();
+        assert_eq!(fields.len(), 4, "3 US per line, got {line:?}");
+        assert!(!line.ends_with(' '), "trailing space in {line:?}");
+        last_field_ok &= matches!(fields[3], "0" | "1");
+    }
+    assert!(last_field_ok, "keyless field not 0/1 in {stdout:?}");
+
+    let messy = cli_run(&[base.as_slice(), &["--credentials", " openrouter , ,opencode "]].concat());
+    let clean = cli_run(&[base.as_slice(), &["--credentials", "openrouter,opencode"]].concat());
+    assert_eq!(messy, clean, "messy credentials must equal clean ones");
+
+    let (code, stdout, _stderr) =
+        cli_run(&[base.as_slice(), &["--credentials", "openrouter", "--format", "json"]].concat());
+    assert_eq!(code, 0);
+    let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid json");
+    assert!(v["chain"]["request"].is_string());
+    assert!(v["chain"]["entries"].is_array());
+    assert!(v["skipped"].is_array());
+    let entry = &v["chain"]["entries"][0];
+    let keys: Vec<&str> = entry.as_object().unwrap().keys().map(String::as_str).collect();
+    assert_eq!(keys, vec!["id_status", "keyless", "provider", "ref"], "entry keys exactly the typed four");
+}
+
+/// T04 decision D1 (this branch): an unknown `--format` value falls back to
+/// the US wire format with exit 0 — documented leniency, pinned here so a
+/// change must update the decision in `kernel/laws/P1.md` first.
+#[test]
+fn cli_unknown_format_value_falls_back_to_us() {
+    let (r, c, a) = cli_fixtures();
+    let base = [
+        "resolve", "tier:cheap", "--registry", r.to_str().unwrap(), "--catalog", c.to_str().unwrap(),
+        "--allowlist", a.to_str().unwrap(), "--credentials", "openrouter",
+    ];
+    let default_us = cli_run(&base);
+    let unknown = cli_run(&[base.as_slice(), &["--format", "xml"]].concat());
+    assert_eq!(unknown.0, 0);
+    assert_eq!(unknown.1, default_us.1, "unknown --format renders the US wire format");
+}
