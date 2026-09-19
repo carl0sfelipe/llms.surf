@@ -142,7 +142,11 @@ impl Chain {
                 ("id_status", e.id_status.as_str()),
                 ("provider", e.provider.as_deref().unwrap_or("")),
             ] {
-                if value.contains(US) || value.contains('\n') {
+                // D-L1c (T07, 2026-09-19): CR is a delimiter too —
+                // `text.lines()` splits on `\n` and strips a trailing `\r`,
+                // so a lone CR inside a field survives the round-trip as a
+                // shifted field.
+                if value.contains(US) || value.contains('\n') || value.contains('\r') {
                     return Err(PolicyError::MalformedField { field: field.to_string(), value: value.to_string() });
                 }
             }

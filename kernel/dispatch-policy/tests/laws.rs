@@ -174,8 +174,14 @@ proptest! {
 
     /// L1b: a field containing a delimiter cannot become a chain.
     #[test]
-    fn l1b_delimiters_are_rejected(mut e in entry(), which in 0u8..3) {
-        match which { 0 => e.r#ref.push(US), 1 => e.id_status.push('\n'), _ => e.provider = Some(format!("x{US}y")) }
+    fn l1b_delimiters_are_rejected(mut e in entry(), which in 0u8..4) {
+        // D-L1c (T07, 2026-09-19): CR is a delimiter too.
+        match which {
+            0 => e.r#ref.push(US),
+            1 => e.id_status.push('\n'),
+            2 => e.provider = Some(format!("x{US}y")),
+            _ => e.r#ref.push('\r'),
+        }
         let rejected = matches!(Chain::new("r", vec![e]), Err(PolicyError::MalformedField { .. }));
         prop_assert!(rejected);
     }
