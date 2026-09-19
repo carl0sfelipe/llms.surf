@@ -183,9 +183,11 @@ O que "shipado" significa, verificável na árvore:
 5. Copy pública continua dizendo "degrau", nunca "provado" — risco 3 de
    `direction-kernel-rust-bend-lab-2026-09-19.md`.
 
-Número de versão: decisão do dono; `VERSION` hoje é 3.5.0 e o corte
-adiciona kernel + modo novo sem quebrar interface — o record não fixa
-o número.
+Número de versão: fixado pelo dono em **4.1.0** (2026-09-19 21:36 UTC).
+Corte em PR #9 (`cursor/release-4-1-0-3a81`, topo da pilha): conserto do
+flake + incidente 115 + bump. Oráculos no SHA do corte: 5× consecutivas
+das três suítes de GUI 0, `incident.sh audit` 0, `check-docs` 0,
+`test-site-honesty` 0, `check-saude` 0.
 
 Sobre bestmodel: continua vinculante não tocar PR #2, optimizer 1.0.1 e
 L03A 355 até ordem contrária. O polimento passa a ser feito **por**
