@@ -355,7 +355,12 @@ fn cli_run(args: &[&str]) -> (i32, String, String) {
 }
 
 fn cli_fixture(name: &str, value: &serde_json::Value) -> std::path::PathBuf {
-    let p = std::env::temp_dir().join(format!("p1-t04-{}-{name}", std::process::id()));
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(0);
+    let n = N.fetch_add(1, Ordering::Relaxed);
+    // Unique per call: parallel CLI tests used to share `p1-t04-{pid}-{name}`
+    // and race on truncate-then-write (empty/partial JSON → exit 3).
+    let p = std::env::temp_dir().join(format!("p1-t04-{}-{n}-{name}", std::process::id()));
     std::fs::write(&p, value.to_string()).unwrap();
     p
 }
@@ -471,7 +476,14 @@ fn cli_catalog_absence_vs_corruption_split() {
         &serde_json::json!({"kind": "free-catalog/1"}),
     );
     std::fs::write(&badjson, "{not json").unwrap();
-    let unreadable = std::env::temp_dir().join(format!("p1-t04-{}-dir", std::process::id()));
+    let unreadable = std::env::temp_dir().join(format!(
+        "p1-t04-{}-{}-dir",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
     std::fs::create_dir_all(&unreadable).unwrap();
 
     // Absent: exit 2, CatalogMissing.
