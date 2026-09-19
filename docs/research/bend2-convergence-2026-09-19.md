@@ -161,6 +161,12 @@ E1–E4 cabem em duas tardes. E5 é a pesquisa de verdade e depende de E1
 funcionar. E6 é o teste da "camada de modelo" (§3, caso fraco) num
 incidente real da árvore.
 
+Atualização (2026-09-19, D-DISPATCH): E5 segue **não medido** até o T20
+existir — `tier:cheap` não despacha pela frente única (`bin/dispatch.sh`
+sem mode YAML: runner sai exit 3, ver
+`incidents/2026-09-19-dispatch-sh-recusa-tier-cheap-sem-mode-yaml.md`), e é
+o modo `kernel_test.yaml` do T20 que dá à bateria um caminho com ledger.
+
 ## 7. Riscos e anti-hype
 
 1. **Bend é jovem** por autodeclaração. Nada de Bend no caminho crítico
