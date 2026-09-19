@@ -129,6 +129,12 @@ EFETIVO_FILE="$PID_DIR/dispatch-${TASK_NAME}.efetivo"
 REF_EFETIVO=""
 PROVIDER_EFETIVO=""
 ALLOWLIST_STATUS="fora-do-escopo"
+KERNEL_FILE="$PID_DIR/dispatch-${TASK_NAME}.kernel"
+KERNEL_SHADOW_DIFF=""
+if [ -f "$KERNEL_FILE" ]; then
+  KERNEL_SHADOW_DIFF="$(sed -n 's/^kernel_shadow_diff=//p' "$KERNEL_FILE" | head -1)"
+fi
+
 if [ -f "$EFETIVO_FILE" ]; then
   IFS=$'\t' read -r REF_EFETIVO PROVIDER_EFETIVO < "$EFETIVO_FILE"
   if [ -n "$PROVIDER_EFETIVO" ]; then
@@ -165,7 +171,7 @@ export STARTED_AT_ISO FINISHED_AT DURATION EXIT_STATUS
 export TOKENS_INPUT TOKENS_OUTPUT TOKENS_REASONING TOKENS_CACHE_READ TOKENS_CACHE_WRITE COST_USD LOG_LINES LOG_FILE LEDGER_FILE FORKS
 export RUNNER_NAME="${DISPATCH_RUNNER_NAME:-}"
 export RUNNER_EXIT ORACLE_EXIT ORACLE_EXPECT="$ORACULO_EXPECT" ORACLE_STATUS ORACLE_CMD="$ORACULO_CMD"
-export REF_EFETIVO PROVIDER_EFETIVO ALLOWLIST_STATUS
+export REF_EFETIVO PROVIDER_EFETIVO ALLOWLIST_STATUS KERNEL_SHADOW_DIFF
 
 python3 -c '
 import json, os
@@ -211,6 +217,10 @@ if runner_name:
 record["provider_efetivo"] = os.environ.get("PROVIDER_EFETIVO", "")
 record["provider_efetivo_ref"] = os.environ.get("REF_EFETIVO", "")
 record["allowlist_status"] = os.environ.get("ALLOWLIST_STATUS", "fora-do-escopo")
+# T18: present only when run-with-fallback wrote the sidecar (LLMS_KERNEL=shadow).
+ksd = os.environ.get("KERNEL_SHADOW_DIFF", "")
+if ksd != "":
+    record["kernel_shadow_diff"] = int(ksd) if ksd.isdigit() else ksd
 
 with open(os.environ["LEDGER_FILE"], "a") as f:
     f.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -244,7 +254,7 @@ case "${RUNNER_EXIT:-}" in
 esac
 bash "$REPO_ROOT_FOR_USAGE/bin/emit-usage-feedback.sh" "${USAGE_ARGS[@]}" 2>/dev/null || true
 
-rm -f "$META_FILE" "$EXIT_FILE" "$EFETIVO_FILE"
+rm -f "$META_FILE" "$EXIT_FILE" "$EFETIVO_FILE" "$KERNEL_FILE"
 [ -n "${DISPATCH_LOCK_FILE:-}" ] && rm -f "$DISPATCH_LOCK_FILE"
 
 exit 0

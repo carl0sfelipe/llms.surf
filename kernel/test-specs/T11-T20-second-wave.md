@@ -76,13 +76,22 @@ it. Oracle: mutation killed; test in tree.
 
 ## T18 — Shadow mode in the shell (60 min)
 
+```
+writes: bin/run-with-fallback.sh, bin/lib-free-credentials.sh, bin/ledger-finalize.sh, bin/test-free-path.sh, kernel/test-specs/reports/T18.md
+reads: kernel/dispatch-policy, data/free-catalog.json, kernel/test-specs/DECISIONS-merge-inc3-t18.md, docs/research/specs/P1-dispatch-policy-rust.md
+oracle: bin/test-free-path.sh exit 0 (all current legs + shadow diff=0 + id_status:null) && bin/check-saude.sh exit 0
+```
+
 Implement integration step 1–3 of `P1-dispatch-policy-rust.md` **behind a
 flag**: `LLMS_KERNEL=shadow` runs both the Python path and the binary,
 diffs the US output, logs `kernel_shadow_diff=<0|1>` to the ledger entry,
 and keeps serving the Python result. `LLMS_KERNEL=on` serves the binary.
 Default unchanged. Add a `test-free-path.sh` leg that runs one dispatch in
-shadow and asserts diff=0. Oracle: 13/13 + new leg PASS; `check-saude`
-20/20. This is the first day the laws watch production traffic.
+shadow and asserts diff=0. D-SHELL addenda: re-emit the kernel's stderr
+in `shadow|on`; a shell leg for `id_status: null`. "13/13" means the
+current suite (all vectors + all legs), not a number. Oracle: all
+`test-free-path.sh` legs + shadow diff=0 + `check-saude`. This is the
+first day the laws watch production traffic.
 
 ## T19 — `policy_version` in the ledger (20 min)
 
