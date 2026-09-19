@@ -164,6 +164,10 @@ for f in LICENSE NOTICE docs/TELEMETRY.md VERSION; do
   fi
 done
 
+# D-INC3: owner ~/.zcode/cli/config.json sha256 identical after stub
+# dispatch (overlay and restore), including SIGTERM mid-run.
+checar "zcode config não vaza ao dono"    bash bin/test-zcode-config-integrity.sh
+
 echo ""
 echo "── Adapters ──────────────────────────────────────────"
 SEM_TOOLS=""

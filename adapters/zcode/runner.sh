@@ -93,17 +93,39 @@ for m in models:
 print("modelo %s ausente do model-registry.json" % mid, file=sys.stderr); sys.exit(3)
 ') || exit 3
 
-# Atualiza model.main no cli config sem apagar provider/auth existentes.
-ZCODE_CLI_CONFIG="${ZCODE_CLI_CONFIG:-$HOME/.zcode/cli/config.json}"
-MODEL_HINT="$RESOLVED" CONFIG_PATH="$ZCODE_CLI_CONFIG" python3 -c '
+# D-INC3: never leave the owner's live config dirty.
+# overlay = write only under <workdir>/.dispatch/zcode-home (HOME relocated).
+# restore = write-then-restore under flock (default: works whether HOME relocates).
+# Measurement of the real binary is adapters/zcode/measure-home-relocation.sh
+# (owner machine). This cloud does not invent that result.
+REAL_HOME="$HOME"
+OWNER_CONFIG="${ZCODE_CLI_CONFIG:-$REAL_HOME/.zcode/cli/config.json}"
+STRATEGY="${ZCODE_CONFIG_STRATEGY:-restore}"
+WORKDIR="${ORACFIT_WORKDIR:-${ZCODE_WORKDIR:-$PWD}}"
+ZCODE_CFG_BACKUP=""
+ZCODE_CFG_HAD=0
+EFFECTIVE_HOME="$REAL_HOME"
+
+case "$STRATEGY" in
+  overlay|restore) ;;
+  *)
+    echo "runner.sh (zcode): ZCODE_CONFIG_STRATEGY must be overlay|restore (got: $STRATEGY)" >&2
+    exit 3
+    ;;
+esac
+
+zcode_write_model_config() {
+  # Reads SOURCE_PATH (may be absent); writes DEST_PATH only.
+  MODEL_HINT="$RESOLVED" SOURCE_PATH="$1" DEST_PATH="$2" python3 -c '
 import json, os, pathlib
 hint = os.environ["MODEL_HINT"]
-path = pathlib.Path(os.environ["CONFIG_PATH"])
-path.parent.mkdir(parents=True, exist_ok=True)
+src = pathlib.Path(os.environ["SOURCE_PATH"])
+dest = pathlib.Path(os.environ["DEST_PATH"])
+dest.parent.mkdir(parents=True, exist_ok=True)
 cfg = {}
-if path.is_file():
+if src.is_file():
     try:
-        cfg = json.loads(path.read_text())
+        cfg = json.loads(src.read_text())
     except Exception:
         cfg = {}
 if not isinstance(cfg, dict):
@@ -144,11 +166,81 @@ elif prov_id and isinstance(provider.get(prov_id), dict):
         entry["options"].setdefault("baseURL", "https://api.z.ai/api/anthropic")
     provider[prov_id] = entry
     cfg["provider"] = provider
-path.write_text(json.dumps(cfg, indent=2) + "\n")
-' || {
-  echo "runner.sh (zcode): falha ao escrever $ZCODE_CLI_CONFIG" >&2
-  exit 1
+dest.write_text(json.dumps(cfg, indent=2) + "\n")
+'
 }
+
+zcode_overlay_home() {
+  # Symlink ~/.zcode/* into the overlay; cli/config.json is a real file.
+  local owner_zcode="$REAL_HOME/.zcode"
+  local overlay_zcode="$EFFECTIVE_HOME/.zcode"
+  local item base
+  rm -rf "$EFFECTIVE_HOME"
+  mkdir -p "$overlay_zcode/cli"
+  if [ -d "$owner_zcode" ]; then
+    for item in "$owner_zcode"/* "$owner_zcode"/.[!.]*; do
+      [ -e "$item" ] || continue
+      base="$(basename "$item")"
+      [ "$base" = "cli" ] && continue
+      ln -sfn "$item" "$overlay_zcode/$base"
+    done
+    if [ -d "$owner_zcode/cli" ]; then
+      for item in "$owner_zcode/cli"/* "$owner_zcode/cli"/.[!.]*; do
+        [ -e "$item" ] || continue
+        base="$(basename "$item")"
+        [ "$base" = "config.json" ] && continue
+        ln -sfn "$item" "$overlay_zcode/cli/$base"
+      done
+    fi
+  fi
+}
+
+zcode_restore_owner_config() {
+  if [ "${STRATEGY:-}" != "restore" ]; then
+    return 0
+  fi
+  if [ "$ZCODE_CFG_HAD" = "1" ] && [ -n "$ZCODE_CFG_BACKUP" ] && [ -f "$ZCODE_CFG_BACKUP" ]; then
+    cp -f "$ZCODE_CFG_BACKUP" "$OWNER_CONFIG"
+  elif [ "$ZCODE_CFG_HAD" = "0" ]; then
+    rm -f "$OWNER_CONFIG"
+  fi
+  if [ -n "$ZCODE_CFG_BACKUP" ]; then
+    rm -f "$ZCODE_CFG_BACKUP"
+    ZCODE_CFG_BACKUP=""
+  fi
+}
+
+if [ "$STRATEGY" = "overlay" ]; then
+  EFFECTIVE_HOME="$WORKDIR/.dispatch/zcode-home"
+  zcode_overlay_home
+  ZCODE_CLI_CONFIG="$EFFECTIVE_HOME/.zcode/cli/config.json"
+  zcode_write_model_config "$OWNER_CONFIG" "$ZCODE_CLI_CONFIG" || {
+    echo "runner.sh (zcode): falha ao escrever overlay $ZCODE_CLI_CONFIG" >&2
+    exit 1
+  }
+else
+  if ! command -v flock >/dev/null 2>&1; then
+    echo "runner.sh (zcode): restore strategy requires flock(1)" >&2
+    exit 3
+  fi
+  mkdir -p "$(dirname "$OWNER_CONFIG")"
+  exec 9>>"${OWNER_CONFIG}.lock"
+  flock 9
+  if [ -f "$OWNER_CONFIG" ]; then
+    ZCODE_CFG_HAD=1
+    ZCODE_CFG_BACKUP="$(mktemp "${TMPDIR:-/tmp}/zcode-cli-config.XXXXXX")"
+    cp -f "$OWNER_CONFIG" "$ZCODE_CFG_BACKUP"
+  else
+    ZCODE_CFG_HAD=0
+  fi
+  trap zcode_restore_owner_config EXIT INT TERM
+  echo "this dispatch temporarily sets your zcode model to $RESOLVED; restored on exit" >&2
+  ZCODE_CLI_CONFIG="$OWNER_CONFIG"
+  zcode_write_model_config "$OWNER_CONFIG" "$ZCODE_CLI_CONFIG" || {
+    echo "runner.sh (zcode): falha ao escrever $ZCODE_CLI_CONFIG" >&2
+    exit 1
+  }
+fi
 
 # Preflight auth: sem apiKey o zcode só imprime "Turn execution failed" (sem Cause).
 PROV_ID="${RESOLVED%%/*}"
@@ -171,14 +263,13 @@ if [ "$HAS_KEY" != "1" ]; then
   exit 3
 fi
 
-WORKDIR="${ORACFIT_WORKDIR:-${ZCODE_WORKDIR:-$PWD}}"
 MODE="${ZCODE_MODE:-${DISPATCH_ZCODE_MODE:-yolo}}"
 
 ARGS=(--prompt "$(cat "$SPEC_FILE")" --mode "$MODE" --cwd "$WORKDIR")
 [ -n "$SESSION_ID" ] && ARGS+=(--resume "$SESSION_ID")
 [ "${DISPATCH_RUNNER_FORMAT_JSON:-1}" = "1" ] && ARGS+=(--json)
 
-OUTPUT=$("$ZCODE_BIN" "${ARGS[@]}" 2>&1)
+OUTPUT=$(HOME="$EFFECTIVE_HOME" "$ZCODE_BIN" "${ARGS[@]}" 2>&1)
 EXIT_CODE=$?
 
 echo "$OUTPUT"
