@@ -204,7 +204,8 @@ proptest! {
         prop_assert_eq!(back, chain);
     }
 
-    /// L1b: a field containing a delimiter cannot become a chain.
+    /// L1b + L1c (D-L1c, T07): a field containing a delimiter cannot become
+    /// a chain — US, LF, and (since D-L1c) CR all reject.
     #[test]
     fn l1b_delimiters_are_rejected(mut e in entry(), which in 0u8..4) {
         // D-L1c (T07, 2026-09-19): CR is a delimiter too.
