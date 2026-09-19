@@ -17,6 +17,12 @@ MODEL="${1:?Uso: dispatch.sh <model_id> <spec_file> [task_name]}"
 SPEC_FILE="${2:?Uso: dispatch.sh <model_id> <spec_file> [task_name]}"
 TASK_NAME="${3:-task-$(date +%s)}"
 
+# D-DISPATCH 1 / T20: tier:* without a mode YAML is the p1-inc-1 smell.
+# dispatch.sh still runs the free path; modes go through dispatch-mode.sh.
+if [[ "$MODEL" == tier:* ]]; then
+  echo "hint: tier:* via modo (kernel_test, BMAD cheap/dev) → bin/dispatch-mode.sh <mode> <spec> <task>" >&2
+fi
+
 mkdir -p "$LOG_DIR" "$PID_DIR"
 
 LOG_FILE="$LOG_DIR/dispatch-${TASK_NAME}.log"

@@ -49,7 +49,7 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 - version: 3.5.0
 - incidents: 114 (excludes incidents/uso/)
 - models in registry: 27,
-- modes: 20
+- modes: 21
 - adapters: 8 + 1 stub
 - test suites: 37
 

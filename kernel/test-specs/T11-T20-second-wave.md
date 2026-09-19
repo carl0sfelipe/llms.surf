@@ -108,6 +108,12 @@ ledger schema test (if one exists) is updated, not weakened.
 
 ## T20 — The battery as a llms.surf mode (45 min)
 
+```
+writes: core/modes/kernel_test.yaml, kernel/test-specs/oracle.sh, bin/dispatch.sh, bin/dispatch-mode.sh, bin/dispatch-stages.sh, bin/test-kernel-test-mode.sh, bin/check-saude.sh, bin/test-oracfit-mode-loader.sh, kernel/test-specs/reports/T20.md, README.md, site/app.js, site/llms.txt
+reads: docs/research/bmad-tiers-2026-09-19.md, kernel/test-specs/README.md, bin/lib-oracfit-mode-loader.py
+oracle: python3 bin/lib-oracfit-mode-loader.py validate core/modes/kernel_test.yaml && bash bin/test-kernel-test-mode.sh
+```
+
 `core/modes/kernel_test.yaml` (schema v1, validated by `mode validate`):
 stage `run` on `tier:cheap` with the spec file as input, then a
 mechanical stage `command: kernel/test-specs/oracle.sh <ID>` implementing
