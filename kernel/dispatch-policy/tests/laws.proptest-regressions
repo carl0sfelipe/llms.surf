@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc bad073a4a30de34b61b38a327e56670cd510898879ce8345e4d72b9110400c4a # shrinks to cat = [CatalogModel { ref: "t", provider: Some("opencode"), keyless: false, context_length: None }, CatalogModel { ref: "t", provider: None, keyless: false, context_length: None }]
+cc f3d15bbea066df18ad4b4e346ba0106555218ddca2b13b25462a7352aa1ee859 # shrinks to cat = [CatalogModel { ref: "c", provider: None, keyless: false, context_length: None }, CatalogModel { ref: "c", provider: Some("opencode"), keyless: false, context_length: None }]
