@@ -370,6 +370,23 @@
       }
     },
     {
+      "name": "cheap_keyed_unknown_provider_passes_gate",
+      "incident": "T09 (2026-09-19): L4 hole pinned as P1.md decision D3 — keyless:false with unknown (null) provider passes the credential gate, mirroring run-with-fallback.sh '[ -n \"$PROVIDER\" ]'",
+      "request": "tier:cheap",
+      "credentials": [],
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "unknown/ref", "provider": null, "keyless": false, "context_length": 1}
+      ]},
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "unknown/ref", "id_status": "", "provider": null, "keyless": false}
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
       "name": "expensive_outside_catalog_typed_unknown_provider",
       "incident": "e82f008: expensive resolves a ref outside the free catalog; provider is None and keyless=true, never the text '1'",
       "request": "tier:expensive",
