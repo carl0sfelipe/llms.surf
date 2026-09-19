@@ -242,6 +242,33 @@
       }
     },
     {
+      "name": "T06_nao_statuses_are_dead",
+      "incident": "T06/M4 (gap): DEAD_ID_STATUSES has three members but vectors pinned only FANTASMA; a mutation matching only FANTASMA survived every vector",
+      "request": "tier:cheap",
+      "credentials": ["openrouter"],
+      "registry": {"models": [
+        {"id": "nao-encontrado-model", "provider": "openrouter", "id_status": "NAO-ENCONTRADO"},
+        {"id": "nao-verificado-model", "provider": "openrouter", "id_status": "NAO-VERIFICADO"},
+        {"id": "live-model", "provider": "openrouter", "id_status": "EXISTE"}
+      ]},
+      "catalog": {"kind": "free-catalog/1", "models": [
+        {"ref": "nao-encontrado-model", "provider": "openrouter", "keyless": false, "context_length": 10},
+        {"ref": "nao-verificado-model", "provider": "openrouter", "keyless": false, "context_length": 9},
+        {"ref": "live-model", "provider": "openrouter", "keyless": false, "context_length": 8}
+      ]},
+      "expect": {
+        "ok": {
+          "entries": [
+            {"ref": "live-model", "id_status": "EXISTE", "provider": "openrouter", "keyless": false}
+          ],
+          "skipped": [
+            {"ref": "nao-encontrado-model", "reason": {"DeadId": {"id_status": "NAO-ENCONTRADO"}}},
+            {"ref": "nao-verificado-model", "reason": {"DeadId": {"id_status": "NAO-VERIFICADO"}}}
+          ]
+        }
+      }
+    },
+    {
       "name": "cheap_keyed_only_no_credential_is_loud",
       "incident": "E5-M5: empty after credential gate",
       "request": "tier:cheap",
