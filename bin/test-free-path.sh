@@ -263,6 +263,72 @@ else
   not_ "tier:expensive: rc=$RC_EXP err=$(tail -3 "$WD/expensive-err.log" 2>/dev/null)"
 fi
 
+# Legs 8–9 export fixtures; they must not leak into the kernel path.
+unset FREE_PROVIDER_ALLOWLIST ORACFIT_AUTH_JSON ORACFIT_OPENCODE_CONFIG
+
+# ── 12. D-SHELL: id_status null no registry não derruba o Python ──────────────
+NULL_REG="$WD/registry-null-status.json"
+python3 - "$ROOT/model-registry.json" "$NULL_REG" <<'PYNULL'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+d["models"] = [
+    {
+        "id": "null-status-probe",
+        "id_status": None,
+        "provider": "opencode",
+        "cli_hints": {},
+        "fallback": [],
+    }
+]
+json.dump(d, open(sys.argv[2], "w"), ensure_ascii=False)
+PYNULL
+NULL_WD="$WD/null-status"
+mkdir -p "$NULL_WD"
+rm -f "$NULL_WD/.dispatch/stub-proof"
+rc_null=0
+MODEL_REGISTRY="$NULL_REG" ORACFIT_WORKDIR="$NULL_WD" \
+  DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh" \
+  bash "$ROOT/bin/run-with-fallback.sh" null-status-probe "$SPEC" \
+  >"$WD/null-status-out.log" 2>"$WD/null-status-err.log" || rc_null=$?
+if [ "$rc_null" -eq 0 ] && grep -q stub_ok "$NULL_WD/.dispatch/stub-proof" 2>/dev/null \
+   && ! grep -qiE 'TypeError|NoneType' "$WD/null-status-err.log"; then
+  ok "id_status:null no registry não derruba o shell (D-SHELL)"
+else
+  not_ "id_status:null: rc=$rc_null err=$(tail -5 "$WD/null-status-err.log" 2>/dev/null)"
+fi
+
+# ── 13. T18 shadow: Python e kernel, US gated idêntico, ledger diff=0 ────────
+if [ ! -x "$ROOT/kernel/target/release/dispatch-policy" ]; then
+  (cd "$ROOT/kernel" && cargo build --release >/tmp/t18-kernel-build.log 2>&1) \
+    || not_ "cargo build --release do kernel falhou (ver /tmp/t18-kernel-build.log)"
+fi
+rm -f "$WD/.dispatch/stub-proof"
+LEDGER_BEFORE_S=$(wc -l < "$LEDGER_DIR/ledger.jsonl" 2>/dev/null || echo 0)
+( cd "$WD" && LLMS_KERNEL=shadow DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh" \
+    bash "$ROOT/bin/dispatch.sh" tier:cheap "$SPEC" t18-shadow ) \
+  >"$WD/t18-shadow.log" 2>&1 || true
+SHADOW_LINE=""
+for i in $(seq 1 60); do
+  SHADOW_LINE=$(tail -n +"$((LEDGER_BEFORE_S + 1))" "$LEDGER_DIR/ledger.jsonl" 2>/dev/null \
+    | grep -F '"task_name": "t18-shadow"' | head -1)
+  [ -n "$SHADOW_LINE" ] && break
+  sleep 1
+done
+SHADOW_DIFF=$(printf '%s' "$SHADOW_LINE" | python3 -c '
+import json, sys
+try:
+    v = json.loads(sys.stdin.read()).get("kernel_shadow_diff", "")
+    print(v if v != "" else "ausente")
+except Exception:
+    print("parse-erro")
+')
+if [ "$SHADOW_DIFF" = "0" ]; then
+  ok "shadow dispatch: kernel_shadow_diff=0 no ledger"
+else
+  not_ "shadow dispatch: kernel_shadow_diff='$SHADOW_DIFF' (esperado 0). log:"
+  sed 's/^/    /' "$WD/t18-shadow.log" 2>/dev/null | head -20
+fi
+
 echo ""
 echo "=== RESULTADO: $pass pass, $fail fail ==="
 if [ "$fail" -gt 0 ]; then

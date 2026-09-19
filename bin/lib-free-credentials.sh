@@ -21,6 +21,8 @@
 #                                       storage corrompido não é "sem chave")
 #   free_cred_list                      imprime providers com credencial
 #                                       (nomes apenas, NUNCA valor)
+#   free_cred_providers_csv             os mesmos nomes, uma linha, CSV
+#                                       (entrada --credentials do kernel P1)
 #
 # NENHUMA função desta lib imprime ou retorna material de chave. Quem precisa
 # do VALOR da chave é o CLI (opencode) — e ele lê os mesmos arquivos por conta
@@ -115,4 +117,15 @@ except (json.JSONDecodeError, OSError, AttributeError):
 for n in sorted(set(names)):
     print(n)
 PYLIST
+}
+
+free_cred_providers_csv() {
+  # Single reader stays this lib (L4): the kernel never opens auth files.
+  local names
+  names="$(free_cred_list || true)"
+  if [ -z "$names" ]; then
+    printf ''
+    return 0
+  fi
+  printf '%s\n' "$names" | paste -sd, -
 }

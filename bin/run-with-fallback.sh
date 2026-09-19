@@ -43,7 +43,22 @@ if [[ "$MODEL" == tier:* ]]; then
   # única). Env herdada NUNCA é consultada: é o vetor do incidente E5.
   # shellcheck source=lib-free-credentials.sh
   source "$REPO_ROOT/bin/lib-free-credentials.sh"
-  CHAIN_META=$(REG="$REGISTRY" MODEL="$MODEL" ROOT="$REPO_ROOT" CATALOG="${FREE_CATALOG:-$REPO_ROOT/data/free-catalog.json}" python3 -c '
+  CATALOG="${FREE_CATALOG:-$REPO_ROOT/data/free-catalog.json}"
+  ALLOWLIST="${FREE_PROVIDER_ALLOWLIST:-$REPO_ROOT/data/free-provider-allowlist.json}"
+  KERNEL_BIN="${LLMS_KERNEL_BIN:-$REPO_ROOT/kernel/target/release/dispatch-policy}"
+  KERNEL_MODE="${LLMS_KERNEL:-off}"
+
+  require_kernel_bin() {
+    if [ ! -x "$KERNEL_BIN" ]; then
+      echo "✖ LLMS_KERNEL=$KERNEL_MODE: dispatch-policy ausente ($KERNEL_BIN) — recusa loud, sem fallback silencioso (E5)" >&2
+      exit 3
+    fi
+  }
+
+  python_tier_us() {
+    # Always re-emit resolve-tier stderr (T08 F1: capture_output used to
+    # swallow E5-M2 WARN on success).
+    REG="$REGISTRY" MODEL="$MODEL" ROOT="$REPO_ROOT" CATALOG="$CATALOG" python3 -c '
 import json, os, subprocess, sys
 out = subprocess.run(
     [sys.executable, os.environ["ROOT"] + "/bin/lib-oracfit-mode-loader.py",
@@ -73,8 +88,72 @@ except Exception:
 FS = "\x1f"
 for r in refs:
     prov, keyless = meta.get(r, ("", True))
-    print(FS.join((r, statuses.get(r, ""), prov, "1" if keyless else "0")))
-') || { echo "✖ cadeia do $MODEL vazia — nada despachado" >&2; exit 2; }
+    print(FS.join((r, statuses.get(r, "") or "", prov, "1" if keyless else "0")))
+sys.stderr.write(out.stderr)
+' || { echo "✖ cadeia do $MODEL vazia — nada despachado" >&2; exit 2; }
+  }
+
+  kernel_tier_us() {
+    local err out rc
+    err=$(mktemp)
+    out=$(mktemp)
+    "$KERNEL_BIN" resolve "$MODEL" \
+      --registry "$REGISTRY" \
+      --catalog "$CATALOG" \
+      --allowlist "$ALLOWLIST" \
+      --credentials "$(free_cred_providers_csv)" \
+      >"$out" 2>"$err"
+    rc=$?
+    # D-SHELL: re-emit the kernel's stderr in shadow|on.
+    cat "$err" >&2
+    cat "$out"
+    rm -f "$err" "$out"
+    return "$rc"
+  }
+
+  filter_us_by_file_creds() {
+    # Same gate as the loop below, silent — used only to compare with kernel.
+    local REF ST PROVIDER KEYLESS
+    while IFS=$'\x1f' read -r REF ST PROVIDER KEYLESS; do
+      [ -n "$REF" ] || continue
+      if [ "$KEYLESS" != "1" ] && [ -n "$PROVIDER" ]; then
+        free_cred_has_provider "$PROVIDER" || continue
+      fi
+      printf '%s\x1f%s\x1f%s\x1f%s\n' "$REF" "$ST" "$PROVIDER" "$KEYLESS"
+    done
+  }
+
+  write_kernel_shadow_diff() {
+    local diff="$1"
+    if [ -n "${DISPATCH_EFETIVO_FILE:-}" ]; then
+      printf 'kernel_shadow_diff=%s\n' "$diff" > "${DISPATCH_EFETIVO_FILE%.efetivo}.kernel"
+    fi
+  }
+
+  case "$KERNEL_MODE" in
+    on)
+      require_kernel_bin
+      CHAIN_META="$(kernel_tier_us)" || { echo "✖ cadeia do $MODEL vazia (kernel) — nada despachado" >&2; exit 2; }
+      ;;
+    shadow)
+      require_kernel_bin
+      CHAIN_META="$(python_tier_us)" || { echo "✖ cadeia do $MODEL vazia — nada despachado" >&2; exit 2; }
+      KERNEL_US="$(kernel_tier_us)" || KERNEL_US=""
+      PYTHON_GATED="$(printf '%s\n' "$CHAIN_META" | filter_us_by_file_creds)"
+      if [ "$(printf '%s\n' "$PYTHON_GATED")" = "$(printf '%s\n' "$KERNEL_US")" ]; then
+        write_kernel_shadow_diff 0
+      else
+        write_kernel_shadow_diff 1
+      fi
+      ;;
+    off|"")
+      CHAIN_META="$(python_tier_us)" || { echo "✖ cadeia do $MODEL vazia — nada despachado" >&2; exit 2; }
+      ;;
+    *)
+      echo "✖ LLMS_KERNEL must be off|shadow|on (got: $KERNEL_MODE)" >&2
+      exit 3
+      ;;
+  esac
 
   CADEIA=""
   while IFS=$'\x1f' read -r REF ST PROVIDER KEYLESS; do
@@ -99,10 +178,10 @@ d = json.load(open(os.environ["REG"]))
 mid = os.environ["MODEL"]
 for m in d["models"]:
     if mid in (m["id"], *(m.get("cli_hints", {}) or {}).values()):
-        idx = {mm["id"]: mm.get("id_status", "") for mm in d["models"]}
-        print(m["id"] + "\t" + m.get("id_status", ""))
+        idx = {mm["id"]: (mm.get("id_status") or "") for mm in d["models"]}
+        print(m["id"] + "\t" + (m.get("id_status") or ""))
         for f in m.get("fallback", []):
-            print(f + "\t" + idx.get(f, ""))
+            print(f + "\t" + (idx.get(f) or ""))
         sys.exit(0)
 print(mid + "\t")   # não está no registry: o runner é quem recusa (exit 3)
 ')
