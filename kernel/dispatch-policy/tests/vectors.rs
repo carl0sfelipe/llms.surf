@@ -29,6 +29,9 @@ struct Case {
     catalog: Override,
     #[serde(default, deserialize_with = "deserialize_override")]
     registry: Override,
+    /// Override; absent = fixture. Never `null` in practice (no "no allowlist" case exists).
+    #[serde(default, deserialize_with = "deserialize_override")]
+    allowlist: Override,
     expect: Expect,
 }
 
@@ -68,7 +71,7 @@ fn pick(o: &Override, fixture: &serde_json::Value) -> Option<serde_json::Value> 
 fn all_p1_vectors_conform() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../vectors/p1/cases.json");
     let file: File = serde_json::from_str(&std::fs::read_to_string(path).expect("vectors file")).expect("vectors json");
-    let allowlist: Allowlist = serde_json::from_value(file.fixtures.allowlist.clone()).unwrap();
+    let allowlist_default = file.fixtures.allowlist.clone();
     let mut failures = Vec::new();
 
     for case in &file.cases {
@@ -76,6 +79,8 @@ fn all_p1_vectors_conform() {
             serde_json::from_value(pick(&case.registry, &file.fixtures.registry).expect("registry never null")).unwrap();
         let catalog: Option<FreeCatalog> =
             pick(&case.catalog, &file.fixtures.catalog).map(|v| serde_json::from_value(v).unwrap());
+        let allowlist: Allowlist =
+            serde_json::from_value(pick(&case.allowlist, &allowlist_default).expect("allowlist never null")).unwrap();
         let credentials: BTreeSet<String> = case.credentials.iter().cloned().collect();
         let inputs = Inputs { registry: &registry, catalog: catalog.as_ref(), allowlist: &allowlist, credentials: &credentials };
 
