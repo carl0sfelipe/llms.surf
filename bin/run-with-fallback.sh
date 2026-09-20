@@ -165,17 +165,33 @@ sys.stderr.write(out.stderr)
   esac
 
   CADEIA=""
+  # Aviso de pulo por credencial: detalhe só na 1ª tentativa do run. O loop de
+  # attempts re-executa este script inteiro por tentativa e o conteúdo não muda
+  # entre tentativas (credencial em arquivo ou existe ou não) — 9 pernas × 5
+  # tentativas = 45 linhas do mesmo aviso empurrando o sinal pra fora da tela
+  # (incidente 2026-09-20-run-with-fallback-reimprime-pulando-sem-).
+  # DISPATCH_ATTEMPT vem do loop do dispatch-mode.sh; ORACFIT_STAGE_ATTEMPT, do
+  # dispatch-stages.sh; sem nenhum (chamada direta), imprime detalhe como antes.
+  SKIP_ATTEMPT="${DISPATCH_ATTEMPT:-${ORACFIT_STAGE_ATTEMPT:-1}}"
+  case "$SKIP_ATTEMPT" in ''|*[!0-9]*) SKIP_ATTEMPT=1 ;; esac
+  PULADOS_SEM_CRED=0
   while IFS=$'\x1f' read -r REF ST PROVIDER KEYLESS; do
     [ -n "$REF" ] || continue
     if [ "$KEYLESS" != "1" ] && [ -n "$PROVIDER" ]; then
       if ! free_cred_has_provider "$PROVIDER"; then
-        echo "  ↳ pulando $REF — provider '$PROVIDER' sem credencial em arquivo (E5-M5: env herdada não conta)" >&2
+        PULADOS_SEM_CRED=$((PULADOS_SEM_CRED + 1))
+        if [ "$SKIP_ATTEMPT" -le 1 ]; then
+          echo "  ↳ pulando $REF — provider '$PROVIDER' sem credencial em arquivo (E5-M5: env herdada não conta)" >&2
+        fi
         continue
       fi
     fi
     CADEIA+="${REF}"$'\t'"${ST}"$'\n'
     PROV_POR_REF[$REF]="$PROVIDER"
   done <<< "$CHAIN_META"
+  if [ "$PULADOS_SEM_CRED" -gt 0 ] && [ "$SKIP_ATTEMPT" -gt 1 ]; then
+    echo "  ↳ $PULADOS_SEM_CRED perna(s) puladas — sem credencial em arquivo (E5-M5); detalhes na tentativa 1" >&2
+  fi
   if [ -z "$CADEIA" ]; then
     echo "✖ cadeia do $MODEL vazia após gate de credencial — nada despachado (configura a chave do provider em 'opencode auth login' ou use a perna keyless)" >&2
     exit 2

@@ -323,6 +323,10 @@ fi
 while [ "$attempt" -lt "$max_attempts" ]; do
   attempt=$((attempt + 1))
   oracfit_emit_event attempt_started attempt="$attempt" mode="$mode_id"
+  # Número da tentativa corrente para os filhos (run-with-fallback deduplica
+  # o aviso de perna sem credencial — incidente
+  # 2026-09-20-run-with-fallback-reimprime-pulando-sem-).
+  export DISPATCH_ATTEMPT="$attempt"
 
   run_spec_file="$spec_file"
   # P4: refresh ground-truth from ## Dados verificados every attempt/resume.
@@ -458,6 +462,7 @@ with open(path, "a") as f:
     echo "gauntlet: attempt $attempt failed — gap: $biggest_gap" >&2
   fi
 done
+unset DISPATCH_ATTEMPT 2>/dev/null || true
 
 # Incidente 2026-08-10-dispatch-mode-run-finished-sem-ledger-nem-usage-feedback
 # (causa nº1): sob `set -e`, substituição de comando falhando neste epílogo
