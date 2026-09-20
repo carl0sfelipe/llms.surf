@@ -26,6 +26,9 @@ gauntlet:               # optional: retry loop that injects oracle feedback
   inject_feedback: true
   until_approved: true
   safety_ceiling: 5     # hard stop — no infinite paddling
+  # precedence: with until_approved: true, safety_ceiling WINS over
+  # max_attempts (effective ceiling = the LARGER of the two). max_attempts
+  # alone only governs stages without a gauntlet block.
 on_fail: halt           # a red stage never starts the next one
 ```
 
