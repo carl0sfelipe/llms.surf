@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vector CDE — Terra + Tokens no Paraguai · 3 vagas de investidor</title>
+<meta name="description" content="Um galpão em Ciudad del Este que rende duas vezes: aluguel de imóvel + tokens de IA de baixa latência, na energia mais barata da região. Rodada Tier 1: 3 investidores, US$100k cada.">
+<meta name="color-scheme" content="only dark">
+<meta name="theme-color" content="#0A0D13">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Vector CDE — Terra + Tokens no Paraguai">
+<meta property="og:description" content="Imóvel industrial + compute de IA em Ciudad del Este. Piso imobiliário com lastro real + upside de tokens. 3 vagas de US$100k.">
+<!-- macrostructure: single-scroll investor one-pager · public (no gate) · dual-engine color coding -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-700.css" media="print" onload="this.media='all'">
+<style>
+:root{
+  --bg:#0A0D13;--panel:#10151F;--panel-2:#141B27;--line:#1E2733;
+  --text:#E7EDF3;--muted:#8B98A6;--faint:#5C6773;
+  --green:#3FB950;--cyan:#22D3EE;--land:#E0A458;--gold:#D29922;--red:#F85149;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--maxw:960px;
+  --pad:16px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;background:var(--bg);color-scheme:only dark;-webkit-text-size-adjust:100%}
+body{background:radial-gradient(760px 420px at 82% -6%,rgba(34,211,238,.08),transparent 62%),radial-gradient(680px 420px at 2% 3%,rgba(224,164,88,.07),transparent 58%),var(--bg);
+  color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100dvh;overflow-wrap:break-word;-webkit-tap-highlight-color:rgba(34,211,238,.16)}
+h1,h2,h3{overflow-wrap:anywhere}
+.wrap{width:100%;max-width:var(--maxw);margin:0 auto;padding-left:calc(var(--pad)+var(--sal));padding-right:calc(var(--pad)+var(--sar))}
+a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline;text-underline-offset:3px}
+::selection{background:var(--green);color:#04240e}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:5px}
+.mono{font-family:var(--mono)}
+section[id]{scroll-margin-top:62px}
+.bar{position:sticky;top:0;z-index:50;background:rgba(10,13,19,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding-top:var(--sat)}
+.bar-in{display:flex;align-items:center;gap:10px;min-height:54px}
+.brand{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text)}
+.brand:hover{text-decoration:none}.brand svg{width:46px;height:18px;flex:none}.brand b{color:var(--cyan)}
+.bar-cta{margin-left:auto}
+.btn{display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13.5px;
+  background:var(--cyan);color:#04240e;border:0;border-radius:9px;min-height:44px;padding:0 16px;cursor:pointer;transition:filter .15s ease}
+.btn:hover{filter:brightness(1.08);text-decoration:none}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn.sm{min-height:40px;font-size:12.5px;padding:0 13px}
+/* hero */
+.hero{padding:44px 0 26px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.eyebrow .dot{color:var(--green)}
+h1{font-family:var(--mono);font-weight:700;font-size:clamp(28px,7.4vw,54px);line-height:1.06;letter-spacing:-.02em}
+h1 .land{color:var(--land)}h1 .comp{color:var(--cyan)}
+.lede{color:var(--muted);font-size:clamp(15px,3.8vw,19px);max-width:60ch;margin:18px 0 24px}
+.lede b{color:var(--text)}
+.ask{display:flex;flex-wrap:wrap;gap:12px;align-items:center;border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.05);border-radius:14px;padding:16px}
+.ask .big{font-family:var(--mono);font-weight:700;font-size:clamp(20px,5vw,26px);color:var(--cyan)}
+.ask .sub{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.ask .spacer{flex:1}
+.cta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+/* sections */
+.sec{padding:34px 0;border-top:1px solid var(--line)}
+.kick{font-family:var(--mono);font-size:12px;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+h2{font-family:var(--mono);font-weight:700;font-size:clamp(21px,5vw,30px);letter-spacing:-.01em;line-height:1.18;margin-bottom:10px}
+.sec p.intro{color:var(--muted);max-width:66ch;font-size:15px}
+/* two engines */
+.engines{display:grid;grid-template-columns:1fr;gap:14px;margin-top:20px}
+.eng{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:18px;position:relative;overflow:hidden}
+.eng::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+.eng.land::before{background:var(--land)}.eng.comp::before{background:var(--cyan)}
+.eng h3{font-family:var(--mono);font-size:15.5px;margin-bottom:6px}
+.eng.land h3{color:var(--land)}.eng.comp h3{color:var(--cyan)}
+.eng .role{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:12px}
+.eng ul{list-style:none;display:grid;gap:9px}
+.eng li{display:flex;gap:9px;font-size:14.5px;line-height:1.5}
+.eng li .b{color:var(--faint);flex:none}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;margin-top:18px}
+.stat{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:15px 14px}
+.stat .num{font-family:var(--mono);font-weight:700;font-size:clamp(19px,5.4vw,26px);line-height:1.05}
+.stat .num span{font-size:.55em}
+.stat.c1 .num{color:var(--cyan)}.stat.c2 .num{color:var(--green)}.stat.c3 .num{color:var(--land)}.stat.c4 .num{color:var(--gold)}
+.stat .lbl{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.45}
+/* build / use of funds */
+.uses{display:grid;gap:10px;margin-top:18px}
+.use{display:grid;grid-template-columns:1fr auto;gap:6px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:13px 15px;align-items:baseline}
+.use .t{font-size:14.5px}.use .t b{color:var(--text)}
+.use .v{font-family:var(--mono);font-weight:700;color:var(--cyan);white-space:nowrap}
+.use .d{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+/* returns waterfall */
+.fall{display:grid;gap:10px;margin-top:18px}
+.step{display:grid;grid-template-columns:32px 1fr;gap:12px}
+.step .lv{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--bg);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.step:nth-child(1) .lv{background:var(--green)}.step:nth-child(2) .lv{background:var(--cyan)}.step:nth-child(3) .lv{background:var(--land)}
+.step .box{border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:13px 15px}
+.step .box h4{font-family:var(--mono);font-size:14px;margin-bottom:3px}
+.step .box p{font-size:13.5px;color:var(--muted)}
+/* honesty two-col */
+.cols{display:grid;grid-template-columns:1fr;gap:12px;margin-top:18px}
+.col{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:16px 17px}
+.col.real{border-color:rgba(63,185,80,.35)}
+.col.todo{border-color:rgba(210,153,34,.35)}
+.col h4{font-family:var(--mono);font-size:13px;margin-bottom:10px}
+.col.real h4{color:var(--green)}.col.todo h4{color:var(--gold)}
+.col ul{list-style:none;display:grid;gap:8px}
+.col li{font-size:14px;line-height:1.5;display:flex;gap:8px}
+.col li .m{flex:none}
+.col.real li .m{color:var(--green)}.col.todo li .m{color:var(--gold)}
+/* final cta */
+.final{text-align:center;padding:44px 0 30px}
+.final h2{margin-bottom:12px}
+.final p{color:var(--muted);max-width:56ch;margin:0 auto 22px;font-size:15px}
+.slots{display:inline-flex;gap:8px;margin-bottom:20px}
+.slot{width:44px;height:10px;border-radius:5px;background:var(--cyan);opacity:.85}
+.contact{display:inline-flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;font-family:var(--mono);font-size:13px;color:var(--muted);border:1px dashed var(--line);border-radius:12px;padding:14px 16px}
+.contact b{color:var(--text)}
+/* footer */
+.foot{border-top:1px solid var(--line);padding:30px 0 calc(46px + var(--sab));margin-top:10px}
+.foot .disc{font-family:var(--mono);font-size:11.5px;color:var(--faint);max-width:82ch;line-height:1.7}
+.foot .srcs{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:14px;line-height:1.7}
+@media(min-width:640px){:root{--pad:22px}.engines{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(4,1fr)}.cols{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap bar-in">
+    <a class="brand" href="#top" aria-label="Vector CDE">
+      <svg viewBox="26 64 158 58" aria-hidden="true">
+        <path d="M32 116 C48 116 58 113 70 102 C82 91 92 76 106 72.5 C118 69.5 128 76 129 85 C129.6 90.5 127 95 123 96.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+        <path d="M124.5 112.5 C112 117 99.5 110 99.5 99.5 C99.5 89.5 107.5 83 115.5 84.2 C120.5 85 123.5 88 124.6 91.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="135.5" cy="110.5" r="4.6" fill="#3FB950"/>
+        <path d="M145.5 103.5 L153.5 112 L175.5 88.5" fill="none" stroke="#3FB950" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Vector <b>CDE</b>
+    </a>
+    <div class="bar-cta"><a class="btn sm" href="#conversar">Quero conversar</a></div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow mono"><span class="dot">●</span> Ciudad del Este, Paraguai &nbsp;·&nbsp; rodada Tier 1 &nbsp;·&nbsp; imóvel + IA</p>
+      <h1>Um galpão que rende <span class="land">duas vezes</span>:<br>aluguel <span style="color:var(--faint)">+</span> <span class="comp">tokens de IA</span>.</h1>
+      <p class="lede">Compramos um <b>galpão industrial</b> em zona de valorização de Ciudad del Este. Na frente, ele <b>aluga como imóvel</b> (renda com lastro real). Nos fundos, roda <b>IA em placas de vídeo</b> vendendo <b>tokens de baixa latência</b> — na energia mais barata da região. Risco de imóvel, potencial de tecnologia.</p>
+      <div class="ask">
+        <div>
+          <div class="big mono">3 investidores · US$100k cada</div>
+          <div class="sub mono">US$300k · rodada Tier 1 · lastro imobiliário + upside de compute</div>
+        </div>
+        <div class="spacer"></div>
+        <a class="btn" href="#conversar">Reservar uma das 3 vagas →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="ideia">
+    <div class="wrap">
+      <p class="kick">a oportunidade</p>
+      <h2>Duas máquinas de retorno, no mesmo metro quadrado</h2>
+      <p class="intro">Uma segura, uma agressiva. Juntas, o risco cai e o teto sobe: o imóvel paga o custo fixo e dá o retorno-piso; as GPUs são o crescimento.</p>
+      <div class="engines">
+        <div class="eng land">
+          <h3>Motor 1 · Terra &amp; Galpão</h3>
+          <div class="role mono">o piso — baixo risco</div>
+          <ul>
+            <li><span class="b mono">›</span><div>Aluguel industrial recorrente + valorização no corredor de crescimento (Km 11 / novo puente).</div></li>
+            <li><span class="b mono">›</span><div>Um <b>ativo real</b> por baixo do investimento — colateral, não promessa.</div></li>
+          </ul>
+        </div>
+        <div class="eng comp">
+          <h3>Motor 2 · Tokens de IA</h3>
+          <div class="role mono">o upside — assimétrico</div>
+          <ul>
+            <li><span class="b mono">›</span><div>Venda de inferência de <b>baixa latência</b> para indústria e robótica na fronteira BR/PY.</div></li>
+            <li><span class="b mono">›</span><div>Faturado como exportação de serviço: <b>imposto único de 1%</b>.</div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="paraguai">
+    <div class="wrap">
+      <p class="kick">por que Paraguai, por que agora</p>
+      <h2>Quatro fatos que fazem a conta fechar</h2>
+      <div class="stats">
+        <div class="stat c1"><div class="num">US$0,044<span>/kWh</span></div><div class="lbl">energia para IA (Itaipú, 100% renovável) — das mais baratas do mundo</div></div>
+        <div class="stat c2"><div class="num">1%</div><div class="lbl">imposto único no regime de Maquila (exportar serviço de IA)</div></div>
+        <div class="stat c3"><div class="num">~US$44<span>/m²</span></div><div class="lbl">terreno industrial no vetor de valorização (Km 11 / Ruta PY02)</div></div>
+        <div class="stat c4"><div class="num">2027</div><div class="lbl">janela: cripto sai, IA entra — política oficial de energia</div></div>
+      </div>
+      <p class="intro" style="margin-top:16px">Parques industriais de Ciudad del Este estão <b>lotados e com fila de espera</b>, puxados por capital brasileiro; a nova Lei 7548/2025 isenta <b>IVA e imposto de importação</b> das GPUs. É um vetor de crescimento real, não uma aposta.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="aporte">
+    <div class="wrap">
+      <p class="kick">o que o seu aporte constrói</p>
+      <h2>US$300k, aplicados para gerar caixa rápido</h2>
+      <p class="intro">Tier 1 é <b>compute-first</b>: começamos leve, provamos o modelo e firmamos o primeiro imóvel — sem comprar terra cara antes da hora.</p>
+      <div class="uses">
+        <div class="use"><div class="t"><b>Pod de GPU</b> (serving de IA)</div><div class="v">~US$150k</div><div class="d">Já temos 8× RTX 3090 como base; o aporte escala capacidade e redundância.</div></div>
+        <div class="use"><div class="t"><b>Galpão</b>: retrofit elétrico/refrigeração + entrada</div><div class="v">~US$110k</div><div class="d">Adequação para servir 24/7 e a entrada/crédito do primeiro imóvel próprio.</div></div>
+        <div class="use"><div class="t"><b>Estrutura</b>: depósito de energia, jurídico, Maquila</div><div class="v">~US$30k</div><div class="d">Credenciamento ANDE + regime fiscal + capital de giro inicial.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="retorno">
+    <div class="wrap">
+      <p class="kick">como você ganha</p>
+      <h2>Piso com lastro + upside que escala</h2>
+      <p class="intro">A distribuição desce numa cascata clara. O sponsor entra com o galpão que já possui (avaliado por laudo) e o know-how operacional; o investidor entra com capital e tem preferência.</p>
+      <div class="fall">
+        <div class="step"><div class="lv mono">1º</div><div class="box"><h4>Retorno preferencial ao investidor</h4><p>Sustentado pelo <b>aluguel + valorização</b> do imóvel (lastro real), mesmo se o compute atrasar.</p></div></div>
+        <div class="step"><div class="lv mono">2º</div><div class="box"><h4>Devolução do capital</h4><p>Você recupera o aporte antes de o sponsor participar do lucro.</p></div></div>
+        <div class="step"><div class="lv mono">3º</div><div class="box"><h4>Upside de compute, dividido</h4><p>O lucro dos tokens (que <b>cresce com a demanda</b>) é partilhado — o motor assimétrico do retorno.</p></div></div>
+      </div>
+      <p class="intro" style="margin-top:16px"><b>Assimetria:</b> o imóvel protege o downside; a IA abre o upside. E há um caminho desenhado para escalar até o tier que destrava <b>10 anos de isenção de dividendos</b> no Paraguai.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="honestidade">
+    <div class="wrap">
+      <p class="kick">transparência</p>
+      <h2>O que já é real — e o que ainda vamos medir</h2>
+      <p class="intro">Nada aqui é chute. Preferimos mostrar a linha entre o medido e o projetado.</p>
+      <div class="cols">
+        <div class="col real">
+          <h4>✓ Já é real (medido / ancorado)</h4>
+          <ul>
+            <li><span class="m">●</span><div>8× RTX 3090 em mãos; <b>79 tok/s/GPU medidos</b> (Qwen3-27B).</div></li>
+            <li><span class="m">●</span><div>Energia US$0,044/kWh, Maquila 1%, terreno ~US$44/m² — <b>fontes públicas 2026</b>.</div></li>
+            <li><span class="m">●</span><div>Software de orquestração próprio (llms.surf) que só entrega trabalho provado por teste.</div></li>
+          </ul>
+        </div>
+        <div class="col todo">
+          <h4>▲ A validar antes de escalar</h4>
+          <ul>
+            <li><span class="m">●</span><div>Throughput em lote (vLLM) e preço por token com 1–2 clientes-âncora.</div></li>
+            <li><span class="m">●</span><div>Orçamento final de obra e terreno específico cotado.</div></li>
+            <li><span class="m">●</span><div>Estrutura societária e ágio — com advogado/contador no Paraguai.</div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final" id="conversar">
+    <div class="wrap">
+      <p class="kick" style="text-align:center">rodada tier 1 · 3 vagas</p>
+      <h2>Vamos conversar</h2>
+      <div class="slots" aria-label="3 vagas"><span class="slot"></span><span class="slot"></span><span class="slot"></span></div>
+      <p>São exatamente <b>três vagas de US$100k</b>. Quem entra no Tier 1 ancora o modelo antes da valorização do corredor e antes da escala de compute. Recebo você para uma conversa de 15 minutos com o plano completo, a calculadora e os números.</p>
+      <div class="contact">
+        <span>Falar com o fundador:</span>
+        <b>[ inserir e-mail / WhatsApp ]</b>
+      </div>
+      <div class="cta-row" style="justify-content:center;margin-top:18px">
+        <a class="btn" href="mailto:SEU-EMAIL-AQUI?subject=Vector%20CDE%20-%20Tier%201">Quero uma das 3 vagas</a>
+        <a class="btn ghost" href="#top">Rever o resumo</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p class="disc">Material de apresentação para fins informativos. Não constitui oferta pública de valores mobiliários, aconselhamento de investimento, jurídico ou contábil. Rentabilidade passada ou projetada não é garantia de resultado; o investimento envolve riscos, inclusive de perda de capital. Estrutura societária, ágio e regime fiscal devem ser validados com profissionais habilitados no Paraguai antes de qualquer aporte.</p>
+    <p class="srcs">Fontes públicas (2025–2026): Hashrate Index; The Paraguay Post; MercoPress; ANDE (Resolución GCIE); Ley 7548/2025 e Decreto 5432/2026; Ley 7547/2025 (Maquila); La Nación; Prensa Mercosur; InfoCasas; Clasipar.</p>
+  </div>
+</footer>
+</body>
+</html>
