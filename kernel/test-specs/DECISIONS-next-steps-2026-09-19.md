@@ -232,8 +232,50 @@ bestmodel PR #2, optimizer 1.0.1, L03A 355 (vinculantes da sessão
 anterior: não tocar). `~/Work/bmad` (sem acesso daqui). Qualquer
 despacho de modelo real a partir do cloud.
 
-## Pergunta ao dono (S8: uma, com garfo)
+## Pergunta ao dono (S8: uma, com garfo) — RESPONDIDA 2026-09-20
 
 pergunta: `HOME` relocado funciona no zcode AppImage da sua máquina? (rode `adapters/zcode/measure-home-relocation.sh` do PR #4; ele imprime três linhas sim/não)
 se sim -> PR de uma linha muda o default para `ZCODE_CONFIG_STRATEGY=overlay`, re-roda `bin/test-zcode-config-integrity.sh`, e o incidente 3 recebe as três linhas medidas.
 se não -> `restore` permanece default, as três linhas vão para o incidente 3 como medição, e o `flock` + `trap` do PR #4 é a proteção definitiva.
+
+Resposta medida (executor zcode na máquina do dono, PR #12): `HOME
+relocado: não` / `XDG_CONFIG_HOME: não` / `--user-data-dir: não`. Garfo
+"não": `restore` é o default definitivo; as três linhas estão no
+incidente `2026-09-19-runner-zcode-reescreve-config-global-do-dono.md`.
+Achado colateral: o script de medição tinha `printf '--user-data-dir: …'`
+(a string vira opção do printf) — corrigido no mesmo PR; 2 linhas saíam
+antes do fix, exit 2.
+
+## D-E5-RUN1 — primeira rodada real: dois furos e um dado (2026-09-20 01:00 UTC)
+
+Fatos do executor zcode (relatório na conversa, PRs #13 e #14):
+
+1. `oracfit run kernel_test` reprovou no preflight `check-spec` para as 15
+   specs da bateria (T01–T10, T13–T17), cinco faltas iguais. O teste do T20
+   (`bin/test-kernel-test-mode.sh`) usou spec sintética com as cláusulas
+   e nunca despachou a T01 real — o oráculo "dispatching T01 through it"
+   foi satisfeito com um stub de spec. Incidente e cláusulas nas specs
+   em PR #14. Mecanismo pendente: o teste do T20 passa a despachar a
+   T01 real (stub de modelo), não uma spec inventada.
+2. Com `LLMS_KERNEL=shadow` ligado, dois runs de T01 falharam 3/3
+   tentativas por rate limit (`mimo-v2.5-free`, `nemotron-3-ultra-free`)
+   e `bin/check-shadow-ledger.sh` disse `no-shadow-traffic`. O sidecar
+   `.dispatch/pids/mode-<run>.kernel` foi escrito (o shadow roda na
+   resolução da cadeia, antes das tentativas), mas nada o levava ao
+   `mode.jsonl` e o medidor só lia `ledger/ledger.jsonl`. Fechado no PR
+   que acompanha este parágrafo: `lib-oracfit-metrics.sh` anexa as chaves
+   do sidecar ao ledger de modo; o medidor agrega os dois ledgers; legs
+   novos em `test-kernel-test-mode.sh` (shadow grava, off não grava) e
+   `test-check-shadow-ledger.sh` (agregação, chaves planas).
+3. Dado E5 honesto: duas linhas `fail`, `attempt=3`, `oracle_exit=2`,
+   `provider_efetivo=""` em `.dispatch/ledger/mode.jsonl` do dono. O
+   `tier:cheap` dele resolve para apenas dois refs keyless: os nove refs
+   openrouter do catálogo são pulados por L4 (sem credencial de arquivo).
+   Domingo 01:00 UTC os dois estavam limitados. `tier:mid` foi
+   corretamente recusado (D-NEXT-4).
+
+## Pergunta ao dono (S8: uma, com garfo)
+
+pergunta: você quer uma credencial de arquivo do openrouter na sua máquina (os modelos `:free` do openrouter custam zero, mas são keyed — L4 exige o arquivo) para a cadeia cheap ter onze refs em vez de dois?
+se sim -> grave a credencial pelo caminho de `bin/lib-free-credentials.sh` (nunca em env), rode `bash bin/test-free-path.sh` (exit 0) e repita o PASSO 3 do prompt do zcode; E5 passa a medir a cadeia inteira.
+se não -> E5 mede só a fatia keyless; repita o PASSO 3 em horário de menor carga e, se voltar 3/3 limitado, isso vira a primeira linha da tabela E5 em `kernel/BENCH.md` ("cheap keyless indisponível às HH:MM UTC"), não um bloqueio.
