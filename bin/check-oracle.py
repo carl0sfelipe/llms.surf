@@ -415,7 +415,19 @@ def main() -> int:
         print(f"workdir não é diretório: {workdir}", file=sys.stderr)
         return 3
 
-    m = ORACLE_LINE.search(spec.read_text(encoding="utf-8"))
+    text = spec.read_text(encoding="utf-8")
+    # 1 arquivo = 1 história (incidente
+    # 2026-09-20-spec-com-n-oraculos-despacha-so-o-primei): a extração abaixo
+    # é first-match — N oráculos num arquivo significaria só o primeiro
+    # julgado, o resto executado nunca. Recusa loud em vez de silêncio.
+    n_sections = len(re.findall(r'(?im)^#{1,6}[ \t]*or[aá]culo', text))
+    n_cmds = len(ORACLE_LINE.findall(text))
+    if n_sections > 1 or n_cmds > 1:
+        print(f"❌ {spec.name}: {n_sections} seções Oráculo / {n_cmds} linhas "
+              f"'comando:' — 1 arquivo = 1 história; recorte a história antes "
+              f"de despachar (só a primeira seria executada).", file=sys.stderr)
+        return 3
+    m = ORACLE_LINE.search(text)
     if not m:
         print(f"❌ {spec.name}: sem linha `- comando:` no bloco Oráculo",
               file=sys.stderr)
