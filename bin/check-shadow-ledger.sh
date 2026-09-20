@@ -13,54 +13,80 @@
 # script no corpo. Não decide o N de runs — o dono lê "dias cobertos" e o
 # ciclo de Lineup (D6.6) e decide.
 #
-# Uso: bin/check-shadow-ledger.sh [ledger.jsonl] [--json]
-#      LEDGER_DIR=<dir> sobrepõe o default (repo/ledger).
+# Uso: bin/check-shadow-ledger.sh [ledger.jsonl ...] [--json]
+#      Sem argumento lê os DOIS ledgers que recebem shadow: repo/ledger/ledger.jsonl
+#      (dispatch.sh → ledger-finalize, campo policy_version objeto) e
+#      <workdir>/.dispatch/ledger/mode.jsonl (dispatch-mode/stages, chaves
+#      planas policy_version_crate/sha). LEDGER_DIR / ORACFIT_WORKDIR sobrepõem.
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-LEDGER=""
+LEDGERS=()
 JSON=0
 for a in "$@"; do
   case "$a" in
     --json) JSON=1 ;;
-    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
-    *) LEDGER="$a" ;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
+    *) LEDGERS+=("$a") ;;
   esac
 done
-[ -n "$LEDGER" ] || LEDGER="${LEDGER_DIR:-$ROOT/ledger}/ledger.jsonl"
-
-if [ ! -f "$LEDGER" ]; then
-  echo "check-shadow-ledger: ledger não encontrado: $LEDGER" >&2
-  exit 3
+if [ "${#LEDGERS[@]}" -eq 0 ]; then
+  central="${LEDGER_DIR:-$ROOT/ledger}/ledger.jsonl"
+  mode="${ORACFIT_WORKDIR:-$ROOT}/.dispatch/ledger/mode.jsonl"
+  [ -f "$central" ] && LEDGERS+=("$central")
+  [ -f "$mode" ] && LEDGERS+=("$mode")
+  if [ "${#LEDGERS[@]}" -eq 0 ]; then
+    echo "check-shadow-ledger: nenhum ledger encontrado ($central, $mode)" >&2
+    exit 3
+  fi
+else
+  for l in "${LEDGERS[@]}"; do
+    if [ ! -f "$l" ]; then
+      echo "check-shadow-ledger: ledger não encontrado: $l" >&2
+      exit 3
+    fi
+  done
 fi
 
-LEDGER="$LEDGER" JSON="$JSON" python3 - <<'PY'
+LEDGERS_NL="$(printf '%s\n' "${LEDGERS[@]}")" JSON="$JSON" python3 - <<'PY'
 import json, os, sys
-path = os.environ["LEDGER"]
+paths = [p for p in os.environ["LEDGERS_NL"].split("\n") if p]
 as_json = os.environ["JSON"] == "1"
 rows, bad = [], 0
-with open(path, encoding="utf-8", errors="replace") as f:
-    for line in f:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            r = json.loads(line)
-        except json.JSONDecodeError:
-            bad += 1
-            continue
-        if isinstance(r, dict) and "kernel_shadow_diff" in r:
-            rows.append(r)
+for path in paths:
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                bad += 1
+                continue
+            if isinstance(r, dict) and "kernel_shadow_diff" in r:
+                r["_ledger"] = path
+                rows.append(r)
 
 def is_zero(v):
     return str(v).strip() == "0"
 
+def pv(r, key, flat):
+    obj = r.get("policy_version")
+    if isinstance(obj, dict) and obj.get(key):
+        return str(obj[key])
+    return str(r.get(flat, "") or "")
+
+def when(r):
+    return str(r.get("started_at") or r.get("ts") or "")[:10]
+
 diffs = [r for r in rows if not is_zero(r.get("kernel_shadow_diff"))]
-dates = sorted(str(r.get("started_at", ""))[:10] for r in rows if r.get("started_at"))
-crates = sorted({str((r.get("policy_version") or {}).get("crate", "")) for r in rows} - {""})
-shas = sorted({str((r.get("policy_version") or {}).get("kernel_sha", ""))[:12] for r in rows} - {""})
+dates = sorted(when(r) for r in rows if when(r))
+crates = sorted({pv(r, "crate", "policy_version_crate") for r in rows} - {""})
+shas = sorted({pv(r, "kernel_sha", "policy_version_sha")[:12] for r in rows} - {""})
+path = ", ".join(paths)
 out = {
-    "ledger": path,
+    "ledgers": paths,
     "shadow_rows": len(rows),
     "diff_rows": len(diffs),
     "diff_sum": sum(1 for _ in diffs),
@@ -72,9 +98,9 @@ out = {
     "malformed_lines_skipped": bad,
     "verdict": "no-shadow-traffic" if not rows else ("diff-zero" if not diffs else "diff-nonzero"),
     "diffs": [
-        {"task_name": r.get("task_name"), "started_at": r.get("started_at"),
+        {"task_name": r.get("task_name") or r.get("task"), "started_at": r.get("started_at") or r.get("ts"),
          "kernel_shadow_diff": r.get("kernel_shadow_diff"),
-         "provider_efetivo_ref": r.get("provider_efetivo_ref")}
+         "provider_efetivo_ref": r.get("provider_efetivo_ref"), "ledger": r.get("_ledger")}
         for r in diffs[:10]
     ],
 }
