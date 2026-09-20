@@ -7,6 +7,8 @@
 <meta name="description" content="Infográfico explicável: um veículo híbrido de imóvel industrial + compute de IA em Ciudad del Este. Energia barata, incentivos fiscais e a janela cripto→IA do Paraguai.">
 <meta name="color-scheme" content="only dark">
 <meta name="theme-color" content="#0A0D13">
+<meta name="robots" content="noindex,nofollow">
+<script>document.documentElement.classList.add('gated');</script>
 <meta property="og:type" content="website">
 <meta property="og:title" content="Vector CDE — Terra + Tokens no Paraguai">
 <meta property="og:description" content="Um galpão que rende duas vezes: aluguel do imóvel + tokens de IA de baixa latência. Infográfico para explicar em 5 minutos.">
@@ -221,6 +223,52 @@ details.card summary .s-hint{font-family:var(--mono);font-weight:400;font-size:1
 .quote-law{border-left:3px solid var(--gold);background:rgba(210,153,34,.06);border-radius:0 10px 10px 0;padding:13px 15px;margin:10px 0;font-size:13.5px;color:var(--text);line-height:1.55}
 .quote-law cite{display:block;font-family:var(--mono);font-size:11px;color:var(--faint);font-style:normal;margin-top:8px}
 
+/* ---------- password gate ---------- */
+html.gated,html.gated body{overflow:hidden;height:100%}
+html.gated .bar,html.gated main,html.gated .foot{filter:blur(7px);pointer-events:none;user-select:none}
+#gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+  padding:calc(24px + var(--sat)) calc(16px + var(--sar)) calc(24px + var(--sab)) calc(16px + var(--sal));
+  background:rgba(6,9,14,.94)}
+html:not(.gated) #gate{display:none}
+.gate-card{width:100%;max-width:400px;border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.gate-lock{width:40px;height:40px;border:1px solid rgba(34,211,238,.4);border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--cyan);margin-bottom:16px}
+.gate-lock svg{width:20px;height:20px}
+.gate-h{font-family:var(--mono);font-weight:700;font-size:19px;letter-spacing:-.01em;margin-bottom:8px}
+.gate-p{color:var(--muted);font-size:13.5px;line-height:1.55}
+.gate-form{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.gate-form input{font-family:var(--mono);font-size:15px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:0 14px;min-height:48px}
+.gate-form input:focus{outline:2px solid var(--cyan);outline-offset:1px}
+.gate-btn{min-height:48px;background:var(--cyan);color:#04240e;font-family:var(--mono);font-weight:700;font-size:14px;border:0;border-radius:10px;cursor:pointer;transition:filter .15s ease}
+.gate-btn:hover{filter:brightness(1.08)}
+.gate-err{color:var(--red);font-family:var(--mono);font-size:12.5px;min-height:1.2em}
+.gate-foot{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:14px;line-height:1.5}
+
+/* ---------- calculator ---------- */
+.calc{border:1px solid rgba(34,211,238,.35);border-radius:16px;background:linear-gradient(180deg,rgba(34,211,238,.05),transparent 60%);padding:16px}
+.calc-grid{display:grid;grid-template-columns:1fr;gap:18px}
+.ctrls{display:grid;gap:15px;align-content:start}
+.ctrl .lab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:7px}
+.ctrl .lab b{color:var(--text);font-size:13px;white-space:nowrap}
+.ctrl .lab .meas{color:var(--gold);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.ctrl input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:var(--line);cursor:pointer;margin:0}
+.ctrl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--cyan);border:4px solid var(--bg);box-shadow:0 0 0 1px var(--cyan)}
+.ctrl input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--cyan);border:3px solid var(--bg);box-shadow:0 0 0 1px var(--cyan)}
+.scns{display:grid;grid-template-columns:1fr;gap:11px}
+.scn{border:1px solid var(--line);border-radius:13px;padding:15px 15px 15px 17px;background:var(--panel);position:relative;overflow:hidden}
+.scn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+.scn.own::before{background:var(--green)} .scn.max::before{background:var(--cyan)} .scn.cloud::before{background:var(--land)} .scn.asset::before{background:var(--gold)}
+.scn .st{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);line-height:1.4}
+.scn .big{font-family:var(--mono);font-weight:700;font-size:clamp(21px,6vw,27px);margin:5px 0 3px;line-height:1.05}
+.scn.own .big{color:var(--green)} .scn.max .big{color:var(--cyan)} .scn.cloud .big{color:var(--land)} .scn.asset .big{color:var(--gold)}
+.scn .row{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:7px}
+.scn .row b{color:var(--text);font-weight:700}
+.arg{border:1px solid rgba(63,185,80,.4);background:rgba(63,185,80,.06);border-radius:13px;padding:15px 16px;margin-top:14px;font-size:14px;line-height:1.65}
+.arg b{color:var(--text)}
+.arg .hl{color:var(--green);font-family:var(--mono);font-weight:700;white-space:nowrap}
+.calc-note{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:13px;line-height:1.6}
+@media(min-width:560px){.scns{grid-template-columns:1fr 1fr}}
+@media(min-width:860px){.calc-grid{grid-template-columns:minmax(0,300px) 1fr}}
+
 /* footer */
 .foot{border-top:1px solid var(--line);padding:34px 0 calc(48px + var(--sab));margin-top:30px}
 .foot .disc{font-family:var(--mono);font-size:12px;color:var(--faint);max-width:80ch;line-height:1.7}
@@ -253,6 +301,21 @@ details.card summary .s-hint{font-family:var(--mono);font-weight:400;font-size:1
 </head>
 <body>
 
+<div id="gate" role="dialog" aria-modal="true" aria-label="Acesso protegido">
+  <div class="gate-card">
+    <div class="gate-lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg></div>
+    <h1 class="gate-h">Plano completo — acesso restrito</h1>
+    <p class="gate-p">Versão interna, com a calculadora e os números do bootstrap. Digite a senha para entrar.</p>
+    <form class="gate-form" id="gateForm" autocomplete="off">
+      <input type="password" id="gatePw" placeholder="senha" aria-label="senha" autocomplete="current-password">
+      <button class="gate-btn" type="submit">entrar</button>
+      <div class="gate-err" id="gateErr" role="alert"></div>
+    </form>
+    <p class="gate-foot">A versão pública para investidores (parte do plano, sem os controles internos) sai separada.</p>
+    <noscript><p class="gate-err">Ative o JavaScript para acessar.</p></noscript>
+  </div>
+</div>
+
 <header class="bar">
   <div class="wrap bar-in">
     <a class="brand" href="#top" aria-label="Vector CDE">
@@ -268,6 +331,7 @@ details.card summary .s-hint{font-family:var(--mono);font-weight:400;font-size:1
       <a href="#engines">2 máquinas</a>
       <a href="#paraguai">Paraguai</a>
       <a href="#tiers">Tiers</a>
+      <a href="#calc">Calculadora</a>
       <a href="#dinheiro">O dinheiro</a>
       <a href="#migracao">Migração 13M</a>
       <a href="#plano">O plano</a>
@@ -519,11 +583,78 @@ details.card summary .s-hint{font-family:var(--mono);font-weight:400;font-size:1
     </div>
   </section>
 
-  <!-- ACT 5 -->
-  <section class="act" id="dinheiro">
+  <!-- ACT 5 · CALCULADORA -->
+  <section class="act" id="calc">
     <div class="wrap">
       <div class="act-head">
         <span class="act-n mono">05</span>
+        <div>
+          <h2 class="act-h">Calculadora do bootstrap</h2>
+          <p class="act-lede">Mexa nos controles. Veja quanto as <b>8× RTX 3090</b> rendem hoje, o teto com a máquina cheia (margem total), e por que alugar nuvem para a demanda extra quase não dá margem — o argumento para subir de tier.</p>
+        </div>
+      </div>
+      <div class="act-body">
+        <div class="calc">
+          <div class="calc-grid">
+
+            <div class="ctrls">
+              <div class="ctrl"><div class="lab"><span>GPUs (RTX 3090)</span><b id="vGpus">8</b></div><input type="range" id="cGpus" min="1" max="64" step="1" value="8"></div>
+              <div class="ctrl"><div class="lab"><span>Throughput/GPU <span class="meas">meça</span></span><b id="vTps">500 tok/s</b></div><input type="range" id="cTps" min="100" max="3000" step="50" value="500"></div>
+              <div class="ctrl"><div class="lab"><span>Preço por 1M tokens</span><b id="vPrice">$0.30/1M</b></div><input type="range" id="cPrice" min="0.05" max="5" step="0.05" value="0.30"></div>
+              <div class="ctrl"><div class="lab"><span>Ocupação</span><b id="vOcc">40%</b></div><input type="range" id="cOcc" min="5" max="100" step="5" value="40"></div>
+              <div class="ctrl"><div class="lab"><span>Consumo/GPU</span><b id="vWatt">400 W</b></div><input type="range" id="cWatt" min="250" max="550" step="10" value="400"></div>
+              <div class="ctrl"><div class="lab"><span>Energia</span><b id="vKwh">$0.044/kWh</b></div><input type="range" id="cKwh" min="0.03" max="0.15" step="0.002" value="0.044"></div>
+              <div class="ctrl"><div class="lab"><span>Aluguel nuvem/GPU·h</span><b id="vCloud">$0.30/h</b></div><input type="range" id="cCloud" min="0.15" max="1.5" step="0.05" value="0.30"></div>
+              <div class="ctrl"><div class="lab"><span>Valor do que temos hoje</span><b id="vAsset">$9,000</b></div><input type="range" id="cAsset" min="3000" max="40000" step="500" value="9000"></div>
+            </div>
+
+            <div>
+              <div class="scns">
+                <div class="scn own">
+                  <div class="st">Nossas máquinas · margem total</div>
+                  <div class="big" id="oA">—</div>
+                  <div class="row"><span>receita/mês</span><b id="oArev">—</b></div>
+                  <div class="row"><span>energia/mês</span><b id="oAen">—</b></div>
+                  <div class="row"><span>margem</span><b id="oAmar">—</b></div>
+                  <div class="row"><span>payback do ativo</span><b id="oApb">—</b></div>
+                </div>
+                <div class="scn max">
+                  <div class="st">Teto · máquina 100% cheia</div>
+                  <div class="big" id="oB">—</div>
+                  <div class="row"><span>receita máx/mês</span><b id="oBrev">—</b></div>
+                  <div class="row"><span>margem</span><b id="oBmar">—</b></div>
+                  <div class="row"><span>payback mín</span><b id="oBpb">—</b></div>
+                </div>
+                <div class="scn cloud">
+                  <div class="st">Nuvem p/ demanda · quase sem margem</div>
+                  <div class="big" id="oC">—</div>
+                  <div class="row"><span>receita/mês</span><b id="oCrev">—</b></div>
+                  <div class="row"><span>aluguel nuvem/mês</span><b id="oCcost">—</b></div>
+                  <div class="row"><span>lucro/mês</span><b id="oCprofit">—</b></div>
+                </div>
+                <div class="scn asset">
+                  <div class="st">Quanto vale / capacidade hoje</div>
+                  <div class="big" id="oDval">—</div>
+                  <div class="row"><span>capacidade máx</span><b id="oDcap">—</b></div>
+                  <div class="row"><span>tokens/mês (atual)</span><b id="oDtok">—</b></div>
+                  <div class="row"><span>receita/mês</span><b id="oDrev">—</b></div>
+                </div>
+              </div>
+              <div class="arg" id="argBox"></div>
+            </div>
+
+          </div>
+          <p class="calc-note">Como fazer render mais: ↑ ocupação (mais clientes), ↑ preço (baixa latência/nicho), ↓ energia (solar no futuro), modelos maiores em lote. O throughput por GPU é <b>premissa</b> até medir com <code>tuned-measure.sh</code> — a casa não inventa tok/s. Energia US$0,044/kWh e nuvem ~US$0,30/h são âncoras reais (ANDE / vast.ai 3090).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACT 6 -->
+  <section class="act" id="dinheiro">
+    <div class="wrap">
+      <div class="act-head">
+        <span class="act-n mono">06</span>
         <div>
           <h2 class="act-h">Como o dinheiro se organiza</h2>
           <p class="act-lede">Três investidores entram com capital. O sponsor entra com o galpão que já possui — avaliado por laudo, com ágio. O lucro desce numa "cascata".</p>
@@ -562,7 +693,7 @@ details.card summary .s-hint{font-family:var(--mono);font-weight:400;font-size:1
   <section class="act" id="migracao">
     <div class="wrap">
       <div class="act-head">
-        <span class="act-n mono">06</span>
+        <span class="act-n mono">07</span>
         <div>
           <h2 class="act-h">Dá para migrar e ganhar os 10 anos de isenção?</h2>
           <p class="act-lede">Resposta curta: <b>sim.</b> A lei paraguaia (Ley 7548/2025) permite começar pequeno e depois, por ampliação, chegar ao patamar que destrava a isenção de dividendos. Mas tem regra — abra as caixas.</p>
@@ -605,7 +736,7 @@ details.card summary .s-hint{font-family:var(--mono);font-weight:400;font-size:1
   <section class="act" id="plano">
     <div class="wrap">
       <div class="act-head">
-        <span class="act-n mono">07</span>
+        <span class="act-n mono">08</span>
         <div>
           <h2 class="act-h">O plano, em fases</h2>
           <p class="act-lede">Cada fase gera caixa antes de puxar a próxima. Começa capital-leve, escala com prova.</p>
@@ -626,7 +757,7 @@ details.card summary .s-hint{font-family:var(--mono);font-weight:400;font-size:1
   <section class="act" id="validar">
     <div class="wrap">
       <div class="act-head">
-        <span class="act-n mono">08</span>
+        <span class="act-n mono">09</span>
         <div>
           <h2 class="act-h">O que ainda vamos medir (sem chute)</h2>
           <p class="act-lede">A mesma regra do llms.surf vale aqui: número sem prova não passa. Estes pontos serão medidos antes de fechar a planilha.</p>
@@ -673,6 +804,83 @@ details.card summary .s-hint{font-family:var(--mono);font-weight:400;font-size:1
   });
   cards.forEach(function(c){ c.addEventListener('toggle', sync); });
   sync();
+})();
+</script>
+<script>
+/* password gate — client-side (SHA-256). Não é segurança forte: é uma trava
+   para link semi-privado. A versão pública sai sem gate. */
+(function(){
+  var HASH='bcefea7c77839e565c5e81658bd0e5e0d86bea4ea7e5ab7dad2d87f4c122ad11';
+  var root=document.documentElement;
+  function unlock(){ root.classList.remove('gated'); try{sessionStorage.setItem('vec_unlocked','1');}catch(e){} }
+  try{ if(sessionStorage.getItem('vec_unlocked')==='1') root.classList.remove('gated'); }catch(e){}
+  var form=document.getElementById('gateForm');
+  if(form){
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      var pw=document.getElementById('gatePw').value||'';
+      var err=document.getElementById('gateErr');
+      if(!(window.crypto&&crypto.subtle)){ err.textContent='Navegador sem suporte a criptografia (use https).'; return; }
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw)).then(function(buf){
+        var hex=Array.prototype.map.call(new Uint8Array(buf),function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+        if(hex===HASH){ err.textContent=''; unlock(); document.getElementById('gatePw').value=''; }
+        else { err.textContent='Senha incorreta.'; }
+      }).catch(function(){ err.textContent='Falha ao verificar a senha.'; });
+    });
+  }
+})();
+</script>
+
+<script>
+/* calculadora do bootstrap */
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var ids=['cGpus','cTps','cPrice','cOcc','cWatt','cKwh','cCloud','cAsset'];
+  var SM=2592000; /* 30 dias em segundos */
+  function usd(n){ if(!isFinite(n)) return '—'; var s=n<0?'-':''; var a=Math.abs(n);
+    if(a>=1e6) return s+'$'+(a/1e6).toFixed(2)+'M';
+    if(a>=1000) return s+'$'+Math.round(a).toLocaleString('en-US');
+    return s+'$'+(a<10?a.toFixed(2):Math.round(a).toString()); }
+  function tok(n){ if(!isFinite(n)) return '—';
+    if(n>=1e9) return (n/1e9).toFixed(1)+' bi'; if(n>=1e6) return (n/1e6).toFixed(0)+' mi';
+    if(n>=1e3) return (n/1e3).toFixed(0)+' mil'; return Math.round(n).toString(); }
+  function pct(n){ return isFinite(n)?Math.round(n*100)+'%':'—'; }
+  function per(n){ if(!isFinite(n)||n<=0) return '—'; if(n>=12) return (n/12).toFixed(1)+' anos'; return n.toFixed(n<3?1:0)+' meses'; }
+  function calc(){
+    var g=+$('cGpus').value,tps=+$('cTps').value,price=+$('cPrice').value,occ=+$('cOcc').value/100,
+        watt=+$('cWatt').value,kwh=+$('cKwh').value,cloud=+$('cCloud').value,asset=+$('cAsset').value;
+    $('vGpus').textContent=g;
+    $('vTps').textContent=tps+' tok/s';
+    $('vPrice').textContent='$'+price.toFixed(2)+'/1M';
+    $('vOcc').textContent=Math.round(occ*100)+'%';
+    $('vWatt').textContent=watt+' W';
+    $('vKwh').textContent='$'+kwh.toFixed(3)+'/kWh';
+    $('vCloud').textContent='$'+cloud.toFixed(2)+'/h';
+    $('vAsset').textContent=usd(asset);
+    var capMax=tps*g*SM, tokens=capMax*occ, revenue=tokens/1e6*price;
+    var hoursBusy=24*30*occ;
+    var energyOwn=g*watt/1000*hoursBusy*kwh;
+    var profitA=revenue-energyOwn, marginA=revenue>0?profitA/revenue:0, paybackA=profitA>0?asset/profitA:Infinity;
+    var revMax=capMax/1e6*price, energyMax=g*watt/1000*720*kwh, profitMax=revMax-energyMax, paybackMax=profitMax>0?asset/profitMax:Infinity;
+    var cloudCost=g*cloud*hoursBusy, profitC=revenue-cloudCost, marginC=revenue>0?profitC/revenue:0;
+    $('oA').textContent=usd(profitA)+'/mês';
+    $('oArev').textContent=usd(revenue); $('oAen').textContent=usd(energyOwn);
+    $('oAmar').textContent=pct(marginA); $('oApb').textContent=per(paybackA);
+    $('oB').textContent=usd(profitMax)+'/mês';
+    $('oBrev').textContent=usd(revMax); $('oBmar').textContent=pct(revMax>0?profitMax/revMax:0); $('oBpb').textContent=per(paybackMax);
+    $('oC').textContent=pct(marginC);
+    $('oCrev').textContent=usd(revenue); $('oCcost').textContent=usd(cloudCost); $('oCprofit').textContent=usd(profitC);
+    $('oDval').textContent=usd(asset);
+    $('oDcap').textContent=tok(capMax); $('oDtok').textContent=tok(tokens); $('oDrev').textContent=usd(revenue);
+    var per10=(0.10*capMax/1e6*price)-(g*watt/1000*(24*30*0.10)*kwh);
+    $('argBox').innerHTML='Com <b>margem total nas suas máquinas</b>, o lucro é <span class="hl">'+usd(profitA)+'/mês</span> '
+      +'e o que você já tem se paga em <span class="hl">'+per(paybackA)+'</span>. '
+      +'Cada <b>+10% de ocupação</b> vale ~<span class="hl">'+usd(per10)+'/mês</span>. '
+      +'Já atender demanda <b>acima do teto das '+g+' GPUs</b> alugando nuvem rende só <span class="hl">'+pct(marginC)+'</span> de margem — '
+      +'por isso o próximo dólar de <b>capex (subir de tier)</b> vale muito mais que aluguel.';
+  }
+  ids.forEach(function(id){ var el=$(id); if(el) el.addEventListener('input',calc); });
+  if($('cGpus')) calc();
 })();
 </script>
 </body>
