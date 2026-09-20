@@ -151,4 +151,4 @@ if honoured "$TOKEN_UDD" udd "$SCRATCH/log-udd"; then UDD_V=sim; else UDD_V=não
 
 printf 'HOME relocado: %s\n' "$HOME_V"
 printf 'XDG_CONFIG_HOME: %s\n' "$XDG_V"
-printf '--user-data-dir: %s\n' "$UDD_V"
+printf '%s\n' "--user-data-dir: $UDD_V"

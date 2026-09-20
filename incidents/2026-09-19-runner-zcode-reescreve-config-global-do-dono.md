@@ -127,6 +127,14 @@ global — o runner fez o único caminho que funcionava. O bug não é a escrita
 em si; é o ESCOPO do efeito colateral (máquina do dono, fora do workdir do
 despacho).
 
+Medição 2026-09-19 (máquina do dono, `adapters/zcode/measure-home-relocation.sh`):
+
+```
+HOME relocado: não
+XDG_CONFIG_HOME: não
+--user-data-dir: não
+```
+
 ## Correção em aberto — exige decisão (halt do D-DISPATCH)
 
 Direção decidida: "scope the write to the workdir or a flag". Verificação
