@@ -26,17 +26,22 @@ SPEC="${1:?Uso: check-spec.sh <spec_file>}"
 
 faltando=()
 
-# 1. Cláusula anti-invenção. Aceita as formulações já usadas no repo.
+# 1. Cláusula anti-invenção. Aceita as formulações já usadas no repo, PT e EN
+#    (mesma paridade de idioma do bloco de dados verificados — incidente
+#    2026-09-20-heuristica-de-dados-verificados-so-casa-).
 # ATENÇÃO: acento vai em ALTERNAÇÃO `(a|ã)`, nunca em conjunto `[aã]`. O grep do
 # macOS é BSD e trata o conjunto byte a byte: `n[aã]o` NÃO casa "não", porque o
 # ã ocupa dois bytes. O efeito era falso negativo silencioso — spec que já
 # trazia a cláusula com acento era reprovada, e o autor era mandado acrescentar
 # o que já estava lá. Descoberto em 2026-07-28 ao escrever as specs SEP-01..03.
-grep -qiE 'n(a|ã)o invente|n(a|ã)o acrescente|sem inventar|nenhum n(u|ú)mero al(e|é)m|al(e|é)m destes' "$SPEC" \
+grep -qiE 'n(a|ã)o invente|n(a|ã)o acrescente|sem inventar|do not invent|don.t invent|nenhum n(u|ú)mero al(e|é)m|al(e|é)m destes' "$SPEC" \
   || faltando+=("cláusula anti-invenção (ex.: 'Nao invente numero, prazo ou fonte alem dos listados')")
 
-# 2. Bloco de dados verificados.
-grep -qiE 'dados verificados|contexto real|verificado\)|\(verificado' "$SPEC" \
+# 2. Bloco de dados verificados. PT e EN — os dois únicos idiomas reconhecidos
+#    (incidente 2026-09-20-heuristica-de-dados-verificados-so-casa-: spec EN
+#    com "## Verified data" era reprovada sem que o limite de idioma estivesse
+#    documentado em lugar nenhum).
+grep -qiE 'dados verificados|verified data|contexto real|verificado\)|\(verificado|verified\)|\(verified' "$SPEC" \
   || faltando+=("bloco de dados verificados (o que o modelo PODE usar)")
 
 # 3. Verificação semântica, não só existência de arquivo.
@@ -55,7 +60,7 @@ if grep -qiE '^VERIFICA(C|Ç)(A|Ã)O:' "$SPEC"; then
   LINHA=$(grep -iE '^VERIFICA(C|Ç)(A|Ã)O:' "$SPEC" | head -1)
   echo "$LINHA" | grep -qE "$COMANDO_SEMANTICO" \
     || faltando+=("verificação semântica — '$LINHA' só checa existência; use grep/python3/etc")
-elif grep -qiE '^#{1,6}[[:space:]].*verifica' "$SPEC"; then
+elif grep -qiE '^#{1,6}[[:space:]].*(verifica|verified[[:space:]]data)' "$SPEC"; then
   grep -qE "$COMANDO_SEMANTICO" "$SPEC" \
     || faltando+=("comando de verificação que prove propriedade do conteúdo (só há 'ls' ou nada)")
 else
@@ -88,10 +93,20 @@ if ! grep -qiE '^#{1,6}[[:space:]]*barra' "$SPEC"; then
   echo "HINT: spec sem ## Barra — gauntlet usa só o oráculo como metric (ok). Template: fluxos/_comum/artefato-template.md" >&2
 fi
 
+# Soft hint (não falha): N histórias num arquivo. O dispatch usa só o PRIMEIRO
+# ## Oráculo e o preflight RECUSA (incidente
+# 2026-09-20-spec-com-n-oraculos-despacha-so-o-primei) — avisar já na autoria.
+N_ORACULOS=$(grep -icE '^#{1,6}[[:space:]]*or(a|á)culo' "$SPEC" || true)
+N_COMANDOS=$(grep -cE '^[-*][[:space:]]*comando:' "$SPEC" || true)
+if [ "${N_ORACULOS:-0}" -gt 1 ] || [ "${N_COMANDOS:-0}" -gt 1 ]; then
+  echo "HINT: ${N_COMANDOS} linha(s) 'comando:' em ${N_ORACULOS} seção(ões) ## Oráculo — 1 arquivo = 1 história; recorte a história antes de despachar (o preflight recusa)" >&2
+fi
+
 # 5. Cláusula anti-fantasma (incidente 2026-07-29-declare-fantasma-formatBrlAmount.md).
 # declare const é TypeScript legal mas RUNTIME inexistente. O flash usa como
 # workaround quando não resolve import — compila, oráculo de tsc passa, produção quebra.
-grep -qiE 'n(a|ã)o use declare|sem declare const|proibido declare|NUNCA.*declare' "$SPEC" \
+# PT e EN (paridade do incidente 2026-09-20-heuristica-de-dados-verificados-so-casa-).
+grep -qiE 'n(a|ã)o use declare|sem declare const|proibido declare|NUNCA.*declare|never use declare|do not use declare' "$SPEC" \
   || faltando+=("cláusula anti-fantasma (ex.: 'NUNCA use declare const como workaround — importe de verdade')")
 if [ ${#faltando[@]} -eq 0 ]; then
   echo "✅ spec OK (declara dados verificados e proíbe invenção): $SPEC"

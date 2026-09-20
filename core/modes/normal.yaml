@@ -11,6 +11,10 @@ description: >
 gauntlet:
   enabled: true
   inject_feedback: true
+  # until_approved: true → safety_ceiling PREVALECE sobre max_attempts
+  # (teto efetivo = o MAIOR dos dois; aqui 5). max_attempts lá em cima só
+  # governa sem bloco gauntlet. Incidente
+  # 2026-09-20-max-attempts-3-no-normal-yaml-mas-safety.
   until_approved: true
   safety_ceiling: 5
 on_fail: halt

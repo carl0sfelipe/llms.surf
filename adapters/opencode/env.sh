@@ -16,5 +16,6 @@ export PID_DIR="$REPO_ROOT/.dispatch/pids"
 export MODEL_REGISTRY="$REPO_ROOT/model-registry.json"
 export CAPABILITIES_FILE="$ADAPTER_DIR/capabilities.env"
 export DISPATCH_RUNNER_FORMAT_JSON=1
+export LLMS_KERNEL=shadow
 
 mkdir -p "$LOG_DIR" "$PID_DIR"

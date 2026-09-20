@@ -154,6 +154,47 @@ else
   bad "biggest_gap pegou '$GAP_JSON' em vez da linha de erro legível"
 fi
 
+# (10) Gradle: a primeira linha do stderr é boilerplate ("FAILURE: Build failed
+# with an exception.") e o gap útil vem depois — a task que falhou. Incidente
+# 2026-09-20-biggest-gap-le-a-primeira-linha-inutil-d: feedback de gap era o
+# cabeçalho inútil em todas as tentativas do run R03.
+GRADLE_LOG="$TMPDIR/oracle-gradle.log"
+cat >"$GRADLE_LOG" <<'EOF'
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileKotlin'.
+> Compilation error; see the compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+
+BUILD FAILED in 6s
+EOF
+GAP_GRADLE="$(oracfit_gauntlet_biggest_gap "$GRADLE_LOG" 1)"
+if [ "$GAP_GRADLE" = "Execution failed for task ':compileKotlin'." ]; then
+  ok "biggest_gap pula boilerplate do Gradle e pega a task que falhou"
+else
+  bad "biggest_gap pegou '$GAP_GRADLE' em vez da linha útil"
+fi
+
+# (11) Gradle/Kotlin: diagnóstico do compilador ("e: file: (l, c): ...") vem
+# ANTES do bloco FAILURE — deve vencer como gap (é o mais acionável).
+GRADLE_KT_LOG="$TMPDIR/oracle-gradle-kt.log"
+cat >"$GRADLE_KT_LOG" <<'EOF'
+e: file:///work/src/main/kotlin/PackVerifier.kt:42:13 unresolved reference: sha256
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileKotlin'.
+EOF
+GAP_KT="$(oracfit_gauntlet_biggest_gap "$GRADLE_KT_LOG" 1)"
+if [ "$GAP_KT" = "e: file:///work/src/main/kotlin/PackVerifier.kt:42:13 unresolved reference: sha256" ]; then
+  ok "biggest_gap prefere o diagnóstico 'e:' do compilador Kotlin"
+else
+  bad "biggest_gap pegou '$GAP_KT' em vez do diagnóstico do compilador"
+fi
+
 echo
 echo "=== Resumo: $PASS passaram, $FAIL falharam ==="
 [ "$FAIL" -eq 0 ] || exit 1

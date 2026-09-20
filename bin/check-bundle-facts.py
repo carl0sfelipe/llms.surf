@@ -43,7 +43,7 @@ UNIT_BY_LOWER = {unit.lower(): unit for unit in UNIT_ORDER}
 NUMBER = r"[+-]?(?:\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)"
 
 DATA_SECTION = re.compile(
-    r"(?ims)^##[ \t]+dados[ \t]+verificados[^\n]*\n"
+    r"(?ims)^##[ \t]+(?:dados[ \t]+verificados|verified[ \t]+data)[^\n]*\n"
     r"(?P<body>.*?)(?=^##[ \t]|\Z)"
 )
 DERIVED_SECTION = re.compile(

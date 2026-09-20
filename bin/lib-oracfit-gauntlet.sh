@@ -258,6 +258,17 @@ oracfit_gauntlet_biggest_gap() {
   # reject ...)") e o feedback injetado era lixo.
   local gap
   gap="$(grep -E '^VISION GATE REJECTED:' "$logfile" | head -1 | cut -c1-240 || true)"
+  # 1.5: Gradle — a primeira linha do stderr é boilerplate ("FAILURE: Build
+  # failed with an exception.") e o conteúdo articulado vem DEPOIS: diagnóstico
+  # do compilador Kotlin ("e: file: (l, c): ..."), causa raiz ("> Caused by:")
+  # ou a task que falhou. Incidente
+  # 2026-09-20-biggest-gap-le-a-primeira-linha-inutil-d: o feedback de gap era
+  # o cabeçalho inútil em TODAS as tentativas do run — modelo real receberia
+  # feedback vazio.
+  if [ -z "$gap" ]; then
+    gap="$(grep -E '^e: |^Execution failed for task|^> Caused by:' "$logfile" \
+          | head -1 | sed 's/^[[:space:]]*//' | cut -c1-240 || true)"
+  fi
   # 2º: linhas que parecem assertion/grep failure, SKIPPING boilerplate do
   # dispatch-stages ("STAGE ORACLE FAILED", "STAGE COMMAND FAILED", labels) e
   # linhas de progresso por fatia ("slice ..." — podem conter vocabulário de
@@ -272,14 +283,17 @@ oracfit_gauntlet_biggest_gap() {
   # json (ex: {"type":"tool_use",...} com "status":"error" no meio) — quando o
   # STAGE COMMAND falha, o oracle_log carrega o tail do stream e a heurística
   # injetava um blob JSON inútil como gap (run AA26BEB2, 2026-08-12).
+  # Boilerplate do Gradle (mesmo incidente 2026-09-20 do 1.5 acima): o
+  # cabeçalho "FAILURE: ..." casa FAIL e "BUILD FAILED" também — ambos são
+  # moldura, não diagnóstico.
   if [ -z "$gap" ]; then
     gap="$(grep -iE 'FAIL|ERROR|not found|No such|ASSERT|expected|missing|REJECTED|ORACLE' "$logfile" \
-          | grep -ivE '^STAGE (ORACLE|COMMAND) FAILED|^VISION GATE REJECTED\b|^slice |^FRESHNESS GATE|^The stage oracle and ordinary spec oracle were skipped|^[[:space:]]*\{"' \
+          | grep -ivE '^STAGE (ORACLE|COMMAND) FAILED|^VISION GATE REJECTED\b|^slice |^FRESHNESS GATE|^The stage oracle and ordinary spec oracle were skipped|^[[:space:]]*\{"|^FAILURE: Build failed|^BUILD FAILED|^\* (What went wrong|Try|Get more help)|^> Run with' \
           | head -1 | sed 's/^[[:space:]]*//' | cut -c1-240 || true)"
   fi
   if [ -z "$gap" ]; then
     gap="$(grep -v '^[[:space:]]*$' "$logfile" \
-          | grep -ivE '^STAGE (ORACLE|COMMAND) FAILED|^VISION GATE REJECTED\b|^slice |^FRESHNESS GATE|^The stage oracle and ordinary spec oracle were skipped|^[[:space:]]*\{"' \
+          | grep -ivE '^STAGE (ORACLE|COMMAND) FAILED|^VISION GATE REJECTED\b|^slice |^FRESHNESS GATE|^The stage oracle and ordinary spec oracle were skipped|^[[:space:]]*\{"|^FAILURE: Build failed|^BUILD FAILED|^\* (What went wrong|Try|Get more help)|^> Run with|^> Compilation error' \
           | head -1 | sed 's/^[[:space:]]*//' | cut -c1-240 || true)"
   fi
   if [ -z "$gap" ]; then
@@ -311,7 +325,7 @@ import re, sys
 from pathlib import Path
 text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
 m = re.search(
-    r"(?im)^##\s*Dados(?:\s+verificados)?[^\n]*\n(.*?)(?=^##\s|\Z)",
+    r"(?im)^##\s*(?:Dados(?:\s+verificados)?|Verified\s+data)[^\n]*\n(.*?)(?=^##\s|\Z)",
     text,
     re.S,
 )

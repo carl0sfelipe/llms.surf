@@ -58,7 +58,7 @@ import sys
 from pathlib import Path
 
 SECTION = re.compile(
-    r'^#{1,6}[^\n]*dados\s+verificados[^\n]*$(.*?)(?=^#{1,6}\s|\Z)',
+    r'^#{1,6}[^\n]*(?:dados\s+verificados|verified\s+data)[^\n]*$(.*?)(?=^#{1,6}\s|\Z)',
     re.I | re.M | re.S,
 )
 BACKTICK = re.compile(r'`([^`\n]+)`')

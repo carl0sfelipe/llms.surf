@@ -1,0 +1,12 @@
+# batch-noite.txt — fila do dogfooding 4.1 para bin/dispatch-batch.sh
+# formato: <spec_file>|<task_name>|<workdir>|<model_ref>
+# Ordem importa: 41-03..05 adicionam suítes e cada uma conta tests/test-*.sh na hora.
+spec/4.1/specs/41-01-contagens-estaticas.md|41-01-contagens-estaticas|.|qwen38-27b-exl3-3090
+spec/4.1/specs/41-02-public-cut.md|41-02-public-cut|.|qwen38-27b-exl3-3090
+spec/4.1/specs/41-03-incidents-schema.md|41-03-incidents-schema|.|qwen38-27b-exl3-3090
+spec/4.1/specs/41-04-claims-nao-medidos.md|41-04-claims-nao-medidos|.|qwen38-27b-exl3-3090
+spec/4.1/specs/41-05-links-relativos.md|41-05-links-relativos|.|qwen38-27b-exl3-3090
+spec/4.1/specs/41-06-post-lancamento.md|41-06-post-lancamento|.|qwen38-27b-exl3-3090
+# Decisões do dono — descomente depois de confirmar a frase / os pesos:
+#spec/4.1/specs/41-07-linha-de-licenca.md|41-07-linha-de-licenca|.|qwen38-27b-exl3-3090
+#spec/4.1/specs/41-08-promessa-classe.md|41-08-promessa-classe|.|qwen38-27b-exl3-3090

@@ -668,7 +668,8 @@
       "source": "local RTX 3090 EXL3 3.5bpw + DFlash2; added 2026-09-10 for llms.surf bench dispatch",
       "verified_at": "2026-09-10",
       "cli_hints": {
-        "opencode": "qwen-local/qwen3.8-27b-exl3-3.5bpw-wm"
+        "opencode": "qwen-local/qwen3.8-27b-exl3-3.5bpw-wm",
+        "zcode": "qwen-local/qwen3.8-27b-exl3-3.5bpw-wm"
       },
       "fallback": [],
       "id_status": "EXISTE",

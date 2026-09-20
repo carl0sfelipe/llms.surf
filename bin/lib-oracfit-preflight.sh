@@ -19,6 +19,21 @@ oracfit_preflight() {
     return 3
   fi
 
+  # (0) 1 arquivo = 1 história (incidente
+  # 2026-09-20-spec-com-n-oraculos-despacha-so-o-primei). A extração do
+  # comando do oráculo é first-match em três lugares (gauntlet, preflight,
+  # check-oracle.py): spec com N histórias despacharia só a primeira em
+  # silêncio. Recusa loud na porta, antes de qualquer gasto.
+  local n_oraculos n_comandos
+  n_oraculos="$(grep -icE '^#{1,6}[[:space:]]*or(a|á)culo' "$spec" || true)"
+  n_comandos="$(grep -cE '^[-*][[:space:]]*comando:' "$spec" || true)"
+  if [ "${n_oraculos:-0}" -gt 1 ] || [ "${n_comandos:-0}" -gt 1 ]; then
+    oracfit_emit_event preflight_result step=multi-oracle pass=false reason="spec-com-n-historias" 2>/dev/null || true
+    echo "ERROR: preflight: spec com ${n_comandos} linha(s) 'comando:' em ${n_oraculos} seção(ões) ## Oráculo" >&2
+    echo "HINT: 1 arquivo = 1 história — recorte a história antes de despachar; só a primeira seria executada." >&2
+    return 1
+  fi
+
   # (1) check-spec
   if bash "$bin_dir/check-spec.sh" "$spec"; then
     oracfit_emit_event preflight_result step=check-spec pass=true reason=ok 2>/dev/null || true
