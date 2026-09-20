@@ -266,6 +266,8 @@ html:not(.gated) #gate{display:none}
 .arg b{color:var(--text)}
 .arg .hl{color:var(--green);font-family:var(--mono);font-weight:700;white-space:nowrap}
 .calc-note{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:13px;line-height:1.6}
+.calc-eff{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:11px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+.calc-eff b{color:var(--cyan)}
 @media(min-width:560px){.scns{grid-template-columns:1fr 1fr}}
 @media(min-width:860px){.calc-grid{grid-template-columns:minmax(0,300px) 1fr}}
 
@@ -512,8 +514,9 @@ html:not(.gated) #gate{display:none}
               <p>Alugando apartamento por ~R$2.300/mês. Pré-receita, enxuto — mas com <b>ferro já em mãos</b>.</p>
               <h5>ferro que já temos</h5>
               <ul>
-                <li><b>8× RTX 3090 (24 GB)</b> — quase rodando. É o pod inicial <b>sem CAPEX novo</b>.</li>
-                <li>Throughput real (tokens/s) <b>a medir na própria bancada</b> com <code>tuned-measure.sh</code> — sem chutar. <span class="tag pre">premissa</span></li>
+                <li><b>8× RTX 3090 (24 GB)</b> — quase no ar. Pod inicial <b>sem CAPEX novo</b>.</li>
+                <li><b>Medido: 79 tok/s/GPU</b> no Qwen3 27B (Q3.5), fluxo único. <span class="tag anc">medido</span></li>
+                <li>Valor de mercado hoje: RTX 3090 usada ~US$1.050–1.300/un → o conjunto vale ~US$9–12k. <span class="tag anc">ancorado</span></li>
               </ul>
               <h5>o que fazemos</h5>
               <ul>
@@ -523,7 +526,7 @@ html:not(.gated) #gate{display:none}
               </ul>
               <h5>meta</h5>
               <p>Chegar ao 1º galpão próprio via financiamento — <b>sem diluir</b> nem depender de investidor.</p>
-              <p class="src">Precedente medido no repo: RTX 3090 na vast.ai ~US$0,30/h; sd-turbo ~5,2 img/s. tok/s de LLM hospedado só depois de medir (regra da casa: não inventar).</p>
+              <p class="src">Números na <a href="#calc">calculadora</a> (Ato 05): o maior salto vem de <b>lote/concorrência</b> (vLLM), não do fluxo único. Preço de mercado ~32B: US$0,08 in / US$0,28 out por 1M (2026).</p>
             </div>
           </details>
 
@@ -599,16 +602,18 @@ html:not(.gated) #gate{display:none}
 
             <div class="ctrls">
               <div class="ctrl"><div class="lab"><span>GPUs (RTX 3090)</span><b id="vGpus">8</b></div><input type="range" id="cGpus" min="1" max="64" step="1" value="8"></div>
-              <div class="ctrl"><div class="lab"><span>Throughput/GPU <span class="meas">meça</span></span><b id="vTps">500 tok/s</b></div><input type="range" id="cTps" min="100" max="3000" step="50" value="500"></div>
-              <div class="ctrl"><div class="lab"><span>Preço por 1M tokens</span><b id="vPrice">$0.30/1M</b></div><input type="range" id="cPrice" min="0.05" max="5" step="0.05" value="0.30"></div>
+              <div class="ctrl"><div class="lab"><span>Throughput/GPU (Qwen3 27B Q3.5) <span class="meas">medido</span></span><b id="vTps">79 tok/s</b></div><input type="range" id="cTps" min="20" max="200" step="1" value="79"></div>
+              <div class="ctrl"><div class="lab"><span>Lote/concorrência (vLLM) <span class="meas">lever</span></span><b id="vBatch">1.0×</b></div><input type="range" id="cBatch" min="1" max="8" step="0.5" value="1"></div>
+              <div class="ctrl"><div class="lab"><span>Preço por 1M tokens (mercado)</span><b id="vPrice">$0.20/1M</b></div><input type="range" id="cPrice" min="0.05" max="5" step="0.05" value="0.20"></div>
               <div class="ctrl"><div class="lab"><span>Ocupação</span><b id="vOcc">40%</b></div><input type="range" id="cOcc" min="5" max="100" step="5" value="40"></div>
               <div class="ctrl"><div class="lab"><span>Consumo/GPU</span><b id="vWatt">400 W</b></div><input type="range" id="cWatt" min="250" max="550" step="10" value="400"></div>
               <div class="ctrl"><div class="lab"><span>Energia</span><b id="vKwh">$0.044/kWh</b></div><input type="range" id="cKwh" min="0.03" max="0.15" step="0.002" value="0.044"></div>
               <div class="ctrl"><div class="lab"><span>Aluguel nuvem/GPU·h</span><b id="vCloud">$0.30/h</b></div><input type="range" id="cCloud" min="0.15" max="1.5" step="0.05" value="0.30"></div>
-              <div class="ctrl"><div class="lab"><span>Valor do que temos hoje</span><b id="vAsset">$9,000</b></div><input type="range" id="cAsset" min="3000" max="40000" step="500" value="9000"></div>
+              <div class="ctrl"><div class="lab"><span>Valor do que temos hoje</span><b id="vAsset">$12,000</b></div><input type="range" id="cAsset" min="3000" max="40000" step="500" value="12000"></div>
             </div>
 
             <div>
+              <div class="calc-eff" id="effLine"></div>
               <div class="scns">
                 <div class="scn own">
                   <div class="st">Nossas máquinas · margem total</div>
@@ -644,7 +649,7 @@ html:not(.gated) #gate{display:none}
             </div>
 
           </div>
-          <p class="calc-note">Como fazer render mais: ↑ ocupação (mais clientes), ↑ preço (baixa latência/nicho), ↓ energia (solar no futuro), modelos maiores em lote. O throughput por GPU é <b>premissa</b> até medir com <code>tuned-measure.sh</code> — a casa não inventa tok/s. Energia US$0,044/kWh e nuvem ~US$0,30/h são âncoras reais (ANDE / vast.ai 3090).</p>
+          <p class="calc-note">Base <b>medida</b>: 79 tok/s/GPU em fluxo único (Qwen3 27B Q3.5). O maior alavanca é <b>lote/concorrência</b> (vLLM/sglang servem vários pedidos por vez → throughput agregado sobe muito acima do fluxo único). Preço de mercado hoje p/ um ~32B: <b>US$0,08 in / US$0,28 out por 1M</b> (Qwen3-32B, DeepInfra/OpenRouter, 2026) — o default US$0,20 é um blend. Como render mais: ↑ lote, ↑ ocupação (mais clientes), ↑ preço (baixa latência/nicho), ↓ energia (solar). Âncoras reais: energia US$0,044/kWh (ANDE), nuvem ~US$0,30/h e RTX 3090 usada ~US$1.050–1.300 (mercado 2026).</p>
         </div>
       </div>
     </div>
@@ -835,7 +840,7 @@ html:not(.gated) #gate{display:none}
 /* calculadora do bootstrap */
 (function(){
   var $=function(id){return document.getElementById(id);};
-  var ids=['cGpus','cTps','cPrice','cOcc','cWatt','cKwh','cCloud','cAsset'];
+  var ids=['cGpus','cTps','cBatch','cPrice','cOcc','cWatt','cKwh','cCloud','cAsset'];
   var SM=2592000; /* 30 dias em segundos */
   function usd(n){ if(!isFinite(n)) return '—'; var s=n<0?'-':''; var a=Math.abs(n);
     if(a>=1e6) return s+'$'+(a/1e6).toFixed(2)+'M';
@@ -847,17 +852,20 @@ html:not(.gated) #gate{display:none}
   function pct(n){ return isFinite(n)?Math.round(n*100)+'%':'—'; }
   function per(n){ if(!isFinite(n)||n<=0) return '—'; if(n>=12) return (n/12).toFixed(1)+' anos'; return n.toFixed(n<3?1:0)+' meses'; }
   function calc(){
-    var g=+$('cGpus').value,tps=+$('cTps').value,price=+$('cPrice').value,occ=+$('cOcc').value/100,
+    var g=+$('cGpus').value,tps=+$('cTps').value,batch=+$('cBatch').value,price=+$('cPrice').value,occ=+$('cOcc').value/100,
         watt=+$('cWatt').value,kwh=+$('cKwh').value,cloud=+$('cCloud').value,asset=+$('cAsset').value;
+    var effTps=tps*batch;
     $('vGpus').textContent=g;
     $('vTps').textContent=tps+' tok/s';
+    $('vBatch').textContent=batch.toFixed(1)+'×';
+    $('effLine').innerHTML='Efetivo: <b>'+Math.round(effTps)+' tok/s/GPU</b> · agregado <b>'+Math.round(effTps*g).toLocaleString('en-US')+' tok/s</b> nas '+g+' GPUs';
     $('vPrice').textContent='$'+price.toFixed(2)+'/1M';
     $('vOcc').textContent=Math.round(occ*100)+'%';
     $('vWatt').textContent=watt+' W';
     $('vKwh').textContent='$'+kwh.toFixed(3)+'/kWh';
     $('vCloud').textContent='$'+cloud.toFixed(2)+'/h';
     $('vAsset').textContent=usd(asset);
-    var capMax=tps*g*SM, tokens=capMax*occ, revenue=tokens/1e6*price;
+    var capMax=effTps*g*SM, tokens=capMax*occ, revenue=tokens/1e6*price;
     var hoursBusy=24*30*occ;
     var energyOwn=g*watt/1000*hoursBusy*kwh;
     var profitA=revenue-energyOwn, marginA=revenue>0?profitA/revenue:0, paybackA=profitA>0?asset/profitA:Infinity;
