@@ -150,6 +150,33 @@ existir.
 Nada desta sessão altera D6: o gate do 2.0 continua com seis
 precondições, e D-NEXT-4 é o caminho da quinta.
 
+Fechamento (2026-09-19 23:20 UTC), achado → artefato, todos em `main`
+ou no PR que fecha este item:
+
+- F1 (L3 vermelho) → D-L3 em `DECISIONS-wave1-2.md`; L8 como
+  precondição de L3; `laws::l3_cheap_order` verde.
+- F2 (cadeias registry-first) → §"Cross-implementation contract" em
+  `P1-dispatch-policy-rust.md`; vetores `T10_vision_registry_first_gemini`,
+  `T10_expensive_prefers_id_containing_pro`.
+- F3 (morto antes do allowlist) → contrato; vetor
+  `T03_dead_id_gate_precedes_allowlist` (mesma semântica do vetor 4
+  proposto).
+- F4 (ordem de `skipped`) → contrato; vetor `T10_skip_order_is_catalog_order`.
+- F5 (lista de `PolicyError`; `MalformedField` sem vetor) → contrato;
+  vetor `T05_ref_with_us_delimiter_is_malformed`.
+- F6 (`provider: null` com chave) → contrato; vetor
+  `T02_keyed_entry_unknown_provider_skips_credential_gate`.
+- F7 (rota de tier lê metadado do catálogo) → contrato; vetor
+  `T10_tier_id_in_catalog_takes_catalog_meta`.
+- F8 (regras do caminho direto) → contrato; **três vetores novos neste
+  fechamento**: `T10_direct_fallback_absent_from_registry_still_entry`,
+  `T10_cheap_route_ignores_cli_hints_alias`,
+  `T10_direct_alias_resolves_to_registry_id`. Comportamento verificado no
+  binário antes de escrever; vermelho deliberado confirmou que a suíte
+  lê o caso.
+- F9 (13/13 é necessário, não suficiente) → nota meta; com 40 vetores as
+  nove inferências código-apenas do T10 têm pino. `src/**` intocado.
+
 ## D-SHIP — o MVP é esta estrutura; Bend sai do caminho crítico; bestmodel vem depois (dono, 2026-09-19 21:33 UTC)
 
 Decisão do dono, na hora: Bend está imaturo demais para receber atenção

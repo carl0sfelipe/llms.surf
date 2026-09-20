@@ -1361,6 +1361,130 @@
           "skipped": []
         }
       }
+    },
+    {
+      "name": "T10_direct_fallback_absent_from_registry_still_entry",
+      "incident": "T10 F8 (kernel/test-specs/reports/T10.md): direct path appends `fallback` ids in declared order and a fallback missing from the registry still yields an entry (id_status \"\", provider null, keyless null) — no dead/credential/allowlist gate on this route",
+      "request": "paid-a",
+      "credentials": [],
+      "registry": {
+        "models": [
+          {
+            "id": "paid-a",
+            "provider": "anthropic",
+            "tier": "paid",
+            "id_status": "EXISTE",
+            "fallback": [
+              "nao-existe-no-registry"
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "paid-a",
+              "id_status": "EXISTE",
+              "provider": "anthropic",
+              "keyless": null
+            },
+            {
+              "ref": "nao-existe-no-registry",
+              "id_status": "",
+              "provider": null,
+              "keyless": null
+            }
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T10_cheap_route_ignores_cli_hints_alias",
+      "incident": "T10 F8 (kernel/test-specs/reports/T10.md): cli_hints aliases apply only on the direct path — the cheap route matches catalog refs to registry ids EXACTLY, so a catalog ref equal to an alias is not the registry model (id_status \"\", catalog provider/keyless kept)",
+      "request": "tier:cheap",
+      "credentials": [],
+      "registry": {
+        "models": [
+          {
+            "id": "mimo-v2.5-free",
+            "provider": "zen",
+            "tier": "free",
+            "id_status": "EXISTE",
+            "cli_hints": {
+              "opencode": "opencode/mimo-alias"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "opencode/mimo-alias",
+            "provider": "opencode",
+            "keyless": true,
+            "context_length": null
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "opencode/mimo-alias",
+              "id_status": "",
+              "provider": "opencode",
+              "keyless": true
+            }
+          ],
+          "skipped": []
+        }
+      }
+    },
+    {
+      "name": "T10_direct_alias_resolves_to_registry_id",
+      "incident": "T10 F8 (kernel/test-specs/reports/T10.md): the same alias requested DIRECTLY resolves through cli_hints to the registry id (companion of T10_cheap_route_ignores_cli_hints_alias — the two routes differ on purpose)",
+      "request": "opencode/mimo-alias",
+      "credentials": [],
+      "registry": {
+        "models": [
+          {
+            "id": "mimo-v2.5-free",
+            "provider": "zen",
+            "tier": "free",
+            "id_status": "EXISTE",
+            "cli_hints": {
+              "opencode": "opencode/mimo-alias"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "kind": "free-catalog/1",
+        "models": [
+          {
+            "ref": "opencode/mimo-alias",
+            "provider": "opencode",
+            "keyless": true,
+            "context_length": null
+          }
+        ]
+      },
+      "expect": {
+        "ok": {
+          "entries": [
+            {
+              "ref": "mimo-v2.5-free",
+              "id_status": "EXISTE",
+              "provider": "zen",
+              "keyless": null
+            }
+          ],
+          "skipped": []
+        }
+      }
     }
   ]
 }

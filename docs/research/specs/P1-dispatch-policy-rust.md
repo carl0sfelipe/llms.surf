@@ -97,6 +97,10 @@ the built binary; pinning vectors are proposed in
   allowlist; `fallback` ids are appended in declared order and a fallback
   id missing from the registry still yields an entry (`id_status: ""`,
   provider `null`). `cli_hints` aliases apply only on this path — the
-  cheap route matches catalog refs to registry ids exactly.
+  cheap route matches catalog refs to registry ids exactly. Pinned
+  (D-NEXT-6, 2026-09-19) by vectors
+  `T10_direct_fallback_absent_from_registry_still_entry`,
+  `T10_cheap_route_ignores_cli_hints_alias`,
+  `T10_direct_alias_resolves_to_registry_id`.
 - `is_dead` is substring containment: a status *containing* `FANTASMA`,
   `NAO-ENCONTRADO` or `NAO-VERIFICADO` is dead, as L2 states.
