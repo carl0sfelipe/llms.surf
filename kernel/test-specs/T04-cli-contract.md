@@ -36,3 +36,23 @@ Fixtures: use `kernel/vectors/p1/cases.json` `fixtures.*` written to
 ## Report extras
 
 A table of the 14 checks with observed exit code and first stderr line.
+
+## Verified data (dados verificados)
+
+The model MAY use only: this spec, the kernel/ tree (sources, tests,
+laws, vectors, Cargo.lock), kernel/test-specs/oracle.sh, the local
+toolchain, and command output produced during the run. Não invente
+número, prazo ou fonte além dos listados — do not invent numbers,
+deadlines, or sources beyond those listed here.
+
+NUNCA use declare const como workaround — importe de verdade (never
+stub an import or fabricate a symbol).
+
+VERIFICACAO: grep -m1 '^## Verdict:' kernel/test-specs/reports/T04.md
+
+## Oráculo
+
+- comando: bash kernel/test-specs/oracle.sh T04
+- exit esperado: 0 (report em kernel/test-specs/reports/T04.md com
+  primeiro '## Verdict:' PASS, FAIL ou BLOCKED — FAIL/BLOCKED exige
+  '## Promoted' não-vazio — e 'cd kernel && cargo test --release' exit 0).
