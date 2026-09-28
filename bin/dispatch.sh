@@ -20,7 +20,11 @@ TASK_NAME="${3:-task-$(date +%s)}"
 # D-DISPATCH 1 / T20: tier:* without a mode YAML is the p1-inc-1 smell.
 # dispatch.sh still runs the free path; modes go through dispatch-mode.sh.
 if [[ "$MODEL" == tier:* ]]; then
-  echo "hint: tier:* via modo (kernel_test, BMAD cheap/dev) → bin/dispatch-mode.sh <mode> <spec> <task>" >&2
+  # Fecha o incidente 2026-09-19-dispatch-sh-recusa-tier-cheap-sem-mode-yaml:
+  # além do hint, NÃO entra na cadeia free que esgotava em exit 3 sem chamar
+  # modelo nenhum (a entrada dona de tier:* é o dispatch-mode.sh).
+  echo "hint: tier:* via modo (kernel_test, BMAD cheap/dev) → bin/dispatch-mode.sh <mode> <spec> <task> — despacho por tier não roda por aqui (incidents/2026-09-19-dispatch-sh-recusa-tier-cheap-sem-mode-yaml.md)" >&2
+  exit 1
 fi
 
 mkdir -p "$LOG_DIR" "$PID_DIR"

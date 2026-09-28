@@ -4,7 +4,7 @@ titulo: tier:cheap não despacha via bin/dispatch.sh sem mode YAML — runner re
 data: 2026-09-19
 recorrivel: sim
 regra: nao — caminho de correção declarado no D-DISPATCH (T20 + hint de uma linha no dispatch.sh)
-status: aberto
+status: resolvido
 interage_com: "2026-08-30-unlock-plan-passa-tier-ao-runner-sem-res (mesma família: ref tier:* literal chega ao runner → exit 3 em ~0s; lá a correção cobriu o caminho de modo, aqui a frente única ficou sem)"
 interage_com: "kernel/test-specs/README.md regra 2 (recomenda exatamente o comando que falha: bin/dispatch.sh tier:cheap kernel/test-specs/<ID>-*.md p1-<ID>)"
 interage_com: "docs/research/specs/P1-dispatch-policy-rust.md (integração do kernel torna o binário o resolvedor único do ramo tier:*)"
@@ -107,3 +107,13 @@ o experimento central da pesquisa, **segue não medido até o T20 existir**
 `docs/research/bend2-convergence-2026-09-19.md` §6). Enquanto o hint não
 existir, quem chegar por `bin/dispatch.sh` com `tier:*` vai refazer a
 descoberta deste incidente a partir de um log de 3 linhas.
+
+## Resolução (2026-09-28, dogfood autônomo)
+
+O hint declarado entrou em `bin/dispatch.sh` **com exit 1 antes da cadeia**:
+`tier:*` não despacha por aqui (nem queima fallback) e aponta
+`bin/dispatch-mode.sh <mode> <spec> <task>` como entrada dona de tier.
+Medido: `bin/dispatch.sh tier:cheap …` → hint + exit 1 sem chamada de modelo;
+model id real do registry passa da porta normalmente (spec check ✓).
+T20 (mode `kernel_test.yaml`) segue em aberto como feature, mas o caminho
+que o README da bateria recomenda agora falha rápido e ensina o caminho certo.
