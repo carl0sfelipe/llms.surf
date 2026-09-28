@@ -680,6 +680,36 @@
         "provider_observed": "exllamav3 OpenAI-compat http://127.0.0.1:8888/v1",
         "quantization": "EXL3 3.5bpw + DFlash2 5.0bpw draft, KV Hadamard int4"
       }
+    },
+    {
+      "id": "qwen38-27b-q5km-gguf-3090",
+      "provider": "qwen-local",
+      "tier": "local",
+      "accuracy": null,
+      "latency_ms": null,
+      "context_window": 32768,
+      "rate_limit": "nenhuma (llama.cpp UD-Q5_K_M GGUF local 127.0.0.1:8802, batch-1)",
+      "best_for": [
+        "coding agent",
+        "rails scaffold",
+        "tool calling"
+      ],
+      "source": "local RTX 3090 llama.cpp mainline UD-Q5_K_M GGUF; added 2026-09-26 dogfood bench dispatch (v4 railschat via surf)",
+      "verified_at": "2026-09-26",
+      "cli_hints": {
+        "opencode": "qwen38-27b-3090/qwen38-27b-q5km"
+      },
+      "fallback": [],
+      "id_status": "EXISTE",
+      "verified_by": "opencode",
+      "measured": {
+        "suite_accuracy": null,
+        "suite_n": 0,
+        "latency_ms": null,
+        "tokens_in": null,
+        "tokens_out": null,
+        "cost_usd": 0.0
+      }
     }
   ]
 }

@@ -249,7 +249,7 @@ oracfit_gauntlet_biggest_gap() {
   local logfile="${1:?}"
   local oracle_exit="${2:-1}"
   if [ ! -s "$logfile" ]; then
-    echo "oracle exited ${oracle_exit} with empty output — re-check ## Oráculo comando and expected artifacts"
+    echo "oracle exited ${oracle_exit} with empty output — the oracle ran but printed nothing: check the spec ## Oráculo command and whether the expected artifacts actually exist in the workdir"
     return 0
   fi
   # 1º: linha final do vision gate — é a mais articulada (nome da fatia + gap

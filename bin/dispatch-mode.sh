@@ -213,12 +213,41 @@ model_ref="${model_ref:-tier:cheap}"
 # Incidente 2026-08-11-prompt-v3-travelview-espera-override-dis: override por
 # env vence YAML e default. Permite fallback cheap→paid sem criar outro modo.
 if [ -n "${DISPATCH_MODEL_REF:-}" ]; then
+
   model_ref="$DISPATCH_MODEL_REF"
+
+  # Dogfood 2026-09-26 (rails-chatapp-gguf): modelo fora do model-registry.json
+  # queimava max_attempts do gauntlet com oracle falhando antes de alguém
+  # perceber o erro de integração. Falha rápida, com instrução acionável.
+  registry_file="${ORACFIT_ROOT}/model-registry.json"
+  if [ -f "$registry_file" ] && [ -n "$model_ref" ]; then
+    if ! python3 - "$model_ref" "$registry_file" <<'PYREG'
+import json, sys
+ref = sys.argv[1]
+d = json.load(open(sys.argv[2]))
+sys.exit(0 if any(m.get("id") == ref for m in d.get("models", [])) else 1)
+PYREG
+    then
+      echo "FAIL: modelo '${model_ref}' ausente do ${registry_file}." >&2
+      echo "  Ação: adicione a entrada {id, provider, tier, cli_hints: {opencode: "provider/model"}} e rode de novo. O gauntlet nem inicia." >&2
+      exit 1
+    fi
+  fi
+
 fi
 max_attempts="$(grep -E '^\s*max_attempts:' "$mode_yaml" | head -1 | awk '{print $2}' || true)"
 max_attempts="${max_attempts:-$MAX_ATTEMPTS_DEFAULT}"
 # Gauntlet: until_approved raises the ceiling (exit = oracle pass, not fixed N).
 max_attempts="$(oracfit_gauntlet_resolve_max_attempts "$mode_yaml" "$max_attempts")"
+
+  # Dogfood 2026-09-26: toolchain quebrado no host (shims ELF do mise) queimou
+  # o teto inteiro de dois runs locais. Gate OPT-IN: SURF_TOOLCHAIN_GATE=1.
+  if [ "${SURF_TOOLCHAIN_GATE:-0}" = "1" ] && [ -f "$SCRIPT_DIR/check-toolchain.sh" ]; then
+    bash "$SCRIPT_DIR/check-toolchain.sh" || {
+      echo "FAIL: toolchain do host reprovado no gate (SURF_TOOLCHAIN_GATE=1). Corrija ou despache sem o gate." >&2
+      exit 1
+    }
+  fi
 gauntlet_on=false
 oracfit_gauntlet_inject_enabled "$mode_yaml" && gauntlet_on=true
 
