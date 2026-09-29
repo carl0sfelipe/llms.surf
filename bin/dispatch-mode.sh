@@ -7,6 +7,7 @@ source "$SCRIPT_DIR/lib-oracfit-root.sh"
 source "$SCRIPT_DIR/lib-oracfit-events.sh"
 source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
+source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
 
 CREDIT="Oracfit — Carlos Felipe"
@@ -219,7 +220,8 @@ if [ -n "${DISPATCH_MODEL_REF:-}" ]; then
   # Dogfood 2026-09-26 (rails-chatapp-gguf): modelo fora do model-registry.json
   # queimava max_attempts do gauntlet com oracle falhando antes de alguém
   # perceber o erro de integração. Falha rápida, com instrução acionável.
-  registry_file="${ORACFIT_ROOT}/model-registry.json"
+  # MODEL_REGISTRY: mesmo override do runner e do run-with-fallback (fixtures de teste).
+  registry_file="${MODEL_REGISTRY:-${ORACFIT_ROOT}/model-registry.json}"
   if [ -f "$registry_file" ] && [ -n "$model_ref" ]; then
     if ! python3 - "$model_ref" "$registry_file" <<'PYREG'
 import json, sys
@@ -553,11 +555,8 @@ frontier_wait_s=$(python3 -c "print(round(float('$t_run1')-float('$t_run0'), 3))
 # stub/free cost table = 0
 estimated_cost="0"
 
-PROVIDER_EFETIVO=""
-REF_EFETIVO=""
-if [ -f "${DISPATCH_EFETIVO_FILE:-}" ]; then
-  IFS=$'\t' read -r REF_EFETIVO PROVIDER_EFETIVO < "$DISPATCH_EFETIVO_FILE" || true
-fi
+# Quem serviu, veredito da allowlist e sidecar do kernel — mesma leitura do ledger do dispatch.sh.
+oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}"
 oracfit_emit_metric_and_ledger \
   mode_id="$mode_id" \
   stage=run \
@@ -569,8 +568,7 @@ oracfit_emit_metric_and_ledger \
   estimated_cost="$estimated_cost" \
   task="$task_name" \
   status="$final_status" \
-  provider_efetivo="${PROVIDER_EFETIVO}" \
-  provider_efetivo_ref="${REF_EFETIVO}"
+  "${ORACFIT_FREE_FIELDS[@]}"
 
 oracfit_emit_event run_finished status="$final_status" attempt="$attempt" oracle_exit="$oracle_exit"
 

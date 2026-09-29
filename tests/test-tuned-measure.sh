@@ -6,7 +6,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export ORACFIT_ROOT="$ROOT"
 export DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh"
-BASE_ID="deepseek-v4-flash-free"
+# base precisa existir no registry (gate de 2026-09-26): deepseek-v4-flash-free saiu na varredura de fantasmas (E5-M3)
+BASE_ID="mimo-v2.5-free"
 TUNED_ID="tuned/teste-dominio-flash"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -15,6 +16,18 @@ WD="$(mktemp -d /tmp/tuned-measure.XXXXXX)"
 trap 'rm -rf "$WD"' EXIT
 git -C "$WD" init -q
 git -C "$WD" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+
+# O id tuned é fictício (fixture): registra num registry de teste, nunca no real.
+# Desde o gate de 2026-09-26 (dispatch-mode.sh recusa modelo fora do registry),
+# sem isto TODAS as rodadas tuned morriam antes do gauntlet.
+python3 - "$ROOT/model-registry.json" "$WD/registry.json" "$TUNED_ID" <<'PYREG'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+d["models"].append({"id": sys.argv[3], "provider": "stub", "tier": "test", "id_status": "FIXTURE",
+                    "cli_hints": {}, "fallback": [], "source": "fixture de tests/test-tuned-measure.sh"})
+json.dump(d, open(sys.argv[2], "w", encoding="utf-8"), ensure_ascii=False)
+PYREG
+export MODEL_REGISTRY="$WD/registry.json"
 
 # 5 specs fixture: o molde da smoke normal (preflight-validado), oráculo
 # de proof por rodada (o harness remove o proof antes de cada medição)
