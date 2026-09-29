@@ -4,4 +4,4 @@ members = ["dispatch-policy"]
 
 [workspace.package]
 edition = "2021"
-license = "LicenseRef-Proprietary"
+license = "MIT"

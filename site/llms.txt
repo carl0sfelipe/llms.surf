@@ -1,7 +1,7 @@
 # llms.surf
 
 > Local dispatcher. Mechanical oracle. Formerly Oracfit. Public cut v4.1.0.
-> Nothing ships on a model's word  -  not even the judge's. LICENSE is proprietary.
+> Nothing ships on a model's word  -  not even the judge's. Open source: AGPL-3.0 + MIT.
 
 This file is the agent surface. Humans get the HTML tour at index.html?as=human.
 If a page asked who is reading, it did not have enough deterministic signal to guess.
@@ -86,7 +86,7 @@ GitHub issue; leaving costs one click.
 - fluxos/dispatch/SKILL.md  -  how to dispatch work to a model
 - adapters/<name>/  -  runner contract per CLI
 - incidents/  -  the ledger; 106 postmortems in this cut
-- LICENSE  -  proprietary. Do not call this open source.
+- LICENSE  -  AGPL-3.0 (core) + MIT (kernel, adapters). See NOTICE.
 - site/index.html?as=agent  -  HTML twin of this file
 - site/blog/  -  writing (source: site/blog/posts/*.md)
 - https://github.com/carl0sfelipe/llms.surf

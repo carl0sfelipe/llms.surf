@@ -20,8 +20,8 @@ Orchestrate work across AI models from the CLIs you already have. Code — not t
 - Every failure becomes an incident; every recurring incident becomes code that refuses. **115 postmortems in this cut.**
 - Even the AI judge is watched: one write, and code kills it.
 
-[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-4.1.0-brightgreen.svg)](VERSION)
+[![License](https://img.shields.io/badge/license-AGPL--3.0%20%2B%20MIT-blue.svg)](NOTICE)
+[![Version](https://img.shields.io/badge/version-0.4.1-brightgreen.svg)](VERSION)
 [![Incidents](https://img.shields.io/badge/incidents%E2%86%92mechanisms-115-orange.svg)](incidents/)
 
 ---
@@ -169,4 +169,4 @@ Every failure you hit: `bin/incident.sh new` — that's how the 115 in this cut 
 | [site/](site/) | Public marketing pages |
 | [incidents/](incidents/) | 115 failures that became permanent protections |
 
-Proprietary — all rights reserved · **llms.surf — Carlos Felipe** · pattern: [gauntlet-loop](https://github.com/robonuggets/gauntlet-loop)
+AGPL-3.0 + MIT (see [NOTICE](NOTICE)) · **llms.surf — Carlos Felipe** · pattern: [gauntlet-loop](https://github.com/robonuggets/gauntlet-loop)

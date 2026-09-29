@@ -187,3 +187,7 @@ anything cloud/Swell, prod, Vast, the Paraguay rig.
   `tests/test-site-honesty.sh` green is part of each oracle chain (S6).
 - `docs/SMOKE-WITH-FIRE.md` is rewritten by this session: Phase A = go-live
   checklist, Phase B = this pack only.
+
+## D1 — revogação parcial (2026-09-29)
+O dono revogou o "no LICENSE flip": llms.surf passa a AGPL-3.0 (núcleo) + MIT
+(kernel/, adapters/), igual ao bestmodel. Features pagas vão para um repo cloud privado.
