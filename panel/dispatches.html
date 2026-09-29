@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Oracfit — Dispatches</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -45,13 +46,16 @@
       ? `<details class="ver-mais"><summary>${r.items.length} itens do lote</summary>
            <pre>${r.items.map((i) => `${i.ok ? "ok " : "FAIL"} ${i.task} (${fmtDur(i.duration_s)})`).map(esc).join("\n")}</pre></details>`
       : "";
+    const model = r.model && r.model !== "?" ? `<span class="row-num tech">${esc(r.model)}</span>` : "";
+    const detail = r.detail ? `<span class="row-meta tech">${esc(r.detail)}</span>` : "";
+    const meta = joinMeta(fmtDur(r.duration_s), fmtTs(r.ts));
     return `
       <div class="row" style="flex-wrap:wrap">
         ${badge}
         <span class="badge-neutral">${esc(r.source)}</span>
-        <span class="row-main">${esc(r.task || "?")} <span class="row-meta">${esc(r.detail || "")}</span></span>
-        <span class="row-num">${esc(r.model || "")}</span>
-        <span class="row-meta">${fmtDur(r.duration_s)} · ${fmtTs(r.ts)}</span>
+        <span class="row-main">${esc(r.task || "")} ${detail}</span>
+        ${model}
+        <span class="row-meta">${esc(meta)}</span>
         ${items ? `<div style="flex-basis:100%">${items}</div>` : ""}
       </div>`;
   }
@@ -134,7 +138,7 @@
     document.getElementById("sources").innerHTML = d.sources.map((s) => `
       <div class="row">
         ${s.exists ? '<span class="badge-nominal">lida</span>' : '<span class="badge-warning">ausente</span>'}
-        <span class="row-main">${esc(s.source)} <span class="row-meta mono">${esc(s.path)}</span></span>
+        <span class="row-main">${esc(s.source)} <span class="row-meta mono tech">${esc(s.path)}</span></span>
         <span class="row-num">${s.exists ? `${s.entries} registro(s)` : "arquivo não existe"}</span>
       </div>`).join("");
 

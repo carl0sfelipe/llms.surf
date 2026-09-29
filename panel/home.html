@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Oracfit — Agora</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -29,7 +30,7 @@
     </section>
     <section class="panel">
       <div class="panel-header"><h3 class="panel-title"><abbr title="ledger = o caderno de registro onde cada acontecimento fica anotado, em ordem">Ledger</abbr> central — últimos acontecimentos</h3>
-        <span class="row-meta mono" id="ledger-path"></span></div>
+        <span class="row-meta mono tech" id="ledger-path"></span></div>
       <div id="tail"><div class="empty-note">…</div></div>
     </section>
     <section class="panel">
@@ -45,22 +46,24 @@
   const $ = (id) => document.getElementById(id);
 
   function leadHTML(d) {
+    const passo = `<a class="btn primary" href="passos.html">Ver o que fazer agora</a>`;
     if (d.to_score > 0) {
       return `<div class="action-lead">
         <span class="lead-text">${d.to_score} ${d.to_score === 1 ? "anel fechado espera" : "anéis fechados esperam"} sua nota real.</span>
         <span class="lead-meta">~2 min por anel</span>
-        <a class="btn primary" href="hitl.html">Dar notas agora</a>
+        ${passo}
       </div>`;
     }
     if (d.active_runs.length > 0) {
       return `<div class="action-lead">
         <span class="lead-text">${d.active_runs.length} run(s) em execução — nada exige você agora.</span>
+        ${passo}
         <a class="btn" href="index.html">Acompanhar ao vivo</a>
       </div>`;
     }
     return `<div class="action-lead calm">
       <span class="lead-text">Nada rodando e nada esperando você.</span>
-      <span class="lead-meta">bom momento para despachar trabalho novo</span>
+      ${passo}
     </div>`;
   }
 
@@ -92,13 +95,13 @@
     renderCapped($("active"), d.active_runs, (r) => `
       <div class="row"><span class="badge-nominal">vivo</span>
         <span class="row-main">${esc(r.task || r.run_id)} <span class="row-meta">${esc(r.mode || "")}</span></span>
-        <span class="row-meta">${esc(r.model || "")} · ${fmtTs(r.started)}</span></div>`);
+        <span class="row-meta">${r.model ? `<span class="tech">${esc(r.model)}</span> ` : ""}${fmtTs(r.started)}</span></div>`);
     if (!d.active_runs.length) $("active").innerHTML = '<div class="empty-note">Nenhum run em execução.</div>';
 
     renderCapped($("open-rings"), d.open_rings, (r) => `
       <div class="row"><span class="badge-warning">aberto</span>
-        <span class="row-main"><span class="mono">${esc(r.ring)}</span> — ${esc(r.hypothesis || "")}</span>
-        <span class="row-meta">${esc(r.mode || "")} · ${fmtTs(r.opened_at)}</span></div>`);
+        <span class="row-main"><span class="mono tech">${esc(r.ring)}</span> — ${esc(r.hypothesis || "")}</span>
+        <span class="row-meta">${esc(joinMeta(r.mode, fmtTs(r.opened_at)))}</span></div>`);
     if (!d.open_rings.length) $("open-rings").innerHTML = '<div class="empty-note">Nenhum anel aberto.</div>';
 
     renderCapped($("tail"), d.central_tail, (e) => `

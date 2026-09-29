@@ -14,10 +14,14 @@
 #   gui_dump_log <log>       → log do servidor no stderr (só chame em FAIL)
 
 gui_get() {
+  # B4: esta função roda em subshell quando piped (`gui_get | grep -q`).
+  # grep -q fecha o pipe no primeiro match; o printf do corpo leva SIGPIPE
+  # e o subshell morre 141 — pipefail reporta "não servido" com 200 real.
+  trap '' PIPE
   local url="$1" i body rc=1 code
   for i in 1 2 3 4 5; do
     body=$(curl -s -f --max-time 5 "$url" 2>/dev/null); rc=$?
-    if [ "$rc" -eq 0 ]; then printf '%s' "$body"; return 0; fi
+    if [ "$rc" -eq 0 ]; then printf '%s' "$body" 2>/dev/null || true; return 0; fi
     sleep 0.3
   done
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$url" 2>/dev/null || true)

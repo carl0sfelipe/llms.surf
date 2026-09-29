@@ -6,7 +6,7 @@ Usage:
                           [--oracfit-root DIR] [--ring-target DIR]
 
 Serves:
-  /           -> panel static files (index.html = run ao vivo; *.html = GUI)
+  /           -> passos.html (Passo a passo); index.html = run ao vivo; *.html = GUI
   /logs/      -> workdir .dispatch/logs/ (events.jsonl etc.) read-only
   /runtime-config.json -> path metadata (no write into panel/)
   /api/message (POST) -> HITL v1 (AD-8 amendment 2026-08-01): escreve
@@ -49,6 +49,10 @@ GUI (2026-08-13) — endpoints READ-ONLY, exceto /api/ring-score:
     explicito, nunca shell=True/eval; N inteiro 0-10; anel fechado e sem
     nota — validado ANTES do subprocess).
   /api/gui/home        -> agora: runs vivos, aneis abertos, disco, audit
+  /api/gui/steps       -> próximo passo (uma coisa por vez) a partir do
+    estado real: modelos, falhas, notas, despachar, pronto
+  /api/gui/decide (POST) -> grava 1 decisão sobre uma falha em
+    <logs-dir>/decisions.jsonl; não despacha sozinho
   /api/gui/dispatches  -> 3 ledgers DECLARADOS (regra 38: fonte ausente
     aparece como ausente, nunca some em silencio)
   /api/gui/rings       -> ring-v1 do ledger central agrupado por run
@@ -516,41 +520,363 @@ def dispatch_sources(root: Path, logs_dir: Path) -> dict:
     return {"sources": declared, "runs": runs}
 
 
+def _join_fields(pairs: list[tuple[str, object]]) -> str:
+    """Junta chave=valor; None/vazio some — nunca imprime 'tier=None'."""
+    parts: list[str] = []
+    for key, val in pairs:
+        if val is None or val == "":
+            continue
+        parts.append(f"{key}={val}")
+    return " ".join(parts)
+
+
 def normalize_dispatch(source: str, e: dict) -> dict | None:
     if source == "dispatch":
         model = e.get("model") or {}
+        mid = model.get("id") if isinstance(model, dict) else None
         ok = e.get("oracle_status") == "passou" or (
             e.get("oracle_status") == "sem-oraculo" and e.get("runner_exit") == "0")
         return {
             "source": source, "task": e.get("task_name"),
-            "model": model.get("id") or "?",
+            "model": mid or "",
             "ts": e.get("started_at"), "duration_s": e.get("duration_seconds"),
-            "ok": bool(ok), "detail": f"oracle={e.get('oracle_status')} runner={e.get('runner_exit')}",
+            "ok": bool(ok),
+            "detail": _join_fields([
+                ("oracle", e.get("oracle_status")),
+                ("runner", e.get("runner_exit")),
+            ]),
             "log_file": e.get("log_file"),
         }
     if source == "escalate":
         return {
             "source": source, "task": e.get("task_name"),
-            "model": e.get("model") or e.get("tier") or "?",
+            "model": e.get("model") or e.get("tier") or "",
             "ts": e.get("ts"), "duration_s": e.get("duration_s"),
             "ok": e.get("result") == "success",
-            "detail": f"tier={e.get('tier')} attempt={e.get('attempt')}",
+            "detail": _join_fields([
+                ("tier", e.get("tier")),
+                ("attempt", e.get("attempt")),
+            ]),
         }
     if source == "batch":
         total, okn = e.get("total"), e.get("ok")
+        items = e.get("items") or []
+        if total is not None and okn is not None:
+            detail = f"{okn}/{total} ok"
+        else:
+            detail = ""
         return {
             "source": source, "task": e.get("run_id"),
-            "model": f"{len(e.get('items') or [])} itens",
+            "model": f"{len(items)} itens" if items else "",
             "ts": e.get("ts"), "duration_s": e.get("total_s"),
             "ok": bool(total is not None and okn == total),
-            "detail": f"{okn}/{total} ok",
+            "detail": detail,
             "items": [
                 {"task": i.get("task"), "ok": i.get("result") == "success",
                  "duration_s": i.get("duration_s")}
-                for i in (e.get("items") or [])
+                for i in items
             ],
         }
     return None
+
+
+STEP_IDS = ("modelos", "falhas", "notas", "despachar", "pronto")
+DECIDE_CHOICES = ("tentar-de-novo", "eu-faco", "descartar")
+
+
+def _plain(text: str) -> str:
+    text = (text or "").strip()
+    return text if len(text) <= 140 else text[:137] + "..."
+
+
+def _run_key(row: dict) -> str:
+    return f"{row.get('source')}:{row.get('task')}:{row.get('ts') or ''}"
+
+
+def _decided_keys(logs_dir: Path) -> set[str]:
+    return {str(d["run_key"]) for d in read_jsonl(logs_dir / "decisions.jsonl") if d.get("run_key")}
+
+
+def _retry_tasks(logs_dir: Path) -> set[str]:
+    out: set[str] = set()
+    for d in read_jsonl(logs_dir / "decisions.jsonl"):
+        if d.get("choice") != "tentar-de-novo":
+            continue
+        parts = str(d.get("run_key") or "").split(":", 2)
+        if len(parts) >= 2 and parts[1]:
+            out.add(parts[1])
+    return out
+
+
+def has_live_model(root: Path) -> bool:
+    """≥1 modelo não aposentado (sem retired:true e id_status sem APOSENTADO)."""
+    reg = root / "model-registry.json"
+    if not reg.is_file():
+        return False
+    try:
+        models = json.loads(reg.read_text(encoding="utf-8")).get("models") or []
+    except (OSError, json.JSONDecodeError):
+        return False
+    for m in models:
+        if not isinstance(m, dict):
+            continue
+        if m.get("retired") is True:
+            continue
+        status = str(m.get("id_status") or "")
+        if "APOSENTADO" in status.upper():
+            continue
+        return True
+    return False
+
+
+def _why_failed(row: dict) -> str:
+    src = row.get("source")
+    if src == "dispatch":
+        return "O teste automático não passou."
+    if src == "escalate":
+        return "O robô tentou e não conseguiu terminar."
+    if src == "batch":
+        return "Uma ou mais tarefas do lote não passaram."
+    return "Esta tarefa não deu certo."
+
+
+def failure_runs(root: Path, logs_dir: Path) -> list[dict]:
+    """Falhas sem pass mais recente na mesma task e sem linha em decisions.jsonl."""
+    runs = dispatch_sources(root, logs_dir)["runs"]
+    decided = _decided_keys(logs_dir)
+    out: list[dict] = []
+    for row in runs:
+        if row.get("ok"):
+            continue
+        task = row.get("task")
+        if not task:
+            continue
+        ts = row.get("ts") or ""
+        later_pass = any(
+            r.get("ok") and r.get("task") == task and (r.get("ts") or "") > ts
+            for r in runs
+        )
+        if later_pass:
+            continue
+        key = _run_key(row)
+        if key in decided:
+            continue
+        out.append({
+            "run_key": key,
+            "task": task,
+            "when": ts,
+            "why_failed": _why_failed(row),
+        })
+    out.sort(key=lambda x: x.get("when") or "", reverse=True)
+    return out
+
+
+def _passed_tasks(runs: list[dict]) -> set[str]:
+    return {r["task"] for r in runs if r.get("ok") and r.get("task")}
+
+
+def pending_specs(workdir: Path | None, runs: list[dict], logs_dir: Path) -> list[dict]:
+    """Specs .md em docs/**/specs/ e .dispatch/specs/ sem run passado."""
+    if workdir is None:
+        return []
+    passed = _passed_tasks(runs)
+    retries = _retry_tasks(logs_dir)
+    found: list[dict] = []
+    seen: set[str] = set()
+    docs = workdir / "docs"
+    if docs.is_dir():
+        for p in docs.rglob("*.md"):
+            if p.parent.name == "specs" and p.is_file():
+                rel = _spec_rel(workdir, p)
+                if rel and rel not in seen:
+                    seen.add(rel)
+                    found.append({"path": rel, "task": p.stem})
+    extra = workdir / ".dispatch" / "specs"
+    if extra.is_dir():
+        for p in extra.glob("*.md"):
+            if p.is_file():
+                rel = _spec_rel(workdir, p)
+                if rel and rel not in seen:
+                    seen.add(rel)
+                    found.append({"path": rel, "task": p.stem})
+    pending = [s for s in found if s["task"] not in passed]
+    pending.sort(key=lambda s: (0 if s["task"] in retries else 1, s["path"]))
+    return [{"path": s["path"], "task": s["task"]} for s in pending]
+
+
+def _spec_rel(workdir: Path, path: Path) -> str | None:
+    try:
+        return path.resolve().relative_to(workdir.resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def build_gui_steps(
+    root: Path,
+    logs_dir: Path,
+    ring_target: Path | None,
+    dispatch_enabled: bool,
+    workdir: Path | None,
+) -> dict:
+    """Contrato de GET /api/gui/steps — ordem fixa, um único 'agora'."""
+    runs = dispatch_sources(root, logs_dir)["runs"]
+    failures = failure_runs(root, logs_dir)
+    specs = pending_specs(workdir, runs, logs_dir)
+
+    modelos = {
+        "id": "modelos",
+        "title": "Falta um modelo",
+        "plain": _plain("Ainda não tem nenhum modelo pronto para o robô usar."),
+        "why": "Sem um modelo ativo o Oracfit não tem com quem trabalhar. O comando abaixo lista e cadastra modelos.",
+        "action": {"kind": "copy", "label": "Copiar comando", "command": "oracfit models"},
+    }
+    modelos_kind = "feito" if has_live_model(root) else "pending"
+    if modelos_kind == "feito":
+        modelos["title"] = "Modelos prontos"
+        modelos["plain"] = _plain("Já existe pelo menos um modelo ativo.")
+
+    falhas = {
+        "id": "falhas",
+        "title": "Uma tarefa falhou",
+        "plain": _plain("Uma tarefa não deu certo. Escolha o que fazer com ela."),
+        "why": "Quando uma tarefa falha, alguém precisa decidir: tentar de novo, fazer na mão ou deixar pra lá.",
+        "action": {"kind": "none"},
+    }
+    if failures:
+        falhas_kind = "pending"
+        item = failures[0]
+        falhas["item"] = {
+            "run_key": item["run_key"],
+            "task": item["task"],
+            "when": item["when"],
+            "why_failed": item["why_failed"],
+        }
+        falhas["remaining"] = len(failures)
+        falhas["plain"] = _plain(
+            f"A tarefa {item['task']} não deu certo. O que você quer fazer?"
+        )
+        falhas["action"] = {
+            "kind": "choice",
+            "options": [
+                {"id": "tentar-de-novo", "label": "Tentar de novo",
+                 "hint": "Manda a mesma tarefa outra vez", "recommended": True},
+                {"id": "eu-faco", "label": "Eu faço",
+                 "hint": "Você resolve isso na mão e segue em frente"},
+                {"id": "descartar", "label": "Descartar",
+                 "hint": "Deixa pra lá, não tenta de novo"},
+            ],
+        }
+    else:
+        falhas_kind = "feito"
+        falhas["title"] = "Nenhuma falha esperando"
+        falhas["plain"] = _plain("Não tem tarefa falha esperando a sua decisão.")
+
+    notas = {
+        "id": "notas",
+        "title": "Dar notas",
+        "plain": _plain("Tem trabalho pronto esperando a sua nota."),
+        "why": "A sua nota ensina o sistema a acertar melhor da próxima vez.",
+        "action": {"kind": "link", "label": "Dar notas agora", "href": "hitl.html"},
+    }
+    if ring_target is None:
+        notas_kind = "pulado"
+        notas["plain"] = _plain("Sem um projeto alvo, este passo não aparece.")
+        notas["action"] = {"kind": "none"}
+    else:
+        to_score = 0
+        try:
+            to_score = int(extract_target_rings(ring_target).get("to_score") or 0)
+        except Exception:
+            to_score = 0
+        if to_score > 0:
+            notas_kind = "pending"
+            n = "1 nota" if to_score == 1 else f"{to_score} notas"
+            notas["plain"] = _plain(f"Tem {n} esperando você. Leva cerca de 2 minutos cada.")
+        else:
+            notas_kind = "feito"
+            notas["title"] = "Notas em dia"
+            notas["plain"] = _plain("Nenhum trabalho pronto está esperando a sua nota.")
+            notas["action"] = {"kind": "none"}
+
+    despachar = {
+        "id": "despachar",
+        "title": "Entregar uma tarefa",
+        "plain": _plain("Tem um trabalho escrito que ainda ninguém começou."),
+        "why": "O trabalho só começa quando você entrega a tarefa a um robô — daqui ou pelo terminal.",
+        "action": {"kind": "none"},
+    }
+    if specs:
+        despachar_kind = "pending"
+        despachar["specs"] = specs
+        first = specs[0]
+        if dispatch_enabled:
+            despachar["action"] = {
+                "kind": "post",
+                "label": "Despachar",
+                "endpoint": "/api/dispatch",
+                "payload": {
+                    "mode": "normal",
+                    "adapter": "opencode",
+                    "spec": first["path"],
+                    "task": first["task"],
+                },
+            }
+        else:
+            despachar["action"] = {
+                "kind": "copy",
+                "label": "Copiar comando",
+                "command": f"oracfit run normal {first['path']} {first['task']}",
+            }
+    else:
+        despachar_kind = "feito"
+        despachar["title"] = "Nada para entregar"
+        despachar["plain"] = _plain("Não tem trabalho escrito esperando para começar.")
+
+    kinds = {
+        "modelos": modelos_kind,
+        "falhas": falhas_kind,
+        "notas": notas_kind,
+        "despachar": despachar_kind,
+    }
+    data = {
+        "modelos": modelos,
+        "falhas": falhas,
+        "notas": notas,
+        "despachar": despachar,
+    }
+    found_agora = False
+    for sid in ("modelos", "falhas", "notas", "despachar"):
+        kind = kinds[sid]
+        if kind == "pulado":
+            data[sid]["state"] = "pulado"
+        elif kind == "feito":
+            data[sid]["state"] = "feito"
+        elif not found_agora:
+            data[sid]["state"] = "agora"
+            found_agora = True
+        else:
+            data[sid]["state"] = "depois"
+
+    pronto = {
+        "id": "pronto",
+        "title": "Tudo em dia.",
+        "plain": _plain("Não tem nada pedindo a sua atenção agora."),
+        "why": "Quando aparecer trabalho novo ou uma falha, esta tela volta a pedir uma decisão.",
+        "action": {"kind": "none"},
+        "state": "agora" if not found_agora else "depois",
+    }
+
+    steps = [data["modelos"], data["falhas"], data["notas"], data["despachar"], pronto]
+    active = [s for s in steps if s["state"] != "pulado"]
+    current = next((s for s in steps if s["state"] == "agora"), pronto)
+    position = next(i for i, s in enumerate(active, 1) if s["id"] == current["id"])
+    return {
+        "ok": True,
+        "current": current["id"],
+        "total": len(active),
+        "position": position,
+        "steps": steps,
+    }
 
 
 def active_runs_from_events(logs_dir: Path, max_age_h: float = 12.0) -> list[dict]:
@@ -899,6 +1225,41 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             "audit": incident_audit(root),
         })
 
+    def _steps_payload(self) -> dict:
+        return build_gui_steps(
+            self.oracfit_root,
+            self.logs_dir,
+            self.ring_target,
+            self.dispatch_enabled,
+            self._gui_workdir(),
+        )
+
+    def _handle_gui_steps(self) -> None:
+        self._json_response(200, self._steps_payload())
+
+    def _handle_gui_decide(self, body: dict) -> None:
+        run_key = body.get("run_key")
+        choice = body.get("choice")
+        if not isinstance(run_key, str) or not isinstance(choice, str) or not run_key or not choice:
+            self._json_response(400, {"ok": False, "error": "corpo inválido"})
+            return
+        if choice not in DECIDE_CHOICES:
+            self._json_response(400, {"ok": False, "error": "escolha inválida"})
+            return
+        keys = {f["run_key"] for f in failure_runs(self.oracfit_root, self.logs_dir)}
+        if run_key not in keys:
+            self._json_response(400, {"ok": False,
+                                      "error": "essa falha não existe ou já foi decidida"})
+            return
+        dest = self.logs_dir / "decisions.jsonl"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with dest.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": ts, "run_key": run_key, "choice": choice},
+                               ensure_ascii=False) + "\n")
+        next_id = self._steps_payload()["current"]
+        self._json_response(200, {"ok": True, "next": next_id})
+
     def _handle_gui_dispatches(self) -> None:
         self._json_response(200, {"ok": True, **dispatch_sources(self.oracfit_root, self.logs_dir)})
 
@@ -1228,6 +1589,9 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/gui/home":
             self._handle_gui_home()
             return
+        if parsed.path == "/api/gui/steps":
+            self._handle_gui_steps()
+            return
         if parsed.path == "/api/gui/dispatches":
             self._handle_gui_dispatches()
             return
@@ -1259,13 +1623,17 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
         if self.auth_token is not None and not self._authorized():
             self._deny_json()
             return
-        if parsed.path not in ("/api/message", "/api/ring-score", "/api/dispatch"):
+        if parsed.path not in ("/api/message", "/api/ring-score", "/api/dispatch",
+                               "/api/gui/decide"):
             self.send_error(404, "not found")
             return
         body = self._read_json_body()
         if body is None:
             return
 
+        if parsed.path == "/api/gui/decide":
+            self._handle_gui_decide(body)
+            return
         if parsed.path == "/api/ring-score":
             self._handle_ring_score(body)
             return
@@ -1316,7 +1684,10 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             except ValueError:
                 return str(self.logs_dir / "__denied__")
             return str(target)
-        rel = clean.lstrip("/") or "index.html"
+        rel = clean.lstrip("/") or "passos.html"
+        if rel == "favicon.ico" and not (self.panel_dir / "favicon.ico").is_file():
+            if (self.panel_dir / "favicon.svg").is_file():
+                rel = "favicon.svg"
         target = (self.panel_dir / rel).resolve()
         try:
             target.relative_to(self.panel_dir.resolve())
