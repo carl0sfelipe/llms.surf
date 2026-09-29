@@ -39,7 +39,8 @@
     const cur = (d.steps || []).find((s) => s.id === d.current) || {};
     const item = cur.item || {};
     const specs = (cur.specs || []).map((s) => s.path).join(",");
-    return [d.current, d.position, d.total, cur.remaining || 0, item.run_key || "", specs].join("|");
+    return [d.current, d.position, d.total, cur.remaining || 0,
+            item.run_key || "", item.id || "", specs].join("|");
   }
 
   function setNotice(text) {
@@ -79,26 +80,32 @@
 
   function actionHTML(step) {
     const a = step.action || { kind: "none" };
+    const parts = [];
     if (a.kind === "choice") {
-      return `<div class="passo-actions" id="passo-actions">${optionButtons(a)}</div>`;
+      parts.push(optionButtons(a));
+    } else if (a.kind === "copy") {
+      parts.push(`<p class="passo-cmd-wrap"><code id="passo-cmd">${esc(a.command || "")}</code></p>`);
+      parts.push(`<button type="button" class="btn primary" id="passo-copy" data-primary>${esc(a.label || "Copiar")}</button>`);
+    } else if (a.kind === "post") {
+      parts.push(`<button type="button" class="btn primary" id="passo-post" data-primary>${esc(a.label || "Despachar")}</button>`);
+    } else if (a.kind === "link" && a.href) {
+      parts.push(`<a class="btn primary" id="passo-link" data-primary href="${esc(a.href)}" target="_blank" rel="noopener">${esc(a.label || "Abrir")}</a>`);
     }
-    if (a.kind === "copy") {
-      return `<div class="passo-actions">
-        <p class="passo-cmd-wrap"><code id="passo-cmd">${esc(a.command || "")}</code></p>
-        <button type="button" class="btn primary" id="passo-copy" data-primary>${esc(a.label || "Copiar")}</button>
-      </div>`;
-    }
-    if (a.kind === "post") {
-      return `<div class="passo-actions">
-        <button type="button" class="btn primary" id="passo-post" data-primary>${esc(a.label || "Despachar")}</button>
-      </div>`;
-    }
-    if (a.kind === "link" && a.href) {
-      return `<div class="passo-actions">
-        <a class="btn primary" id="passo-link" data-primary href="${esc(a.href)}">${esc(a.label || "Abrir")}</a>
-      </div>`;
-    }
-    return "";
+    const hasDoFirst = (a.kind === "copy" && a.command)
+      || (a.kind === "link" && a.href)
+      || a.kind === "post"
+      || a.kind === "choice";
+    (a.secondary || []).forEach((s) => {
+      const feito = s.id === "feito";
+      const ready = feito && !hasDoFirst;
+      const cls = feito
+        ? (ready ? "btn primary dono-feito" : "btn dono-feito")
+        : "btn dono-depois";
+      const primary = ready ? " data-primary" : "";
+      parts.push(`<button type="button" class="${cls}" id="passo-${esc(s.id)}"${primary}>${esc(s.label || "")}</button>`);
+    });
+    if (!parts.length) return "";
+    return `<div class="passo-actions" id="passo-actions">${parts.join("")}</div>`;
   }
 
   function extraHTML(step) {
@@ -106,7 +113,16 @@
     if (step.item && step.item.why_failed) {
       bits.push(`<p class="passo-extra">${esc(step.item.why_failed)}</p>`);
     }
-    if (step.remaining > 1) {
+    if (step.item && step.item.source) {
+      bits.push(`<p class="passo-extra tech">pedido por ${esc(step.item.source)}</p>`);
+    }
+    if (step.item && step.item.blocks) {
+      bits.push(`<p class="passo-extra tech">destrava: ${esc(step.item.blocks)}</p>`);
+    }
+    if (step.id === "dono" && step.remaining > 0) {
+      const n = step.remaining;
+      bits.push(`<p class="passo-extra">Depois desta, ainda tem ${n} ${n === 1 ? "outra" : "outras"}.</p>`);
+    } else if (step.id !== "dono" && step.remaining > 1) {
       const n = step.remaining - 1;
       bits.push(`<p class="passo-extra">Depois desta, ainda tem ${n} ${n === 1 ? "outra" : "outras"}.</p>`);
     }
@@ -122,6 +138,19 @@
     return bits.join("");
   }
 
+  function markFeitoPrimary() {
+    const feito = $("passo-feito");
+    if (!feito) return;
+    document.querySelectorAll("[data-primary]").forEach((el) => el.removeAttribute("data-primary"));
+    const copy = $("passo-copy");
+    const link = $("passo-link");
+    if (copy) copy.classList.remove("primary");
+    if (link) link.classList.remove("primary");
+    feito.classList.add("primary");
+    feito.setAttribute("data-primary", "");
+    feito.focus();
+  }
+
   function bindActions(step) {
     const a = step.action || {};
     if (a.kind === "choice") {
@@ -131,11 +160,41 @@
     }
     if (a.kind === "copy") {
       const btn = $("passo-copy");
-      if (btn) btn.addEventListener("click", () => copyCommand(a.command || "", btn));
+      if (btn) btn.addEventListener("click", async () => {
+        await copyCommand(a.command || "", btn);
+        markFeitoPrimary();
+      });
+    }
+    if (a.kind === "link") {
+      const link = $("passo-link");
+      if (link) link.addEventListener("click", () => markFeitoPrimary());
     }
     if (a.kind === "post") {
       const btn = $("passo-post");
       if (btn) btn.addEventListener("click", () => postDispatch(a, btn));
+    }
+    const feito = $("passo-feito");
+    const depois = $("passo-depois");
+    if (feito) feito.addEventListener("click", () => ownerChoice(step, "feito"));
+    if (depois) depois.addEventListener("click", () => ownerChoice(step, "depois"));
+  }
+
+  async function ownerChoice(step, choice) {
+    const id = step.item && step.item.id;
+    if (!id || !choice) return;
+    setErr("");
+    try {
+      const { status, body } = await postJSON("/api/gui/acao", { id, choice });
+      if (!body || !body.ok) {
+        setErr((body && body.error) || `Não deu para gravar (código ${status}).`);
+        return;
+      }
+      const d = await load({ focus: true, force: true });
+      const next = (d.steps || []).find((s) => s.id === body.next)
+        || (d.steps || []).find((s) => s.state === "agora");
+      if (next && next.title) setNotice(`Feito. Agora: ${next.title}`);
+    } catch (err) {
+      setErr(err.message || "Não deu para gravar.");
     }
   }
 

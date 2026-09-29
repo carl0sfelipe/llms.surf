@@ -4,6 +4,7 @@
 Usage:
   oracfit-panel-server.py --panel-dir DIR --logs-dir DIR [--port N] [--bind ADDR]
                           [--oracfit-root DIR] [--ring-target DIR]
+                          [--owner-actions PATH]
 
 Serves:
   /           -> passos.html (Passo a passo); index.html = run ao vivo; *.html = GUI
@@ -50,9 +51,11 @@ GUI (2026-08-13) — endpoints READ-ONLY, exceto /api/ring-score:
     nota — validado ANTES do subprocess).
   /api/gui/home        -> agora: runs vivos, aneis abertos, disco, audit
   /api/gui/steps       -> próximo passo (uma coisa por vez) a partir do
-    estado real: modelos, falhas, notas, despachar, pronto
+    estado real: modelos, dono, falhas, notas, despachar, pronto
   /api/gui/decide (POST) -> grava 1 decisão sobre uma falha em
     <logs-dir>/decisions.jsonl; não despacha sozinho
+  /api/gui/acao (POST) -> {id, choice:feito|depois} grava done/snooze no
+    jsonl de ações do dono (--owner-actions / ORACFIT_OWNER_ACTIONS)
   /api/gui/dispatches  -> 3 ledgers DECLARADOS (regra 38: fonte ausente
     aparece como ausente, nunca some em silencio)
   /api/gui/rings       -> ring-v1 do ledger central agrupado por run
@@ -63,6 +66,7 @@ GUI (2026-08-13) — endpoints READ-ONLY, exceto /api/ring-score:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -165,6 +169,19 @@ BIN_DIR = Path(__file__).resolve().parent
 USAGE_HUB = BIN_DIR / "usage-hub.py"
 RING_SCRIPT = BIN_DIR / "oracfit-ring.sh"
 INCIDENT_SCRIPT = BIN_DIR / "incident.sh"
+
+
+def _load_acao_lib():
+    spec = importlib.util.spec_from_file_location(
+        "oracfit_acao", BIN_DIR / "oracfit-acao.py")
+    if spec is None or spec.loader is None:
+        raise RuntimeError("bin/oracfit-acao.py não encontrado")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+acao_lib = _load_acao_lib()
 _USAGE_CACHE: tuple[float, dict] | None = None
 _USAGE_CACHE_TTL = 15.0
 _AUDIT_CACHE: tuple[float, dict] | None = None
@@ -580,8 +597,13 @@ def normalize_dispatch(source: str, e: dict) -> dict | None:
     return None
 
 
-STEP_IDS = ("modelos", "falhas", "notas", "despachar", "pronto")
+STEP_IDS = ("modelos", "dono", "falhas", "notas", "despachar", "pronto")
 DECIDE_CHOICES = ("tentar-de-novo", "eu-faco", "descartar")
+ACAO_CHOICES = ("feito", "depois")
+DONO_SECONDARY = (
+    {"id": "feito", "label": "Já fiz"},
+    {"id": "depois", "label": "Me lembre amanhã"},
+)
 
 
 def _plain(text: str) -> str:
@@ -717,11 +739,14 @@ def build_gui_steps(
     ring_target: Path | None,
     dispatch_enabled: bool,
     workdir: Path | None,
+    owner_actions: Path | None = None,
 ) -> dict:
     """Contrato de GET /api/gui/steps — ordem fixa, um único 'agora'."""
     runs = dispatch_sources(root, logs_dir)["runs"]
     failures = failure_runs(root, logs_dir)
     specs = pending_specs(workdir, runs, logs_dir)
+    acoes_path = owner_actions if owner_actions is not None else acao_lib.resolve_path()
+    abertas = acao_lib.open_list(acoes_path)
 
     modelos = {
         "id": "modelos",
@@ -734,6 +759,36 @@ def build_gui_steps(
     if modelos_kind == "feito":
         modelos["title"] = "Modelos prontos"
         modelos["plain"] = _plain("Já existe pelo menos um modelo ativo.")
+
+    dono = {
+        "id": "dono",
+        "title": "Nada pedindo você",
+        "plain": _plain("Nenhum agente está esperando uma ação sua."),
+        "why": "Quando um agente precisa que você faça algo, o pedido aparece aqui.",
+        "action": {"kind": "none"},
+    }
+    if abertas:
+        dono_kind = "pending"
+        first = abertas[0]
+        act = dict(first.get("action") or {"kind": "none"})
+        act["secondary"] = [dict(x) for x in DONO_SECONDARY]
+        dono["title"] = first["title"]
+        dono["plain"] = _plain(first.get("plain") or "")
+        if first.get("why"):
+            dono["why"] = first["why"]
+        dono["item"] = {
+            "id": first["id"],
+            "title": first["title"],
+            "plain": first.get("plain") or "",
+            "why": first.get("why") or "",
+            "source": first.get("source") or "",
+            "blocks": first.get("blocks") or "",
+            "age_days": first.get("age_days") or 0,
+        }
+        dono["remaining"] = len(abertas) - 1
+        dono["action"] = act
+    else:
+        dono_kind = "feito"
 
     falhas = {
         "id": "falhas",
@@ -834,18 +889,20 @@ def build_gui_steps(
 
     kinds = {
         "modelos": modelos_kind,
+        "dono": dono_kind,
         "falhas": falhas_kind,
         "notas": notas_kind,
         "despachar": despachar_kind,
     }
     data = {
         "modelos": modelos,
+        "dono": dono,
         "falhas": falhas,
         "notas": notas,
         "despachar": despachar,
     }
     found_agora = False
-    for sid in ("modelos", "falhas", "notas", "despachar"):
+    for sid in ("modelos", "dono", "falhas", "notas", "despachar"):
         kind = kinds[sid]
         if kind == "pulado":
             data[sid]["state"] = "pulado"
@@ -866,7 +923,7 @@ def build_gui_steps(
         "state": "agora" if not found_agora else "depois",
     }
 
-    steps = [data["modelos"], data["falhas"], data["notas"], data["despachar"], pronto]
+    steps = [data["modelos"], data["dono"], data["falhas"], data["notas"], data["despachar"], pronto]
     active = [s for s in steps if s["state"] != "pulado"]
     current = next((s for s in steps if s["state"] == "agora"), pronto)
     position = next(i for i, s in enumerate(active, 1) if s["id"] == current["id"])
@@ -963,6 +1020,7 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
     ring_target: Path | None = None
     auth_token: str | None = None
     dispatch_enabled: bool = False
+    owner_actions: Path | None = None
 
     # ── auth: cookie ou Bearer, comparação tempo-constante ───────────────────
 
@@ -1225,6 +1283,11 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             "audit": incident_audit(root),
         })
 
+    def _owner_actions_path(self) -> Path:
+        if self.owner_actions is not None:
+            return Path(self.owner_actions)
+        return acao_lib.resolve_path()
+
     def _steps_payload(self) -> dict:
         return build_gui_steps(
             self.oracfit_root,
@@ -1232,6 +1295,7 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             self.ring_target,
             self.dispatch_enabled,
             self._gui_workdir(),
+            self._owner_actions_path(),
         )
 
     def _handle_gui_steps(self) -> None:
@@ -1257,6 +1321,23 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
         with dest.open("a", encoding="utf-8") as f:
             f.write(json.dumps({"ts": ts, "run_key": run_key, "choice": choice},
                                ensure_ascii=False) + "\n")
+        next_id = self._steps_payload()["current"]
+        self._json_response(200, {"ok": True, "next": next_id})
+
+    def _handle_gui_acao(self, body: dict) -> None:
+        aid = body.get("id")
+        choice = body.get("choice")
+        if not isinstance(aid, str) or not isinstance(choice, str) or not aid or not choice:
+            self._json_response(400, {"ok": False, "error": "corpo inválido"})
+            return
+        if choice not in ACAO_CHOICES:
+            self._json_response(400, {"ok": False, "error": "escolha inválida"})
+            return
+        path = self._owner_actions_path()
+        if not acao_lib.apply_choice(path, aid, choice):
+            self._json_response(400, {"ok": False,
+                                      "error": "essa ação não está aberta"})
+            return
         next_id = self._steps_payload()["current"]
         self._json_response(200, {"ok": True, "next": next_id})
 
@@ -1624,7 +1705,7 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             self._deny_json()
             return
         if parsed.path not in ("/api/message", "/api/ring-score", "/api/dispatch",
-                               "/api/gui/decide"):
+                               "/api/gui/decide", "/api/gui/acao"):
             self.send_error(404, "not found")
             return
         body = self._read_json_body()
@@ -1633,6 +1714,9 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/gui/decide":
             self._handle_gui_decide(body)
+            return
+        if parsed.path == "/api/gui/acao":
+            self._handle_gui_acao(body)
             return
         if parsed.path == "/api/ring-score":
             self._handle_ring_score(body)
@@ -1717,6 +1801,9 @@ def main() -> int:
                     help="token de acesso (também via env ORACFIT_GUI_TOKEN); obrigatório se --bind fora do loopback")
     ap.add_argument("--enable-dispatch", action="store_true",
                     help="liga POST /api/dispatch (formulário de despacho da GUI)")
+    ap.add_argument("--owner-actions", default=os.environ.get("ORACFIT_OWNER_ACTIONS"),
+                    help="jsonl de ações do dono (senão env ORACFIT_OWNER_ACTIONS, "
+                         "senão ~/.config/llms-surf/acoes-do-dono.jsonl)")
     args = ap.parse_args()
 
     token = args.auth_token or None
@@ -1766,6 +1853,10 @@ def main() -> int:
     OracfitPanelHandler.ring_target = ring_target
     OracfitPanelHandler.auth_token = token
     OracfitPanelHandler.dispatch_enabled = bool(args.enable_dispatch)
+    if args.owner_actions:
+        OracfitPanelHandler.owner_actions = Path(args.owner_actions).expanduser()
+    else:
+        OracfitPanelHandler.owner_actions = acao_lib.resolve_path()
 
     httpd = ThreadingHTTPServer((args.bind, args.port), OracfitPanelHandler)
     real_port = httpd.server_address[1]  # --port 0 = porta efêmera real aqui

@@ -338,6 +338,8 @@ def main() -> int:
                     help="token de acesso (idem base: obrigatório fora do loopback)")
     ap.add_argument("--enable-dispatch", action="store_true",
                     help="liga POST /api/dispatch (formulário de despacho)")
+    ap.add_argument("--owner-actions", default=os.environ.get("ORACFIT_OWNER_ACTIONS"),
+                    help="jsonl de ações do dono (idem base)")
     args = ap.parse_args()
 
     token = args.auth_token or None
@@ -390,6 +392,10 @@ def main() -> int:
     OracfitTodoHandler.ring_target = ring_target
     OracfitTodoHandler.auth_token = token
     OracfitTodoHandler.dispatch_enabled = bool(args.enable_dispatch)
+    if args.owner_actions:
+        OracfitTodoHandler.owner_actions = Path(args.owner_actions).expanduser()
+    else:
+        OracfitTodoHandler.owner_actions = base.acao_lib.resolve_path()
 
     httpd = ThreadingHTTPServer((args.bind, args.port), OracfitTodoHandler)
     real_port = httpd.server_address[1]  # --port 0 = porta efêmera real aqui
