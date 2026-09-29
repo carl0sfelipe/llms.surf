@@ -1081,8 +1081,17 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             return
         if proc.returncode != 0:
             detail = " ".join((proc.stderr.strip() or proc.stdout.strip()).splitlines()[-1:])
-            self._json_response(500, {"ok": False, "exit": proc.returncode,
-                                      "error": detail or f"corte-review saiu {proc.returncode}"})
+            # corte-review --json reports its own failure as JSON ({"erro": ...}); unwrap it
+            # so the page shows a sentence, not an escaped JSON string (panel probe 2026-09-29).
+            try:
+                inner = json.loads(detail)
+                detail = inner.get("erro") or inner.get("error") or detail
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            # A missing cut dir is machine configuration, not a server fault: 404, not 500.
+            status = 404 if "não existe" in detail else 500
+            self._json_response(status, {"ok": False, "exit": proc.returncode,
+                                         "error": detail or f"corte-review saiu {proc.returncode}"})
             return
         try:
             payload = json.loads(proc.stdout)

@@ -467,8 +467,23 @@ abbr[title] {
 
 @media (max-width: 720px) {
   .score-grid { grid-template-columns: repeat(6, 1fr); }
-  body.gui { grid-template-columns: 1fr; }
-  .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border-default); }
+  /* minmax(0,1fr), not 1fr: a bare 1fr track grows to its widest child (mono strings,
+     tables) and pushed the whole page to ~1000px on a 390px phone (panel probe 2026-09-29). */
+  html, body.gui { overflow-x: clip; }
+  body.gui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .content { min-width: 0; overflow-wrap: anywhere; }
+  /* The sidebar becomes one scrollable strip of links; only the strip scrolls sideways. */
+  .sidebar {
+    position: sticky; top: 0; z-index: 10; height: auto;
+    display: flex; align-items: center; gap: var(--space-1);
+    overflow-x: auto; overflow-y: hidden; padding: var(--space-2) var(--space-3);
+    border-right: none; border-bottom: 1px solid var(--border-default);
+    scrollbar-width: none;
+  }
+  .sidebar .brand { padding: 0 var(--space-2) 0 0; font-size: 14px; flex: none; }
+  .sidebar .brand small, .nav-group-label { display: none; }
+  .nav-link { flex: none; white-space: nowrap; padding: var(--space-2) var(--space-3); border-left: none; border-bottom: 2px solid transparent; }
+  .nav-link.active { border-left-color: transparent; border-bottom-color: var(--data-secondary); }
 }
 
 .hitl-context .ctx-item { margin-bottom: var(--space-2); }

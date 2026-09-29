@@ -275,6 +275,10 @@
       render(await getJSON("/api/gui/corte"));
     } catch (err) {
       showError(document.getElementById("lead"), err);
+      // Nothing will arrive: replace the "Carregando…" placeholders instead of leaving them spinning.
+      for (const id of ["checks", "divergencias"]) {
+        document.getElementById(id).innerHTML = '<div class="empty-note">Sem dados — veja o aviso acima.</div>';
+      }
     }
   }
 
