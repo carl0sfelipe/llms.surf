@@ -126,44 +126,14 @@ LOG_LINES=$((LOG_LINES))
 # dispatch direto sem cadeia não tem arquivo e fica fora do escopo da
 # allowlist. Linha autossuficiente (R5): o run não re-resolve id no registry.
 EFETIVO_FILE="$PID_DIR/dispatch-${TASK_NAME}.efetivo"
-REF_EFETIVO=""
-PROVIDER_EFETIVO=""
-ALLOWLIST_STATUS="fora-do-escopo"
-KERNEL_FILE="$PID_DIR/dispatch-${TASK_NAME}.kernel"
-KERNEL_SHADOW_DIFF=""
-POLICY_VERSION_CRATE=""
-POLICY_VERSION_SHA=""
-if [ -f "$KERNEL_FILE" ]; then
-  KERNEL_SHADOW_DIFF="$(sed -n 's/^kernel_shadow_diff=//p' "$KERNEL_FILE" | head -1)"
-  POLICY_VERSION_CRATE="$(sed -n 's/^policy_version_crate=//p' "$KERNEL_FILE" | head -1)"
-  POLICY_VERSION_SHA="$(sed -n 's/^policy_version_sha=//p' "$KERNEL_FILE" | head -1)"
-fi
-
-if [ -f "$EFETIVO_FILE" ]; then
-  IFS=$'\t' read -r REF_EFETIVO PROVIDER_EFETIVO < "$EFETIVO_FILE"
-  if [ -n "$PROVIDER_EFETIVO" ]; then
-    # FREE_PROVIDER_ALLOWLIST sobrejável só para teste (perna adulterada do D5).
-    ALLOWLIST_FILE="${FREE_PROVIDER_ALLOWLIST:-$BIN_DIR/../data/free-provider-allowlist.json}"
-    if [ -f "$ALLOWLIST_FILE" ] && python3 - "$ALLOWLIST_FILE" "$PROVIDER_EFETIVO" <<'PYALLOW'
-import json, sys
-al = json.load(open(sys.argv[1], encoding="utf-8"))
-sys.exit(0 if sys.argv[2] in (al.get("providers") or []) else 1)
-PYALLOW
-    then
-      ALLOWLIST_STATUS="ok"
-    else
-      ALLOWLIST_STATUS="sem-allowlist"
-      if [ ! -f "$ALLOWLIST_FILE" ]; then
-        echo "⛔ allowlist ausente: $ALLOWLIST_FILE (E5-M6/R4 — crie o arquivo antes de despachar free)" >&2
-      else
-        ALLOWLIST_STATUS="violado"
-        echo "⛔ PROVIDER FORA DA ALLOWLIST DO DONO: $PROVIDER_EFETIVO (ref $REF_EFETIVO) — run fica marcado como violação (E5-M6/R4)" >&2
-        echo "⛔ allowlist violada: provider_efetivo=$PROVIDER_EFETIVO ref=$REF_EFETIVO (data/free-provider-allowlist.json)" >> "$LOG_FILE" 2>/dev/null || true
-      fi
-    fi
-  else
-    ALLOWLIST_STATUS="sem-provider"
-  fi
+KERNEL_FILE="${EFETIVO_FILE%.efetivo}.kernel"
+# Veredito da allowlist + sidecar do kernel: implementação única, compartilhada com os modos
+# (bin/lib-oracfit-allowlist.sh). O .kernel mora ao lado do .efetivo.
+# shellcheck source=lib-oracfit-allowlist.sh
+source "$BIN_DIR/lib-oracfit-allowlist.sh"
+oracfit_free_path_read "$EFETIVO_FILE"
+if [ "$ALLOWLIST_STATUS" = "violado" ]; then
+  echo "⛔ allowlist violada: provider_efetivo=$PROVIDER_EFETIVO ref=$REF_EFETIVO (data/free-provider-allowlist.json)" >> "$LOG_FILE" 2>/dev/null || true
 fi
 
 [ -z "$MODEL_ID" ] && MODEL_ID="$MODEL"

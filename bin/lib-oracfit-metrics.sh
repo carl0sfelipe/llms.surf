@@ -44,6 +44,12 @@ obj = {
 for arg in sys.argv[2:]:
     if '=' in arg:
         k, v = arg.split('=', 1)
+        # Typed fields: key:int=3 and key:json={...} (kernel_shadow_diff, policy_version — same
+        # shape as the dispatch.sh ledger, so consumers read one schema).
+        if k.endswith(':int'):
+            k, v = k[:-4], (int(v) if v.lstrip('-').isdigit() else v)
+        elif k.endswith(':json'):
+            k, v = k[:-5], json.loads(v)
         if k not in skip:
             obj[k] = v
 missing = [k for k in ('flash_work_s','frontier_wait_s','estimated_cost') if obj.get(k,'') == '']

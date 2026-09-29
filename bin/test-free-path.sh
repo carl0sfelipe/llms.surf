@@ -125,6 +125,9 @@ EOS
 
 export LOG_DIR="$WD/logs" PID_DIR="$WD/pids" DB_PATH="$WD/sem-db.sqlite"
 export LEDGER_DIR="$WD/ledger"
+# tier:* entra pelo dispatch-mode.sh desde 0190e93 (incidente 2026-09-19-dispatch-sh-recusa-tier-cheap-sem-mode-yaml);
+# o veredito da allowlist e o sidecar do kernel vão no ledger do modo (bin/lib-oracfit-allowlist.sh).
+MODE_LEDGER="$WD/.dispatch/ledger/mode.jsonl"
 export DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh"
 export ORACFIT_ROOT="$ROOT"
 mkdir -p "$LOG_DIR" "$PID_DIR"
@@ -138,14 +141,14 @@ export AWS_ACCESS_KEY_ID='BAIT-AWS-7f3a' AWS_SECRET_ACCESS_KEY='BAIT-AWS-7f3a' \
   AWS_SESSION_TOKEN='BAIT-AWS-7f3a' OPENROUTER_API_KEY='BAIT-OR-91cd' \
   OR_API_KEY='BAIT-OR-91cd' GROQ_API_KEY='BAIT-GROQ-22ab' \
   NVIDIA_API_KEY='BAIT-NV-55ee' DEEPSEEK_API_KEY='BAIT-DS-88bc'
-( cd "$WD" && bash "$ROOT/bin/dispatch.sh" tier:cheap "$SPEC" d5-envenenado ) > "$WD/dispatch-out.log" 2>&1
+( cd "$WD" && unset DISPATCH_MODEL_REF && ORACFIT_WORKDIR="$WD" bash "$ROOT/bin/dispatch-mode.sh" normal "$SPEC" d5-envenenado ) > "$WD/dispatch-out.log" 2>&1
 unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN \
   OPENROUTER_API_KEY OR_API_KEY GROQ_API_KEY NVIDIA_API_KEY DEEPSEEK_API_KEY
 
 # Espera o finalizador gravar a linha do ledger (teto 60s).
 LEDGER_LINE=""
 for i in $(seq 1 60); do
-  LEDGER_LINE=$(grep -F '"task_name": "d5-envenenado"' "$LEDGER_DIR/ledger.jsonl" 2>/dev/null | head -1)
+  LEDGER_LINE=$(grep -F '"task": "d5-envenenado"' "$MODE_LEDGER" 2>/dev/null | head -1)
   [ -n "$LEDGER_LINE" ] && break
   sleep 1
 done
@@ -173,7 +176,7 @@ else
 fi
 
 VAZOU=0
-grep -rq "BAIT-AWS\|BAIT-OR\|BAIT-GROQ\|BAIT-NV\|BAIT-DS" "$LOG_DIR" "$LEDGER_DIR" "$WD/pids" 2>/dev/null && VAZOU=1
+grep -rq "BAIT-AWS\|BAIT-OR\|BAIT-GROQ\|BAIT-NV\|BAIT-DS" "$LOG_DIR" "$LEDGER_DIR" "$WD/pids" "$WD/.dispatch" 2>/dev/null && VAZOU=1
 if [ "$VAZOU" -eq 0 ]; then
   ok "nenhuma isca vazou em log/ledger/efetivo (imunidade a env herdada)"
 else
@@ -197,16 +200,16 @@ cat > "$TAMPER" <<'EOT'
 {"kind": "free-provider-allowlist/1", "updated": "2026-08-31", "note": "teste", "providers": ["provider-inexistente"]}
 EOT
 export FREE_PROVIDER_ALLOWLIST="$TAMPER"
-LEDGER_BEFORE=$(wc -l < "$LEDGER_DIR/ledger.jsonl" 2>/dev/null || echo 0)
+LEDGER_BEFORE=$(wc -l < "$MODE_LEDGER" 2>/dev/null || echo 0)
 # Oráculo volta a vermelho: o proof da perna 7 faria o preflight recusar
 # ("oráculo já passa não mede nada") — mesma regra da porta, outro run.
 rm -f "$WD/.dispatch/stub-proof"
 export AWS_ACCESS_KEY_ID='BAIT-XX-0000'
-( cd "$WD" && bash "$ROOT/bin/dispatch.sh" tier:cheap "$SPEC" d5-tamper ) > "$WD/dispatch-tamper.log" 2>&1
+( cd "$WD" && unset DISPATCH_MODEL_REF && ORACFIT_WORKDIR="$WD" bash "$ROOT/bin/dispatch-mode.sh" normal "$SPEC" d5-tamper ) > "$WD/dispatch-tamper.log" 2>&1
 unset AWS_ACCESS_KEY_ID
 TAMPER_LINE=""
 for i in $(seq 1 60); do
-  TAMPER_LINE=$(tail -n +"$((LEDGER_BEFORE + 1))" "$LEDGER_DIR/ledger.jsonl" 2>/dev/null | grep -F '"task_name": "d5-tamper"' | head -1)
+  TAMPER_LINE=$(tail -n +"$((LEDGER_BEFORE + 1))" "$MODE_LEDGER" 2>/dev/null | grep -F '"task": "d5-tamper"' | head -1)
   [ -n "$TAMPER_LINE" ] && break
   sleep 1
 done
@@ -314,14 +317,14 @@ if [ ! -x "$ROOT/kernel/target/release/dispatch-policy" ]; then
     || not_ "cargo build --release do kernel falhou (ver /tmp/t18-kernel-build.log)"
 fi
 rm -f "$WD/.dispatch/stub-proof"
-LEDGER_BEFORE_S=$(wc -l < "$LEDGER_DIR/ledger.jsonl" 2>/dev/null || echo 0)
-( cd "$WD" && LLMS_KERNEL=shadow DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh" \
-    bash "$ROOT/bin/dispatch.sh" tier:cheap "$SPEC" t18-shadow ) \
+LEDGER_BEFORE_S=$(wc -l < "$MODE_LEDGER" 2>/dev/null || echo 0)
+( cd "$WD" && unset DISPATCH_MODEL_REF && LLMS_KERNEL=shadow DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh" \
+    ORACFIT_WORKDIR="$WD" bash "$ROOT/bin/dispatch-mode.sh" normal "$SPEC" t18-shadow ) \
   >"$WD/t18-shadow.log" 2>&1 || true
 SHADOW_LINE=""
 for i in $(seq 1 60); do
-  SHADOW_LINE=$(tail -n +"$((LEDGER_BEFORE_S + 1))" "$LEDGER_DIR/ledger.jsonl" 2>/dev/null \
-    | grep -F '"task_name": "t18-shadow"' | head -1)
+  SHADOW_LINE=$(tail -n +"$((LEDGER_BEFORE_S + 1))" "$MODE_LEDGER" 2>/dev/null \
+    | grep -F '"task": "t18-shadow"' | head -1)
   [ -n "$SHADOW_LINE" ] && break
   sleep 1
 done

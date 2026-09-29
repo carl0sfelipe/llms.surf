@@ -18,12 +18,11 @@ source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
 
+source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
+
+# Quem serviu + veredito da allowlist + sidecar do kernel (mesma leitura do dispatch.sh).
 oracfit_stages_read_efetivo() {
-  PROVIDER_EFETIVO=""
-  REF_EFETIVO=""
-  if [ -f "${DISPATCH_EFETIVO_FILE:-}" ]; then
-    IFS=$'\t' read -r REF_EFETIVO PROVIDER_EFETIVO < "$DISPATCH_EFETIVO_FILE" || true
-  fi
+  oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}"
 }
 
 mode_id=""
@@ -181,8 +180,7 @@ oracfit_stages_emergency_epilogue() {
     estimated_cost=0 \
     task="${task_name:-}" \
     status=fail \
-    provider_efetivo="${PROVIDER_EFETIVO}" \
-    provider_efetivo_ref="${REF_EFETIVO}" 2>/dev/null || true
+    "${ORACFIT_FREE_FIELDS[@]}" 2>/dev/null || true
   echo "run_id: ${RUN_ID:-}"
   echo "status: fail"
   return 0
@@ -467,8 +465,7 @@ for line in open(sys.argv[1]):
           estimated_cost=0 \
           task="$task_name" \
           status=owner_question \
-          provider_efetivo="${PROVIDER_EFETIVO}" \
-          provider_efetivo_ref="${REF_EFETIVO}" || true
+          "${ORACFIT_FREE_FIELDS[@]}" || true
         epilogue_done=1
         echo "run_id: $RUN_ID"
         echo "status: owner_question (pausado — pergunta do dono no inbox)"
@@ -664,8 +661,7 @@ oracfit_emit_metric_and_ledger \
   estimated_cost=0 \
   task="$task_name" \
   status="$final_status" \
-  provider_efetivo="${PROVIDER_EFETIVO}" \
-  provider_efetivo_ref="${REF_EFETIVO}" || true
+  "${ORACFIT_FREE_FIELDS[@]}" || true
 
 # Tier-0 behavior scan (advisory — nunca altera exit code do dispatch).
 _behavior_events="$(oracfit_events_path 2>/dev/null || true)"
