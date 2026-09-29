@@ -710,6 +710,31 @@
         "tokens_out": null,
         "cost_usd": 0.0
       }
+    },
+    {
+      "id": "qwen-3.8-27b",
+      "provider": "rigparaguai",
+      "tier": "self-hosted",
+      "accuracy": null,
+      "latency_ms": null,
+      "context_window": 200192,
+      "rate_limit": "rpm por chave no gateway LiteLLM; 1 geração por vez na placa (fila serial)",
+      "best_for": [
+        "corpo de story com gate (baixa complexidade)",
+        "fila de pedidos .md"
+      ],
+      "source": "rig próprio: RTX 3090, exllamav3 + DFlash2, gateway https://gemma.bestmodel.run/v1 (repo inference-paraguai)",
+      "verified_at": "2026-09-29",
+      "quantization": "EXL3 3.5bpw + draft DFlash2 5.0bpw, KV INT4",
+      "cli_hints": {
+        "opencode": "rigparaguai/qwen-3.8-27b"
+      },
+      "id_status": "VERIFICADO",
+      "verified_by": "opencode",
+      "fallback": [
+        "gpt-5.6-luna"
+      ],
+      "nota": "Dogfood 2026-09-29: 4/4 stories pequenas verdes na 1ª tentativa (AG-3, DEV-1..3). Raciocina muito (até 14k tokens): max_tokens 40000. Pelo túnel exige stream (524 >100 s) e UA não-urllib (403). Request abandonada segura a placa até max_tokens."
     }
   ]
 }
