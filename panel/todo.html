@@ -135,7 +135,11 @@
     const itemsEl = document.getElementById("items");
     let d;
     try { d = await getJSON(API); }
-    catch (err) { showError(itemsEl, err); return; }
+    catch (err) {
+      showError(itemsEl, err);
+      document.getElementById("target-line").textContent = err.setup ? "Nenhum alvo nesta sessão." : "Sem dados.";
+      return;
+    }
 
     const c = d.counters;
     document.getElementById("target-line").innerHTML =

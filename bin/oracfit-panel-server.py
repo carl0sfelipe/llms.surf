@@ -851,7 +851,10 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
 
     def _handle_rings(self) -> None:
         if self.ring_target is None:
-            self._json_response(404, {"ok": False, "error": "GUI subiu sem --ring-target (rode: oracfit hitl <target-dir>)"})
+            self._json_response(404, {"ok": False, "error": "GUI subiu sem --ring-target (rode: oracfit hitl <target-dir>)",
+                                      "setup": {"title": "Calibração desligada nesta sessão",
+                                                "why": "A calibração lê os anéis de um projeto-alvo (a pasta ring/ do ledger). Este painel subiu sem apontar para nenhum alvo, então não há anel para dar nota.",
+                                                "cmd": "oracfit gui --target <pasta-do-projeto>"}})
             return
         try:
             data = extract_target_rings(self.ring_target)
@@ -1089,9 +1092,17 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             except (json.JSONDecodeError, AttributeError):
                 pass
             # A missing cut dir is machine configuration, not a server fault: 404, not 500.
-            status = 404 if "não existe" in detail else 500
-            self._json_response(status, {"ok": False, "exit": proc.returncode,
-                                         "error": detail or f"corte-review saiu {proc.returncode}"})
+            missing = "não existe" in detail
+            body = {"ok": False, "exit": proc.returncode,
+                    "error": detail or f"corte-review saiu {proc.returncode}"}
+            if missing:
+                body["setup"] = {
+                    "title": "Corte público não configurado nesta máquina",
+                    "why": f"A revisão compara esta oficina com a pasta do corte que vai a público. {detail}. "
+                           "Nada falhou: esta máquina só não tem o corte clonado.",
+                    "cmd": "ORACFIT_CORTE_DIR=<pasta-do-corte> oracfit gui",
+                }
+            self._json_response(404 if missing else 500, body)
             return
         try:
             payload = json.loads(proc.stdout)

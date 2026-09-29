@@ -368,6 +368,27 @@ abbr[title] {
 
 .empty-note { color: var(--fg-secondary); font-size: 13px; padding: var(--space-2); }
 
+/* ── estado "desligado nesta sessão" (feature sem configuração, não falha) ── */
+.setup-state {
+  padding: var(--space-8) var(--space-6);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+}
+.setup-state__tag {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.1em; color: var(--fg-tertiary);
+}
+.setup-state__title { margin: var(--space-2) 0 var(--space-3); font-size: 20px; font-weight: 600; color: var(--fg-primary); }
+.setup-state__why { margin: 0 0 var(--space-5); max-width: 68ch; color: var(--fg-secondary); line-height: 1.6; }
+.setup-state__cmd {
+  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-default); border: 1px solid var(--border-subtle); border-radius: var(--radius);
+}
+.setup-state__cmd code { font-family: var(--font-mono); font-size: 13px; color: var(--data-secondary); overflow-wrap: anywhere; min-width: 0; flex: 1 1 16ch; }
+.setup-state__copy { flex: none; }
+
 /* ── botões ───────────────────────────────────────────────────────────── */
 .btn {
   font-family: var(--font-sans);

@@ -287,12 +287,18 @@ class OracfitTodoHandler(base.OracfitPanelHandler):
         project = (qs.get("project") or [""])[0]
         target = self._resolve_target(project or None)
         if target is None:
-            self._json_response(404, {
+            body = {
                 "ok": False,
                 "error": "GUI subiu sem --ring-target e sem frota wt-* (rode: oracfit gui --target <dir>)"
                          if not project else
                          "projeto fora da frota (só wt-* irmãos do --ring-target, sem path)",
-            })
+            }
+            if not project:
+                # Not configured is a state to explain, not a failure to alarm about.
+                body["setup"] = {"title": "Backlog desligado nesta sessão",
+                                 "why": "O TODO cruza o backlog de um projeto-alvo com o ledger dele. Este painel subiu sem alvo, então não há backlog para mostrar.",
+                                 "cmd": "oracfit gui --target <pasta-do-projeto>"}
+            self._json_response(404, body)
             return
         try:
             payload = todo_payload(target)

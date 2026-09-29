@@ -52,7 +52,10 @@ async function getJSON(url) {
   try { body = await res.json(); } catch (_) { /* corpo não-JSON vira erro abaixo */ }
   if (!res.ok || !body) {
     const msg = body && body.error ? body.error : `HTTP ${res.status} em ${url}`;
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.status = res.status;
+    err.setup = body && body.setup ? body.setup : null;
+    throw err;
   }
   return body;
 }
@@ -114,7 +117,31 @@ function renderCapped(container, items, renderItem, cap = 5) {
 }
 
 function showError(el, err) {
+  if (err && err.setup) {
+    showSetup(el, err.setup);
+    return;
+  }
   el.innerHTML = `<div class="alert-banner">Falha ao carregar: ${esc(err.message || err)}</div>`;
+}
+
+// A feature that is off in this session: say what it is, why it is empty, and the one command
+// that turns it on. Never a red banner: nothing failed (panel review 2026-09-29).
+function showSetup(el, setup) {
+  el.innerHTML =
+    `<section class="setup-state" role="status">` +
+      `<span class="setup-state__tag">DESLIGADO NESTA SESSÃO</span>` +
+      `<h2 class="setup-state__title">${esc(setup.title)}</h2>` +
+      `<p class="setup-state__why">${esc(setup.why)}</p>` +
+      `<div class="setup-state__cmd"><code>${esc(setup.cmd)}</code>` +
+        `<button type="button" class="btn setup-state__copy">copiar</button></div>` +
+    `</section>`;
+  const btn = el.querySelector(".setup-state__copy");
+  btn.addEventListener("click", () => {
+    navigator.clipboard.writeText(setup.cmd).then(() => {
+      btn.textContent = "copiado";
+      setTimeout(() => { btn.textContent = "copiar"; }, 1600);
+    }).catch(() => {});
+  });
 }
 
 /* Glossário mínimo compartilhado — o jargão do framework em palavras comuns.
