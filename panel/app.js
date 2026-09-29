@@ -632,6 +632,15 @@
         `/api/runfiles?run_id=${encodeURIComponent(run.run_id)}&t=${Date.now()}`,
         { cache: "no-store" }
       );
+      if (rf.status === 404) {
+        // No gauntlet dir is not an error: a live run has none until its first attempt writes
+        // one, and a normal-mode run logs to .dispatch/logs instead. The panel showed "erro"
+        // on a run that had just PASSED (panel review 2026-09-29).
+        state.stageLog = { file: null, size: null, text: "", currentTask: null, err: null };
+        renderStageLog();
+        renderPipeline();
+        return;
+      }
       if (!rf.ok) {
         state.stageLog.err = rf.status === 404 ? "diretório gauntlet não encontrado" : `HTTP ${rf.status} em /api/runfiles`;
         renderStageLog();

@@ -1091,3 +1091,11 @@ details.feed-item summary:hover .feed-body { color: var(--fg-primary); }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── celular: nada passa da largura da tela (sonda do painel, 2026-09-29) ── */
+@media (max-width: 720px) {
+  html, body { overflow-x: clip; }
+  .field, .select, #run-switcher { max-width: 100%; min-width: 0; }
+  .select, #run-switcher { width: 100%; text-overflow: ellipsis; }
+  .usage-toks { flex-wrap: wrap; min-width: 0; }
+}

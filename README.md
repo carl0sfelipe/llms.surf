@@ -114,7 +114,7 @@ resets. Only real silence dies.
   ledger.
 - **Usage hub** — token/quota tracking from local sources only, so the
   orchestrator picks the cheapest viable model per task.
-- **The memory** — 115 incident postmortems in this cut, 29 models in the registry,
+- **The memory** — 115 incident postmortems in this cut, 30 models in the registry,
   21 modes, 8 adapters + stub, 37 test suites guarding the guards.
 
 ---

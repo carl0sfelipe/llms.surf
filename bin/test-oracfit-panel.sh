@@ -64,26 +64,26 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 
 HTML=$(curl -sf "http://127.0.0.1:$PORT/")
-echo "$HTML" | grep -q "Oracfit — Carlos Felipe"
-echo "$HTML" | grep -q 'id="metric-bar"'
-echo "$HTML" | grep -q 'id="session-bar"'
-echo "$HTML" | grep -q 'observe-only'
+grep -q "Oracfit — Carlos Felipe" <<<"$HTML"
+grep -q 'id="metric-bar"' <<<"$HTML"
+grep -q 'id="session-bar"' <<<"$HTML"
+grep -q 'observe-only' <<<"$HTML"
 
 CFG=$(curl -sf "http://127.0.0.1:$PORT/runtime-config.json")
-echo "$CFG" | grep -q '"observe_only": false'
-echo "$CFG" | grep -q '"hitl_v1": true'
-echo "$CFG" | grep -q '/logs/events.jsonl'
+grep -q '"observe_only": false' <<<"$CFG"
+grep -q '"hitl_v1": true' <<<"$CFG"
+grep -q '/logs/events.jsonl' <<<"$CFG"
 
 EV=$(curl -sf "http://127.0.0.1:$PORT/logs/events.jsonl")
-echo "$EV" | grep -q 'run-aaa-pass'
-echo "$EV" | grep -q 'flash_work_s'
+grep -q 'run-aaa-pass' <<<"$EV"
+grep -q 'flash_work_s' <<<"$EV"
 
 # CSS/JS present
 CSS=$(curl -sf "http://127.0.0.1:$PORT/styles.css")
-echo "$CSS" | grep -q -- '--metric'
+grep -q -- '--metric' <<<"$CSS"
 JS=$(curl -sf "http://127.0.0.1:$PORT/app.js")
-echo "$JS" | grep -q 'POLL_MS'
-echo "$JS" | grep -q 'observe-only'
+grep -q 'POLL_MS' <<<"$JS"
+grep -q 'observe-only' <<<"$JS"
 
 # path traversal blocked (should 404 or empty denied)
 CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/logs/../../etc/passwd" || true)
@@ -119,10 +119,10 @@ cat > "$GAUNTLET/mech-1.log" <<'LOGEOF'
 LOGEOF
 
 RUNFILES=$(curl -sf "http://127.0.0.1:$PORT/api/runfiles?run_id=run-aaa-111")
-echo "$RUNFILES" | grep -q 'mech-1.log'
+grep -q 'mech-1.log' <<<"$RUNFILES"
 
 TAIL=$(curl -sf "http://127.0.0.1:$PORT/api/tail?run_id=run-aaa-111&file=mech-1.log")
-echo "$TAIL" | grep -q 'T2-JUDGE'
+grep -q 'T2-JUDGE' <<<"$TAIL"
 
 TRAV_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/api/tail?run_id=run-aaa-111&file=../../etc/passwd" || true)
 test "$TRAV_CODE" != "200" || { echo "FAIL: tail traversal leaked"; exit 1; }

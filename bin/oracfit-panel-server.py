@@ -851,7 +851,10 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
 
     def _handle_rings(self) -> None:
         if self.ring_target is None:
-            self._json_response(404, {"ok": False, "error": "GUI subiu sem --ring-target (rode: oracfit hitl <target-dir>)"})
+            self._json_response(404, {"ok": False, "error": "GUI subiu sem --ring-target (rode: oracfit hitl <target-dir>)",
+                                      "setup": {"title": "Calibração desligada nesta sessão",
+                                                "why": "A calibração lê os anéis de um projeto-alvo (a pasta ring/ do ledger). Este painel subiu sem apontar para nenhum alvo, então não há anel para dar nota.",
+                                                "cmd": "oracfit gui --target <pasta-do-projeto>"}})
             return
         try:
             data = extract_target_rings(self.ring_target)
@@ -1081,8 +1084,25 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             return
         if proc.returncode != 0:
             detail = " ".join((proc.stderr.strip() or proc.stdout.strip()).splitlines()[-1:])
-            self._json_response(500, {"ok": False, "exit": proc.returncode,
-                                      "error": detail or f"corte-review saiu {proc.returncode}"})
+            # corte-review --json reports its own failure as JSON ({"erro": ...}); unwrap it
+            # so the page shows a sentence, not an escaped JSON string (panel probe 2026-09-29).
+            try:
+                inner = json.loads(detail)
+                detail = inner.get("erro") or inner.get("error") or detail
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            # A missing cut dir is machine configuration, not a server fault: 404, not 500.
+            missing = "não existe" in detail
+            body = {"ok": False, "exit": proc.returncode,
+                    "error": detail or f"corte-review saiu {proc.returncode}"}
+            if missing:
+                body["setup"] = {
+                    "title": "Corte público não configurado nesta máquina",
+                    "why": f"A revisão compara esta oficina com a pasta do corte que vai a público. {detail}. "
+                           "Nada falhou: esta máquina só não tem o corte clonado.",
+                    "cmd": "ORACFIT_CORTE_DIR=<pasta-do-corte> oracfit gui",
+                }
+            self._json_response(404 if missing else 500, body)
             return
         try:
             payload = json.loads(proc.stdout)
