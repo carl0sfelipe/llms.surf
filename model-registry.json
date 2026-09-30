@@ -735,6 +735,24 @@
         "gpt-5.6-luna"
       ],
       "nota": "Dogfood 2026-09-29: 4/4 stories pequenas verdes na 1ª tentativa (AG-3, DEV-1..3). Raciocina muito (até 14k tokens): max_tokens 40000. Pelo túnel exige stream (524 >100 s) e UA não-urllib (403). Request abandonada segura a placa até max_tokens."
+    },
+    {
+      "id": "grok-4.6-xhigh-fast",
+      "provider": "cursor",
+      "tier": "token-plan",
+      "accuracy": null,
+      "latency_ms": null,
+      "id_status": "VERIFICADO",
+      "best_for": [
+        "corpo de story com oráculo (Cursor)"
+      ],
+      "source": "cursor-agent --list-models 2026-09-29",
+      "cli_hints": {
+        "cursor": "cursor-grok-4.6-xhigh-fast"
+      },
+      "verified_by": "cursor",
+      "verified_at": "2026-09-29",
+      "nota": "Dono testou: 4.6 xhigh-fast melhor que 4.7 (2026-09-29)."
     }
   ]
 }
