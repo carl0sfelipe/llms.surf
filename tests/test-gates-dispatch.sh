@@ -17,6 +17,11 @@
 #  T7  escalate: >=1 screenshot em GAUNTLET_SCREENS_DIR satisfaz (paridade ring)
 #  T8  critic P3: biggest_gap evasivo ("none"/"n/a") vira vazio pelo vocabulário
 #      canônico de bin/check-verdict.py — gap real passa intacto
+#  T9  escalate emite run_started/run_finished no events.jsonl do workdir
+#      (ORACFIT_RUN_ID setado) — sucesso e blocked; "já passa" não emite nada
+#      (gap: batch/escalate invisíveis em "Run ao vivo" por falta do evento)
+#  T10 dispatch-batch.sh herda o mesmo evento (delega em escalate por item) —
+#      cada item grava run_started/run_finished no events.jsonl do SEU workdir
 
 set -uo pipefail
 
@@ -219,6 +224,89 @@ oracfit_gauntlet_parse_critic_json "{\"biggest_gap\":\"CTA sem contraste no mobi
 if printf '%s' "$T8_REAL" | grep -q 'CTA sem contraste'; then
   ok "gap real passa intacto"
 else not "gap real perdido: [$T8_REAL]"; fi
+
+# ── T9: escalate emite run_started/run_finished (events.jsonl do workdir) ───
+echo "T9: dispatch-escalate.sh — run_started/run_finished no events.jsonl"
+
+BAD_RUNNER="$WORK/bad-runner.sh"
+cat > "$BAD_RUNNER" <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+chmod +x "$BAD_RUNNER"
+
+# sucesso: run_started + run_finished status=success, com o mesmo run_id
+# (globs="" desliga o gate visual — o FAKE_RUNNER também toca index.html,
+# que sem isso reprovaria por falta de screenshot, como no T5)
+WD9="$(new_workdir t9)"
+write_spec "$WD9/spec.md"
+GAUNTLET_VISUAL_GLOBS="" DISPATCH_RUNNER="$FAKE_RUNNER" DISPATCH_TIERS="test/fake" LOG_DIR="$WORK/t9-logs" \
+  bash "$REPO_ROOT/bin/dispatch-escalate.sh" "$WD9/spec.md" t9 --workdir "$WD9" --max-per-tier 1 \
+  >/dev/null 2>&1
+EV9="$WD9/.dispatch/logs/events.jsonl"
+if [ -f "$EV9" ] && grep -q '"type": *"run_started"' "$EV9" && grep -q '"type": *"run_finished"' "$EV9"; then
+  ok "sucesso grava run_started + run_finished no events.jsonl do workdir"
+else
+  not "sucesso sem run_started/run_finished (events: $(cat "$EV9" 2>/dev/null))"
+fi
+RID_START=$(grep '"type": *"run_started"' "$EV9" | head -1 | grep -oE '"run_id": *"[^"]+"')
+RID_FINISH=$(grep '"type": *"run_finished"' "$EV9" | head -1 | grep -oE '"run_id": *"[^"]+"')
+if [ -n "$RID_START" ] && [ "$RID_START" = "$RID_FINISH" ]; then
+  ok "run_started e run_finished compartilham o mesmo run_id"
+else
+  not "run_id não bate: started=[$RID_START] finished=[$RID_FINISH]"
+fi
+grep -q '"task": *"t9"' "$EV9" && ok "task no run_started (é o que a GUI usa pra rotular o run)" \
+  || not "task ausente do run_started"
+grep -q '"status": *"success"' "$EV9" && ok "run_finished com status=success" \
+  || not "run_finished sem status=success"
+
+# blocked: todos os tiers falham → run_finished status=blocked (não some
+# sem fechar o evento — GUI trataria como run "vivo" pra sempre)
+WD9B="$(new_workdir t9b)"
+write_spec "$WD9B/spec.md"
+DISPATCH_RUNNER="$BAD_RUNNER" DISPATCH_TIERS="test/fake" LOG_DIR="$WORK/t9b-logs" \
+  bash "$REPO_ROOT/bin/dispatch-escalate.sh" "$WD9B/spec.md" t9b --workdir "$WD9B" --max-per-tier 1 \
+  >/dev/null 2>&1
+EV9B="$WD9B/.dispatch/logs/events.jsonl"
+if grep -q '"type": *"run_started"' "$EV9B" 2>/dev/null && grep -q '"status": *"blocked"' "$EV9B" 2>/dev/null; then
+  ok "blocked também fecha o run (run_finished status=blocked)"
+else
+  not "blocked sem run_finished (events: $(cat "$EV9B" 2>/dev/null))"
+fi
+
+# já passa (nenhum modelo chamado): nenhum evento — não é um run de verdade
+WD9C="$(new_workdir t9c)"
+write_spec "$WD9C/spec.md"
+( cd "$WD9C" && echo done > alvo.txt && git add -A && git commit -qm "ja passa" ) >/dev/null
+DISPATCH_RUNNER="$BAD_RUNNER" DISPATCH_TIERS="test/fake" LOG_DIR="$WORK/t9c-logs" \
+  bash "$REPO_ROOT/bin/dispatch-escalate.sh" "$WD9C/spec.md" t9c --workdir "$WD9C" --max-per-tier 1 \
+  >/dev/null 2>&1
+if [ ! -f "$WD9C/.dispatch/logs/events.jsonl" ]; then
+  ok "'já passa' não escreve evento (não gastou modelo, não é run)"
+else
+  not "'já passa' escreveu events.jsonl: $(cat "$WD9C/.dispatch/logs/events.jsonl")"
+fi
+
+# ── T10: dispatch-batch.sh — mesmo evento, por delegar em escalate por item ──
+echo "T10: dispatch-batch.sh — run_started/run_finished por item (delega em escalate)"
+WD10="$(new_workdir t10)"
+write_spec "$WD10/spec.md"
+BATCH_FILE="$WORK/batch-t10.txt"
+printf '%s|%s|%s|%s\n' "$WD10/spec.md" "t10" "$WD10" "test/fake" > "$BATCH_FILE"
+GAUNTLET_VISUAL_GLOBS="" DISPATCH_RUNNER="$FAKE_RUNNER" LOG_DIR="$WORK/t10-logs" \
+  bash "$REPO_ROOT/bin/dispatch-batch.sh" "$BATCH_FILE" --mode 1 --max-per-tier 1 --allow-dirty \
+  > "$WORK/t10-out.txt" 2>&1
+rc=$?
+EV10="$WD10/.dispatch/logs/events.jsonl"
+if [ "$rc" -eq 0 ] && [ -f "$EV10" ] && grep -q '"type": *"run_started"' "$EV10" \
+   && grep -q '"status": *"success"' "$EV10"; then
+  ok "item do batch grava run_started/run_finished no events.jsonl do SEU workdir"
+else
+  not "batch (rc=$rc) sem evento — events: $(cat "$EV10" 2>/dev/null); out: $(tail -5 "$WORK/t10-out.txt")"
+fi
+grep -q '"task": *"t10"' "$EV10" 2>/dev/null && ok "task do item (não o run_id do batch) rotula o evento" \
+  || not "task do item ausente do evento"
 
 echo ""
 echo "── resultado: $pass PASS, $fail FAIL ──"
