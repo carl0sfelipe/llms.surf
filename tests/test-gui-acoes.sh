@@ -90,8 +90,8 @@ grep -q '"type": *"snooze"' "$ORACFIT_OWNER_ACTIONS" && grep -q '"until"' "$ORAC
 
 echo "--- T5: robustez ---"
 echo 'isto não é json' >> "$ORACFIT_OWNER_ACTIONS"
-"$ORACFIT" acao add revisar-prs --title "Revisar PRs" --plain "Primeira versão." >/dev/null 2>&1
-"$ORACFIT" acao add revisar-prs --title "Revisar PRs 18 e 19" --plain "Versão nova substitui." >/dev/null 2>&1
+"$ORACFIT" acao add revisar-prs --title "Revisar PRs" --plain "Primeira versão." --decisao >/dev/null 2>&1
+"$ORACFIT" acao add revisar-prs --title "Revisar PRs 18 e 19" --plain "Versão nova substitui." --decisao >/dev/null 2>&1
 dono | J "assert d['item']['id']=='revisar-prs' and d['title']=='Revisar PRs 18 e 19' and d['remaining']==0" 2>/dev/null \
   && ok "linha lixo ignorada; add repetido substitui" || not "robustez: $(dono)"
 
