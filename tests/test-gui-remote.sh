@@ -20,6 +20,10 @@
 #      anterior inalterado (retrocompatibilidade do loopback)
 #  T11 túnel: sem --auth-token recusa; sem cloudflared recusa com dica; --help ok
 #  T12 roteamento: oracfit gui-tunnel --help passa pelo bin/oracfit
+#  T13 túnel: --config isolado (nunca herda ~/.cloudflared/config.yml de
+#      túnel nomeado — incidente 2026-09-29)
+#  T14 túnel: matar o cloudflared não derruba a GUI; sobe de novo sozinho
+#  T15 túnel: matar a GUI não derruba o túnel; sobe de novo sozinha
 
 set -uo pipefail
 
@@ -35,6 +39,7 @@ not() { echo "  FAIL: $1"; fail=$((fail + 1)); }
 WORK=$(mktemp -d /tmp/test-gui-remote.XXXXXX)
 export ORACFIT_CENTRAL_LEDGER="$WORK/central.jsonl"
 SERVER_PID=""
+T13_PORT=18799
 cleanup() {
   [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null
   wait "$SERVER_PID" 2>/dev/null
@@ -44,6 +49,10 @@ cleanup() {
     pid="$(head -1 "$pidfile" | tr -d '[:space:]')"
     [ -n "$pid" ] && kill "$pid" 2>/dev/null
   done
+  # T13-T15: mata a árvore do gui-tunnel + stub, mesmo se um teste falhar no meio
+  pkill -f "bin/oracfit-gui-tunnel.sh.*--port $T13_PORT" 2>/dev/null
+  pkill -f "oracfit-todo-server.py.*--port $T13_PORT " 2>/dev/null
+  pkill -f "stub-cloudflared.sh tunnel .*--url http://127.0.0.1:$T13_PORT " 2>/dev/null
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -206,6 +215,97 @@ bash "$REPO_ROOT/bin/oracfit-gui-tunnel.sh" --help 2>/dev/null | grep -q "tryclo
 echo "--- T12: roteamento bin/oracfit gui-tunnel ---"
 "$ORACFIT" gui-tunnel --help 2>/dev/null | grep -q "auth-token" \
   && ok "oracfit gui-tunnel --help" || not "oracfit gui-tunnel não rota"
+
+echo "--- T13: túnel isola config (nunca herda ~/.cloudflared/config.yml) ---"
+STUB_CF="$REPO_ROOT/tests/fixtures/stub-cloudflared.sh"
+T13W="$WORK/t13"
+mkdir -p "$T13W/wd" "$T13W/fakehome/.cloudflared"
+cat > "$T13W/fakehome/.cloudflared/config.yml" <<'CFG'
+tunnel: some-named-tunnel
+ingress:
+  - hostname: whatever
+    service: http_status:404
+CFG
+ARGV_LOG="$T13W/argv.log"
+: > "$ARGV_LOG"
+HOME="$T13W/fakehome" ORACFIT_ROOT="$REPO_ROOT" ORACFIT_WORKDIR="$T13W/wd" \
+  STUB_CF_ARGV_LOG="$ARGV_LOG" \
+  bash "$REPO_ROOT/bin/oracfit-gui-tunnel.sh" --auth-token "$TOKEN" --port "$T13_PORT" \
+  --cloudflared "$STUB_CF" > "$T13W/out.log" 2> "$T13W/err.log" &
+T13_PID=$!
+
+t13_url=""
+for _ in $(seq 1 50); do
+  t13_url=$(grep -oE 'https://[A-Za-z0-9.-]+\.trycloudflare\.com' "$T13W/out.log" | head -1)
+  [ -n "$t13_url" ] && break
+  sleep 0.2
+done
+[ -n "$t13_url" ] && ok "túnel sobe com cloudflared stub" || not "túnel não subiu com stub (log: $(cat "$T13W/err.log")))"
+
+cfg_used=$(grep -A1 -- "--config" "$ARGV_LOG" | tail -1)
+named_cfg="$T13W/fakehome/.cloudflared/config.yml"
+if [ -n "$cfg_used" ] && [ "$cfg_used" != "$named_cfg" ]; then
+  ok "usa --config isolado (não o do usuário/túnel nomeado)"
+else
+  not "não isolou --config: usou '$cfg_used'"
+fi
+if [ -n "$cfg_used" ] && [ -f "$cfg_used" ] && [ ! -s "$cfg_used" ]; then
+  ok "config isolado está vazio (sem ingress herdado)"
+else
+  not "config isolado não está vazio/não existe: $cfg_used"
+fi
+
+echo "--- T14: ciclo de vida independente — matar o túnel não derruba a GUI ---"
+t13_gui_pid=$(pgrep -f "oracfit-todo-server.py.*--port $T13_PORT " | head -1)
+t13_cf_pid=$(pgrep -f "stub-cloudflared.sh tunnel .*--url http://127.0.0.1:$T13_PORT " | head -1)
+if [ -n "$t13_gui_pid" ] && [ -n "$t13_cf_pid" ]; then
+  ok "achou o PID da GUI e do túnel (stub)"
+else
+  not "não achou os PIDs (gui=$t13_gui_pid cf=$t13_cf_pid)"
+fi
+kill "$t13_cf_pid" 2>/dev/null
+sleep 1.5
+if kill -0 "$t13_gui_pid" 2>/dev/null && curl -sf -m 2 -o /dev/null "http://127.0.0.1:$T13_PORT/login"; then
+  ok "matar o túnel não derruba a GUI (PID vivo e respondendo)"
+else
+  not "GUI morreu ou parou de responder ao matar o túnel"
+fi
+new_cf_pid=""
+for _ in $(seq 1 25); do
+  new_cf_pid=$(pgrep -f "stub-cloudflared.sh tunnel .*--url http://127.0.0.1:$T13_PORT " | head -1)
+  [ -n "$new_cf_pid" ] && [ "$new_cf_pid" != "$t13_cf_pid" ] && break
+  sleep 0.3
+done
+if [ -n "$new_cf_pid" ] && [ "$new_cf_pid" != "$t13_cf_pid" ]; then
+  ok "túnel sobe de novo sozinho (PID novo, sem a GUI ter caído)"
+else
+  not "túnel não voltou a subir sozinho"
+fi
+grep -q "o túnel caiu" "$T13W/err.log" && ok "avisa em português que o túnel caiu" \
+  || not "não avisou a queda do túnel"
+
+echo "--- T15: ciclo de vida independente — matar a GUI não derruba o túnel ---"
+kill "$t13_gui_pid" 2>/dev/null
+sleep 1.5
+if kill -0 "$new_cf_pid" 2>/dev/null; then
+  ok "matar a GUI não derruba o túnel"
+else
+  not "túnel morreu junto com a GUI"
+fi
+gui_back=0
+for _ in $(seq 1 25); do
+  curl -sf -m 1 -o /dev/null "http://127.0.0.1:$T13_PORT/login" && gui_back=1 && break
+  sleep 0.3
+done
+[ "$gui_back" = "1" ] && ok "GUI sobe de novo sozinha (sem o túnel ter caído)" \
+  || not "GUI não voltou a responder"
+grep -q "a GUI caiu" "$T13W/err.log" && ok "avisa em português que a GUI caiu" \
+  || not "não avisou a queda da GUI"
+
+kill "$T13_PID" 2>/dev/null
+wait "$T13_PID" 2>/dev/null
+pkill -f "oracfit-todo-server.py.*--port $T13_PORT " 2>/dev/null
+pkill -f "stub-cloudflared.sh tunnel .*--url http://127.0.0.1:$T13_PORT " 2>/dev/null
 
 echo ""
 echo "=== resultado: $pass PASS, $fail FAIL ==="
