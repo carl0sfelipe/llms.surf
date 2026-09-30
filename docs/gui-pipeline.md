@@ -26,9 +26,15 @@ Sem isso o pedido some no chat e a GUI não tem o que mostrar.
 
 ```
 oracfit acao add <id> --title "uma linha" --plain "o que fazer, ≤140" \
-  [--href URL | --command "comando"] [--source "quem pediu"] [--blocks "o que destrava"]
+  [--href URL] [--command "comando"] [--step "texto"]… \
+  [--artifact P] [--context P]… [--prioridade alta|normal] [--decisao] \
+  [--source "quem pediu"] [--blocks "o que destrava"]
 ```
 
 O id casa `^[a-z0-9][a-z0-9-]{0,63}$`. Title vazio ou plain longo
-recusam sem gravar. A GUI mostra a ação aberta mais antiga; o dono
-marca "Já fiz" ou "Me lembre amanhã".
+recusam sem gravar. A GUI mostra a ação de prioridade alta primeiro,
+depois a mais antiga; o dono marca "Já fiz" ou "Me lembre amanhã".
+
+Cartão que manda abrir algo tem **link direto** (deep link da tela
+exata). Se o agente gerou um arquivo, passa `--artifact` e `--context`
+para a GUI mostrar se o script é da vez ou se ficou velho.

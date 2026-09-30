@@ -56,6 +56,9 @@ GUI (2026-08-13) — endpoints READ-ONLY, exceto /api/ring-score:
     <logs-dir>/decisions.jsonl; não despacha sozinho
   /api/gui/acao (POST) -> {id, choice:feito|depois} grava done/snooze no
     jsonl de ações do dono (--owner-actions / ORACFIT_OWNER_ACTIONS)
+  /api/gui/ajuda (POST) -> {id, image data-url, note?} "Não tô achando":
+    manda o print ao modelo de visão (ORACFIT_VISION_URL) e grava evidência
+    em <logs-dir>/ajuda/ mesmo se o modelo estiver fora
   /api/gui/dispatches  -> 3 ledgers DECLARADOS (regra 38: fonte ausente
     aparece como ausente, nunca some em silencio)
   /api/gui/rings       -> ring-v1 do ledger central agrupado por run
@@ -66,6 +69,7 @@ GUI (2026-08-13) — endpoints READ-ONLY, exceto /api/ring-score:
 from __future__ import annotations
 
 import argparse
+import base64
 import importlib.util
 import json
 import os
@@ -75,6 +79,7 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.request
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -604,6 +609,87 @@ DONO_SECONDARY = (
     {"id": "feito", "label": "Já fiz"},
     {"id": "depois", "label": "Me lembre amanhã"},
 )
+AJUDA_IMAGE_RE = re.compile(
+    r"^data:image/(png|jpeg);base64,(.+)$", re.DOTALL)
+AJUDA_MAX_BYTES = 4 * 1024 * 1024
+AJUDA_BODY_MAX = 8 * 1024 * 1024
+JSON_BODY_MAX = 65536
+VISION_TIMEOUT_S = 60
+VISION_MAX_TOKENS = 300
+VISION_URL_DEFAULT = "http://127.0.0.1:8000/v1"
+VISION_MODEL_DEFAULT = "gemma-4-12b"
+VISION_SYSTEM = (
+    "O dono tem TDAH. Responda em pt-BR, no máximo 3 frases numeradas "
+    "curtas, dizendo ONDE clicar no print (posição + texto do botão). "
+    "Se o print não é a tela certa, diga qual abrir (use o link da ação)."
+)
+
+
+def parse_ajuda_image(image: object) -> tuple[bytes, str] | None:
+    if not isinstance(image, str) or not image.strip():
+        return None
+    m = AJUDA_IMAGE_RE.match(image.strip())
+    if not m:
+        return None
+    kind, b64 = m.group(1), m.group(2)
+    try:
+        raw = base64.b64decode(b64, validate=False)
+    except Exception:
+        return None
+    if not raw or len(raw) > AJUDA_MAX_BYTES:
+        return None
+    return raw, ("png" if kind == "png" else "jpg")
+
+
+def ajuda_messages(rec: dict, note: str, image: str) -> list[dict]:
+    action = rec.get("action") if isinstance(rec.get("action"), dict) else {}
+    user_text = "\n".join([
+        f"título: {rec.get('title') or ''}",
+        f"frase: {rec.get('plain') or ''}",
+        f"passos: {json.dumps(rec.get('steps') or [], ensure_ascii=False)}",
+        f"why: {rec.get('why') or ''}",
+        f"href: {action.get('href') or ''}",
+        f"nota: {note or ''}",
+    ])
+    return [
+        {"role": "system", "content": VISION_SYSTEM},
+        {"role": "user", "content": [
+            {"type": "text", "text": user_text},
+            {"type": "image_url", "image_url": {"url": image}},
+        ]},
+    ]
+
+
+def call_vision(base_url: str, model: str, messages: list) -> tuple[str | None, str | None, float]:
+    url = base_url.rstrip("/") + "/chat/completions"
+    payload = json.dumps({
+        "model": model,
+        "max_tokens": VISION_MAX_TOKENS,
+        "messages": messages,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    t0 = time.monotonic()
+    fail = (
+        "Não consegui falar com o modelo de visão. "
+        "Ele pode estar desligado."
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=VISION_TIMEOUT_S) as resp:
+            raw = resp.read()
+        seconds = round(time.monotonic() - t0, 2)
+        data = json.loads(raw.decode("utf-8"))
+        answer = ((data.get("choices") or [{}])[0]
+                  .get("message") or {}).get("content")
+        if not isinstance(answer, str) or not answer.strip():
+            return None, "O modelo de visão devolveu uma resposta vazia.", seconds
+        return answer, None, seconds
+    except Exception:
+        seconds = round(time.monotonic() - t0, 2)
+        return None, fail, seconds
 
 
 def _plain(text: str) -> str:
@@ -776,15 +862,7 @@ def build_gui_steps(
         dono["plain"] = _plain(first.get("plain") or "")
         if first.get("why"):
             dono["why"] = first["why"]
-        dono["item"] = {
-            "id": first["id"],
-            "title": first["title"],
-            "plain": first.get("plain") or "",
-            "why": first.get("why") or "",
-            "source": first.get("source") or "",
-            "blocks": first.get("blocks") or "",
-            "age_days": first.get("age_days") or 0,
-        }
+        dono["item"] = acao_lib.gui_item(first)
         dono["remaining"] = len(abertas) - 1
         dono["action"] = act
     else:
@@ -1047,10 +1125,10 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             "error": "não autenticado — POST /login {\"token\": …} (cookie) ou header Authorization: Bearer <token>",
         })
 
-    def _read_json_body(self) -> dict | None:
+    def _read_json_body(self, max_len: int = JSON_BODY_MAX) -> dict | None:
         """Lê e valida o corpo JSON do POST; responde o erro e devolve None."""
         length = int(self.headers.get("Content-Length", "0") or "0")
-        if length <= 0 or length > 65536:
+        if length <= 0 or length > max_len:
             self.send_error(400, "bad content-length")
             return None
         raw = self.rfile.read(length)
@@ -1340,6 +1418,74 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             return
         next_id = self._steps_payload()["current"]
         self._json_response(200, {"ok": True, "next": next_id})
+
+    def _handle_gui_ajuda(self, body: dict) -> None:
+        aid = body.get("id")
+        image = body.get("image")
+        note = body.get("note") if isinstance(body.get("note"), str) else ""
+        if not isinstance(aid, str) or not aid:
+            self._json_response(400, {"ok": False, "error": "falta o id da ação"})
+            return
+        path = self._owner_actions_path()
+        abertas = acao_lib.replay(path)
+        if aid not in abertas:
+            self._json_response(400, {"ok": False,
+                                      "error": "essa ação não está aberta"})
+            return
+        parsed = parse_ajuda_image(image)
+        if parsed is None:
+            self._json_response(400, {"ok": False,
+                "error": "mande um print (png ou jpeg, até 4 MB)"})
+            return
+        raw, ext = parsed
+        rec = abertas[aid]
+        dest_dir = self.logs_dir / "ajuda"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%dT%H%M%S", time.gmtime())
+        stamp += f"{time.time_ns() % 1000000:06d}"
+        img_path = dest_dir / f"{stamp}-{aid}.{ext}"
+        json_path = dest_dir / f"{stamp}-{aid}.json"
+        try:
+            img_path.write_bytes(raw)
+        except OSError:
+            self._json_response(500, {"ok": False,
+                                      "error": "não consegui gravar o print"})
+            return
+        model = os.environ.get("ORACFIT_VISION_MODEL") or VISION_MODEL_DEFAULT
+        base = os.environ.get("ORACFIT_VISION_URL") or VISION_URL_DEFAULT
+        messages = ajuda_messages(rec, note, image)
+        answer, err, seconds = call_vision(base, model, messages)
+        record = {
+            "id": aid,
+            "note": note,
+            "answer": answer,
+            "error": err,
+            "model": model,
+            "seconds": seconds,
+            "question": {
+                "title": rec.get("title") or "",
+                "plain": rec.get("plain") or "",
+                "steps": rec.get("steps") or [],
+                "why": rec.get("why") or "",
+                "href": (rec.get("action") or {}).get("href") or "",
+            },
+        }
+        try:
+            json_path.write_text(
+                json.dumps(record, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+            with (self.logs_dir / "ajuda.jsonl").open("a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+        if err or not answer:
+            self._json_response(502, {"ok": False, "error": err or (
+                "Não consegui falar com o modelo de visão. "
+                "Ele pode estar desligado.")})
+            return
+        self._json_response(200, {
+            "ok": True, "answer": answer, "model": model, "seconds": seconds,
+        })
 
     def _handle_gui_dispatches(self) -> None:
         self._json_response(200, {"ok": True, **dispatch_sources(self.oracfit_root, self.logs_dir)})
@@ -1705,10 +1851,12 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             self._deny_json()
             return
         if parsed.path not in ("/api/message", "/api/ring-score", "/api/dispatch",
-                               "/api/gui/decide", "/api/gui/acao"):
+                               "/api/gui/decide", "/api/gui/acao",
+                               "/api/gui/ajuda"):
             self.send_error(404, "not found")
             return
-        body = self._read_json_body()
+        max_len = AJUDA_BODY_MAX if parsed.path == "/api/gui/ajuda" else JSON_BODY_MAX
+        body = self._read_json_body(max_len)
         if body is None:
             return
 
@@ -1717,6 +1865,9 @@ class OracfitPanelHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/gui/acao":
             self._handle_gui_acao(body)
+            return
+        if parsed.path == "/api/gui/ajuda":
+            self._handle_gui_ajuda(body)
             return
         if parsed.path == "/api/ring-score":
             self._handle_ring_score(body)
