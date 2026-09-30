@@ -26,6 +26,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$REPO_ROOT/bin/lib-oracfit-gauntlet.sh"
 # shellcheck source=lib-oracfit-preflight.sh
 source "$REPO_ROOT/bin/lib-oracfit-preflight.sh"
+# shellcheck source=lib-oracfit-events.sh
+source "$REPO_ROOT/bin/lib-oracfit-events.sh"
 
 SPEC_FILE="${1:?Uso: dispatch-escalate.sh <spec_file> <task_name> [--mode 1|2|3] [--workdir DIR]}"
 TASK_NAME="${2:?Uso: dispatch-escalate.sh <spec_file> <task_name> [--mode 1|2|3] [--workdir DIR]}"
@@ -53,6 +55,11 @@ while [ $# -gt 0 ]; do
 done
 
 [ -f "$SPEC_FILE" ] || { echo "spec não encontrada: $SPEC_FILE" >&2; exit 3; }
+
+# events.jsonl vive no workdir do dispatch (não no REPO_ROOT do oracfit) —
+# sem isso oracfit_emit_event escreve no $PWD de quem chamou, nunca visto
+# pela GUI que olha .dispatch/logs/events.jsonl do workdir do item.
+export ORACFIT_WORKDIR="${WORKDIR:-$PWD}"
 
 # Immutable base for gauntlet compose (never append to escalate in a chain).
 ORIGINAL_SPEC="$(cd "$(dirname "$SPEC_FILE")" && pwd)/$(basename "$SPEC_FILE")"
@@ -295,6 +302,14 @@ if [ "$PF_RC" -ne 0 ]; then
   exit 3
 fi
 
+# run_started SÓ depois do preflight passar (mesmo princípio dos gates
+# acima: nenhum evento de "run vivo" pra um dispatch que não gastou modelo
+# nenhum). Sem isto, batch/escalate ficava invisível em "Run ao vivo" —
+# só dispatch-mode.sh mintava ORACFIT_RUN_ID e emitia run_started/finished.
+RUN_ID="$(oracfit_mint_run_id)"
+export ORACFIT_RUN_ID="$RUN_ID"
+oracfit_emit_event run_started mode=escalate task="$TASK_NAME" model_id="${TIERS[0]}" escalate_mode="$MODE" tiers="${TIERS[*]}"
+
 TOTAL_START=$(date +%s)
 PREV_SIG=""
 CONSECUTIVE_SIMILAR=0
@@ -346,6 +361,7 @@ for tier_idx in "${!TIERS[@]}"; do
         echo "══════════════════════════════════════════════════════════"
         echo "{\"task_name\":\"$TASK_NAME\",\"mode\":$MODE,\"result\":\"success\",\"tier\":\"$label\",\"model\":\"$model\",\"attempt\":$attempt,\"duration_s\":$DURATION,\"total_s\":$TOTAL_DUR,\"runner_exit\":0,\"oracle_exit\":0}" >> "$LOG_DIR/escalate-ledger.jsonl"
         emit_usage success 0 "{\"tier\":\"$label\",\"model\":\"$model\",\"attempt\":$attempt,\"duration_s\":$DURATION,\"total_s\":$TOTAL_DUR}"
+        oracfit_emit_event run_finished status=success tier="$label" model_id="$model" attempt="$attempt" duration_s="$DURATION" total_s="$TOTAL_DUR"
         exit 0
       fi
       CUR_SIG="oracle_exit=0
@@ -451,4 +467,5 @@ echo " último erro: $PREV_SIG"
 echo "══════════════════════════════════════════════════════════"
 echo "{\"task_name\":\"$TASK_NAME\",\"mode\":$MODE,\"result\":\"blocked\",\"tiers_used\":${#TIERS[@]},\"total_s\":$TOTAL_DUR,\"last_error\":\"$(echo "$PREV_SIG" | head -1 | tr '"' "'")\"}" >> "$LOG_DIR/escalate-ledger.jsonl"
 emit_usage blocked 1 "{\"tiers_used\":${#TIERS[@]},\"total_s\":$TOTAL_DUR,\"last_error\":\"$(echo "$PREV_SIG" | head -1 | tr '"' "'")\"}"
+oracfit_emit_event run_finished status=blocked tiers_used="${#TIERS[@]}" total_s="$TOTAL_DUR"
 exit 1
