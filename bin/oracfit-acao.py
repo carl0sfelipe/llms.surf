@@ -2,8 +2,10 @@
 """oracfit-acao.py — pedidos de agente ao dono (arquivo append-only).
 
 Uso (via `oracfit acao`):
-  add <id> --title T --plain P [--why W] [--command C | --href H]
-           [--source S] [--blocks B] [--file PATH]
+  add <id> --title T --plain P [--why W] [--command C] [--href H]
+           [--step "texto[|href=URL][|copy=TEXTO]"]…
+           [--artifact P] [--context P]… [--prioridade alta|normal]
+           [--decisao] [--source S] [--blocks B] [--file PATH]
   done <id>
   snooze <id> <horas>
   list [--json]
@@ -23,6 +25,9 @@ from pathlib import Path
 
 ACTION_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 DEFAULT_PATH = Path.home() / ".config" / "llms-surf" / "acoes-do-dono.jsonl"
+STEP_TEXT_MAX = 90
+STEPS_MAX = 6
+PRIORIDADES = ("alta", "normal")
 
 
 def resolve_path(explicit: str | Path | None = None) -> Path:
@@ -53,8 +58,132 @@ def parse_ts(ts: str) -> datetime | None:
     return dt
 
 
+def valid_href(href: object) -> bool:
+    if not isinstance(href, str) or not href:
+        return False
+    if href.startswith("https://"):
+        return True
+    if href.startswith("http://127.0.0.1") or href.startswith("http://localhost"):
+        return True
+    return False
+
+
 def _valid_id(aid: object) -> bool:
     return isinstance(aid, str) and bool(ACTION_ID_RE.match(aid))
+
+
+def parse_step(raw: str) -> dict | str:
+    """Dicionário do step, ou mensagem de erro."""
+    if not isinstance(raw, str):
+        return "step inválido"
+    parts = raw.split("|")
+    text = parts[0]
+    if len(text) > STEP_TEXT_MAX:
+        return "step passa de 90 caracteres"
+    step: dict = {"text": text}
+    for part in parts[1:]:
+        if part.startswith("href="):
+            href = part[5:]
+            if not valid_href(href):
+                return "href inválido"
+            step["href"] = href
+        elif part.startswith("copy="):
+            step["copy"] = part[5:]
+    return step
+
+
+def ago_from_dt(dt: datetime) -> str:
+    delta = datetime.now(timezone.utc) - dt
+    secs = max(0, int(delta.total_seconds()))
+    if secs < 60:
+        return "há 0 min"
+    mins = secs // 60
+    if mins < 60:
+        return f"há {mins} min"
+    hours = mins // 60
+    if hours < 24:
+        return f"há {hours} h"
+    days = hours // 24
+    if days == 1:
+        return "há 1 dia"
+    return f"há {days} dias"
+
+
+def ago_label(ts: str) -> str:
+    dt = parse_ts(ts)
+    if dt is None:
+        return "há 0 min"
+    return ago_from_dt(dt)
+
+
+def mtime_iso(path: Path) -> str:
+    dt = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def artifact_status(path: str, context: list | None) -> dict:
+    p = Path(path)
+    if not p.is_file():
+        return {
+            "path": path,
+            "exists": False,
+            "generated_at": "",
+            "generated_ago": "",
+            "status": "sumiu",
+        }
+    art_mtime = p.stat().st_mtime
+    info = {
+        "path": path,
+        "exists": True,
+        "generated_at": mtime_iso(p),
+        "generated_ago": ago_from_dt(
+            datetime.fromtimestamp(art_mtime, tz=timezone.utc)),
+        "status": "ok",
+    }
+    newest_path = None
+    newest_mt = art_mtime
+    for c in context or []:
+        if not isinstance(c, str) or not c:
+            continue
+        cp = Path(c)
+        if not cp.is_file():
+            continue
+        mt = cp.stat().st_mtime
+        if mt > newest_mt:
+            newest_mt = mt
+            newest_path = c
+    if newest_path is not None:
+        info["status"] = "velho"
+        info["stale_because"] = newest_path
+    return info
+
+
+def gui_item(rec: dict) -> dict:
+    """Item do passo dono: asked_at/ago, steps, artifact com status."""
+    item = {
+        "id": rec["id"],
+        "title": rec["title"],
+        "plain": rec.get("plain") or "",
+        "why": rec.get("why") or "",
+        "source": rec.get("source") or "",
+        "blocks": rec.get("blocks") or "",
+        "age_days": rec.get("age_days") if rec.get("age_days") is not None
+                    else age_days(rec.get("ts") or ""),
+        "asked_at": rec.get("ts") or rec.get("asked_at") or "",
+        "asked_ago": ago_label(rec.get("ts") or rec.get("asked_at") or ""),
+        "steps": list(rec.get("steps") or []),
+    }
+    raw = rec.get("artifact")
+    path = raw if isinstance(raw, str) and raw else ""
+    if path:
+        ctx = rec.get("context") if isinstance(rec.get("context"), list) else []
+        item["artifact"] = artifact_status(path, ctx)
+    return item
+
+
+def _open_sort_key(rec: dict) -> tuple:
+    pri = 0 if rec.get("priority") == "alta" else 1
+    return (pri, rec.get("ts") or "")
 
 
 def _valid_add(ev: dict) -> bool:
@@ -102,6 +231,12 @@ def replay(path: Path) -> dict[str, dict]:
             action = ev.get("action")
             if not isinstance(action, dict):
                 action = {"kind": "none"}
+            steps = ev.get("steps") if isinstance(ev.get("steps"), list) else []
+            ctx = ev.get("context") if isinstance(ev.get("context"), list) else []
+            pri = ev.get("priority")
+            if pri not in PRIORIDADES:
+                pri = "normal"
+            art = ev.get("artifact") if isinstance(ev.get("artifact"), str) else ""
             items[aid] = {
                 "id": aid,
                 "ts": ev.get("ts") or "",
@@ -112,6 +247,11 @@ def replay(path: Path) -> dict[str, dict]:
                 "source": ev.get("source") or "",
                 "blocks": ev.get("blocks") or "",
                 "until": None,
+                "steps": steps,
+                "artifact": art,
+                "context": ctx,
+                "priority": pri,
+                "decision": bool(ev.get("decision")),
             }
         elif typ == "done":
             items.pop(aid, None)
@@ -145,9 +285,10 @@ def age_days(ts: str) -> int:
 
 
 def open_list(path: Path) -> list[dict]:
+    recs = sorted(replay(path).values(), key=_open_sort_key)
     out = []
-    for rec in replay(path).values():
-        out.append({
+    for rec in recs:
+        item = {
             "id": rec["id"],
             "title": rec["title"],
             "plain": rec["plain"],
@@ -156,13 +297,22 @@ def open_list(path: Path) -> list[dict]:
             "blocks": rec.get("blocks") or "",
             "age_days": age_days(rec.get("ts") or ""),
             "action": rec.get("action") or {"kind": "none"},
-        })
+            "ts": rec.get("ts") or "",
+            "steps": rec.get("steps") or [],
+            "priority": rec.get("priority") or "normal",
+            "decision": bool(rec.get("decision")),
+        }
+        if rec.get("artifact"):
+            item["artifact"] = rec["artifact"]
+        if rec.get("context"):
+            item["context"] = rec["context"]
+        out.append(item)
     return out
 
 
-def _action_from_flags(command: str | None, href: str | None) -> dict | None:
+def _action_from_flags(command: str | None, href: str | None) -> dict:
     if command and href:
-        return None
+        return {"kind": "link", "label": "Abrir", "href": href, "command": command}
     if command:
         return {"kind": "copy", "label": "Copiar comando", "command": command}
     if href:
@@ -180,6 +330,11 @@ def add_action(
     href: str | None = None,
     source: str = "",
     blocks: str = "",
+    steps_raw: list[str] | None = None,
+    artifact: str | None = None,
+    context: list[str] | None = None,
+    prioridade: str = "normal",
+    decisao: bool = False,
 ) -> int:
     if not ACTION_ID_RE.match(aid):
         print("id inválido (use letras minúsculas, números e hífen)", file=sys.stderr)
@@ -191,21 +346,56 @@ def add_action(
     if not isinstance(plain, str) or len(plain) > 140:
         print("plain passa de 140 caracteres", file=sys.stderr)
         return 2
-    action = _action_from_flags(command, href)
-    if action is None:
-        print("use --command ou --href, não os dois", file=sys.stderr)
+    raw_steps = list(steps_raw or [])
+    if len(raw_steps) > STEPS_MAX:
+        print("no máximo 6 steps", file=sys.stderr)
         return 2
-    append_event(path, {
+    steps: list[dict] = []
+    for raw in raw_steps:
+        parsed = parse_step(raw)
+        if isinstance(parsed, str):
+            print(parsed, file=sys.stderr)
+            return 2
+        steps.append(parsed)
+    href = href.strip() if isinstance(href, str) and href.strip() else None
+    command = command.strip() if isinstance(command, str) and command.strip() else None
+    if href and not valid_href(href):
+        print("href inválido", file=sys.stderr)
+        return 2
+    if not href and not command and not steps and not decisao:
+        print("ação precisa de --href, --command, --step ou --decisao", file=sys.stderr)
+        return 2
+    if prioridade not in PRIORIDADES:
+        print("prioridade inválida", file=sys.stderr)
+        return 2
+    art = ""
+    if artifact and str(artifact).strip():
+        art = str(Path(str(artifact).strip()).expanduser())
+    ctx: list[str] = []
+    for c in context or []:
+        if c and str(c).strip():
+            ctx.append(str(Path(str(c).strip()).expanduser()))
+    ev: dict = {
         "type": "add",
         "id": aid,
         "ts": now_iso(),
         "title": title,
         "plain": plain,
         "why": why or "",
-        "action": action,
+        "action": _action_from_flags(command, href),
         "source": source or "",
         "blocks": blocks or "",
-    })
+        "priority": prioridade,
+    }
+    if steps:
+        ev["steps"] = steps
+    if art:
+        ev["artifact"] = art
+    if ctx:
+        ev["context"] = ctx
+    if decisao:
+        ev["decision"] = True
+    append_event(path, ev)
     return 0
 
 
@@ -304,6 +494,11 @@ def main(argv: list[str] | None = None) -> int:
     p_add.add_argument("--why", default="")
     p_add.add_argument("--command", default=None)
     p_add.add_argument("--href", default=None)
+    p_add.add_argument("--step", action="append", default=[])
+    p_add.add_argument("--artifact", default=None)
+    p_add.add_argument("--context", action="append", default=[])
+    p_add.add_argument("--prioridade", choices=PRIORIDADES, default="normal")
+    p_add.add_argument("--decisao", action="store_true")
     p_add.add_argument("--source", default="")
     p_add.add_argument("--blocks", default="")
 
@@ -326,6 +521,9 @@ def main(argv: list[str] | None = None) -> int:
             path, args.id, args.title, args.plain,
             why=args.why, command=args.command, href=args.href,
             source=args.source, blocks=args.blocks,
+            steps_raw=args.step, artifact=args.artifact,
+            context=args.context, prioridade=args.prioridade,
+            decisao=args.decisao,
         )
     if args.cmd == "done":
         return close_action(path, args.id)
