@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Oracfit — Passo a passo</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="gui.css" />
+</head>
+<body class="gui" data-page="passos">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="content" id="passos">
+    <div class="passos-progress" id="passos-progress">
+      <span class="passos-label" id="passos-label">Carregando…</span>
+      <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="passos-bar-wrap">
+        <div class="progress-bar-fill" id="passos-bar"></div>
+      </div>
+    </div>
+    <p class="passos-notice" id="passos-notice" role="status" aria-live="polite"></p>
+    <ol class="passos-done" id="passos-feitos"></ol>
+    <article class="passo-card" id="passo-agora" aria-current="step"></article>
+    <ol class="passos-later" id="passos-depois"></ol>
+    <p id="passo-err" class="passo-err" hidden></p>
+    <div id="glossary"></div>
+  </main>
+
+  <script src="gui.js"></script>
+  <script>
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let stamp = "";
+  let lastData = null;
+  let noticeTimer = 0;
+
+  function stampOf(d) {
+    const cur = (d.steps || []).find((s) => s.id === d.current) || {};
+    const item = cur.item || {};
+    const specs = (cur.specs || []).map((s) => s.path).join(",");
+    return [d.current, d.position, d.total, cur.remaining || 0, item.run_key || "", specs].join("|");
+  }
+
+  function setNotice(text) {
+    const el = $("passos-notice");
+    el.textContent = text || "";
+    clearTimeout(noticeTimer);
+    if (text) {
+      noticeTimer = setTimeout(() => { el.textContent = ""; }, 8000);
+    }
+  }
+
+  function setErr(text) {
+    const el = $("passo-err");
+    if (!text) { el.hidden = true; el.textContent = ""; return; }
+    el.hidden = false;
+    el.textContent = text;
+  }
+
+  function focusPrimary() {
+    const el = document.querySelector("[data-primary]");
+    if (el) el.focus();
+  }
+
+  function optionButtons(action) {
+    return (action.options || []).map((o) => {
+      const rec = o.recommended ? " recommended" : "";
+      const badge = o.recommended ? '<span class="option-badge">recomendado</span>' : "";
+      const hint = o.hint ? `<span class="option-hint">${esc(o.hint)}</span>` : "";
+      const primary = o.recommended ? " data-primary" : "";
+      const recAttr = o.recommended ? " data-recommended" : "";
+      return `<button type="button" class="option${rec}" id="opt-${esc(o.id)}"
+        data-choice="${esc(o.id)}"${primary}${recAttr}>
+        <span class="option-label">${esc(o.label)}${badge}</span>${hint}
+      </button>`;
+    }).join("");
+  }
+
+  function actionHTML(step) {
+    const a = step.action || { kind: "none" };
+    if (a.kind === "choice") {
+      return `<div class="passo-actions" id="passo-actions">${optionButtons(a)}</div>`;
+    }
+    if (a.kind === "copy") {
+      return `<div class="passo-actions">
+        <p class="passo-cmd-wrap"><code id="passo-cmd">${esc(a.command || "")}</code></p>
+        <button type="button" class="btn primary" id="passo-copy" data-primary>${esc(a.label || "Copiar")}</button>
+      </div>`;
+    }
+    if (a.kind === "post") {
+      return `<div class="passo-actions">
+        <button type="button" class="btn primary" id="passo-post" data-primary>${esc(a.label || "Despachar")}</button>
+      </div>`;
+    }
+    if (a.kind === "link" && a.href) {
+      return `<div class="passo-actions">
+        <a class="btn primary" id="passo-link" data-primary href="${esc(a.href)}">${esc(a.label || "Abrir")}</a>
+      </div>`;
+    }
+    return "";
+  }
+
+  function extraHTML(step) {
+    const bits = [];
+    if (step.item && step.item.why_failed) {
+      bits.push(`<p class="passo-extra">${esc(step.item.why_failed)}</p>`);
+    }
+    if (step.remaining > 1) {
+      const n = step.remaining - 1;
+      bits.push(`<p class="passo-extra">Depois desta, ainda tem ${n} ${n === 1 ? "outra" : "outras"}.</p>`);
+    }
+    if (step.specs && step.specs.length) {
+      const first = step.specs[0];
+      bits.push(`<p class="passo-extra">A próxima é <strong>${esc(first.task)}</strong>.</p>`);
+      bits.push(`<p class="passo-extra tech"><code>${esc(first.path)}</code></p>`);
+      if (step.specs.length > 1) {
+        const n = step.specs.length - 1;
+        bits.push(`<p class="passo-extra">Tem mais ${n} depois desta.</p>`);
+      }
+    }
+    return bits.join("");
+  }
+
+  function bindActions(step) {
+    const a = step.action || {};
+    if (a.kind === "choice") {
+      document.querySelectorAll("#passo-actions button.option").forEach((btn) => {
+        btn.addEventListener("click", () => decide(step, btn.getAttribute("data-choice")));
+      });
+    }
+    if (a.kind === "copy") {
+      const btn = $("passo-copy");
+      if (btn) btn.addEventListener("click", () => copyCommand(a.command || "", btn));
+    }
+    if (a.kind === "post") {
+      const btn = $("passo-post");
+      if (btn) btn.addEventListener("click", () => postDispatch(a, btn));
+    }
+  }
+
+  async function decide(step, choice) {
+    const key = step.item && step.item.run_key;
+    if (!key || !choice) return;
+    setErr("");
+    try {
+      const { status, body } = await postJSON("/api/gui/decide", { run_key: key, choice });
+      if (!body || !body.ok) {
+        setErr((body && body.error) || `Não deu para gravar (código ${status}).`);
+        return;
+      }
+      const d = await load({ focus: true, force: true });
+      const next = (d.steps || []).find((s) => s.id === body.next)
+        || (d.steps || []).find((s) => s.state === "agora");
+      if (next && next.title) setNotice(`Feito. Agora: ${next.title}`);
+    } catch (err) {
+      setErr(err.message || "Não deu para gravar a decisão.");
+    }
+  }
+
+  async function copyCommand(text, btn) {
+    const done = () => {
+      const old = btn.textContent;
+      btn.textContent = "Copiado";
+      setTimeout(() => { btn.textContent = old; }, 1600);
+    };
+    const fallback = () => {
+      const code = $("passo-cmd");
+      if (!code) return;
+      const range = document.createRange();
+      range.selectNodeContents(code);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        done();
+      } else {
+        fallback();
+      }
+    } catch (_) {
+      fallback();
+    }
+  }
+
+  async function postDispatch(action, btn) {
+    setErr("");
+    btn.disabled = true;
+    const old = btn.textContent;
+    btn.textContent = "Enviando…";
+    try {
+      const { status, body } = await postJSON(action.endpoint || "/api/dispatch", action.payload || {});
+      if (!body || !body.ok) {
+        setErr((body && body.error) || `Não deu para entregar (código ${status}).`);
+        return;
+      }
+      setNotice("Entregue. O robô já pode começar.");
+      await load({ focus: true, force: true });
+    } catch (err) {
+      setErr(err.message || "Não deu para entregar a tarefa.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = old;
+    }
+  }
+
+  function render(d) {
+    lastData = d;
+    $("passos-label").textContent = `Passo ${d.position} de ${d.total}`;
+    const pct = d.total ? Math.round((d.position / d.total) * 100) : 0;
+    $("passos-bar").style.width = `${pct}%`;
+    $("passos-bar-wrap").setAttribute("aria-valuenow", String(pct));
+
+    const feitos = $("passos-feitos");
+    feitos.innerHTML = (d.steps || []).filter((s) => s.state === "feito").map((s) =>
+      `<li class="passos-line feito">✓ ${esc(s.title)}</li>`).join("");
+
+    const depois = $("passos-depois");
+    depois.innerHTML = (d.steps || []).filter((s) => s.state === "depois").map((s) =>
+      `<li class="passos-line depois">${esc(s.title)}</li>`).join("");
+
+    const step = (d.steps || []).find((s) => s.state === "agora") || {};
+    const why = step.why
+      ? `<details class="porque"><summary>Por quê?</summary><p>${esc(step.why)}</p></details>`
+      : "";
+    $("passo-agora").innerHTML = `
+      <h2 class="passo-title">${esc(step.title || "")}</h2>
+      <p class="passo-plain">${esc(step.plain || "")}</p>
+      ${extraHTML(step)}
+      ${actionHTML(step)}
+      ${why}`;
+    bindActions(step);
+  }
+
+  async function load(opts) {
+    const focus = !!(opts && opts.focus);
+    const force = !!(opts && opts.force);
+    let d;
+    try { d = await getJSON("/api/gui/steps"); }
+    catch (err) { showError($("passo-agora"), err); return lastData; }
+    const next = stampOf(d);
+    if (!force && next === stamp) return d;
+    const active = document.activeElement;
+    const keepId = (!focus && active && active.id) ? active.id : "";
+    render(d);
+    stamp = next;
+    if (focus) focusPrimary();
+    else if (keepId) {
+      const el = document.getElementById(keepId);
+      if (el) el.focus();
+    }
+    return d;
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    if (e.target && e.target.closest("button, a, textarea, input, select, summary")) return;
+    const primary = document.querySelector("[data-primary]");
+    if (primary) { e.preventDefault(); primary.click(); }
+  });
+
+  load({ focus: true });
+  setInterval(() => load({ focus: false }), 15000);
+  </script>
+</body>
+</html>

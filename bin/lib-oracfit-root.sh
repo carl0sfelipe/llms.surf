@@ -2,6 +2,7 @@
 # Source me: source lib-oracfit-root.sh; oracfit_resolve_root
 #
 # Precedence: ORACFIT_ROOT > DISPATCH_ROOT > $HOME/.oracfit/current
+# > repo do próprio script ($SCRIPT_DIR/.. se tiver panel/ e bin/oracfit)
 # Both set and differ => error to stderr, return 1.
 
 oracfit_resolve_root() {
@@ -29,8 +30,22 @@ oracfit_resolve_root() {
   elif [ -d "$HOME/.oracfit/current" ]; then
     _root="$HOME/.oracfit/current"
   else
-    echo "ERROR: cannot resolve Oracfit root. Set ORACFIT_ROOT, DISPATCH_ROOT, or ensure ~/.oracfit/current exists." >&2
-    return 1
+    # B1: rodado de dentro do repo, sem ~/.oracfit/current — o próprio
+    # script conhece a instalação (bin/ → raiz com panel/ e bin/oracfit).
+    local _script_dir="${SCRIPT_DIR:-}"
+    if [ -z "$_script_dir" ]; then
+      _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    fi
+    local _self=""
+    if [ -n "$_script_dir" ] && [ -d "$_script_dir/.." ]; then
+      _self="$(cd "$_script_dir/.." && pwd -P 2>/dev/null)" || _self=""
+    fi
+    if [ -n "$_self" ] && [ -d "$_self/panel" ] && [ -e "$_self/bin/oracfit" ]; then
+      _root="$_self"
+    else
+      echo "ERROR: cannot resolve Oracfit root. Set ORACFIT_ROOT, DISPATCH_ROOT, or ensure ~/.oracfit/current exists." >&2
+      return 1
+    fi
   fi
 
   _root="$(_oracfit_abspath "$_root")" || return 1

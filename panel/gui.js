@@ -8,6 +8,7 @@
 
 const GUI_PAGES = [
   { group: "Agir", items: [
+    { href: "passos.html", label: "Passo a passo", id: "passos" },
     { href: "home.html", label: "Agora", id: "home" },
     { href: "hitl.html", label: "Calibração", id: "hitl" },
   ]},
@@ -37,13 +38,57 @@ function buildSidebar() {
     }
   }
   host.innerHTML = html;
-  // contagem "para dar nota" ao lado de Calibração — progresso visível sem abrir a página
-  fetch("/api/rings").then((r) => r.json()).then((d) => {
+  // B2: contagem de notas vem de /api/gui/home (nunca /api/rings sem alvo — 404)
+  fetch("/api/gui/home").then((r) => r.json()).then((d) => {
     if (d && d.ok && d.to_score > 0) {
       const el = host.querySelector('[data-navcount="hitl"]');
       if (el) el.textContent = String(d.to_score);
     }
   }).catch(() => {});
+}
+
+function joinMeta(...parts) {
+  return parts.filter((p) => p != null && String(p).trim() !== "" && p !== "—").join(" · ");
+}
+
+function applySimple(on) {
+  document.body.classList.toggle("simple", on);
+  const btn = document.getElementById("simplify");
+  if (btn) {
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = on ? "Mostrar detalhes" : "Simplificar";
+  }
+}
+
+function initSimplify() {
+  let btn = document.getElementById("simplify");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "simplify";
+    btn.className = "btn";
+    document.body.appendChild(btn);
+  }
+  let on = false;
+  try {
+    const v = localStorage.getItem("oracfit.simple");
+    on = v === "1" || v === "true";
+  } catch (_) { /* sem storage: default desligado */ }
+  applySimple(on);
+  btn.addEventListener("click", () => {
+    const next = !document.body.classList.contains("simple");
+    try { localStorage.setItem("oracfit.simple", next ? "1" : "0"); } catch (_) {}
+    applySimple(next);
+  });
+}
+
+function ensureFavicon() {
+  if (document.querySelector('link[rel="icon"]')) return;
+  const link = document.createElement("link");
+  link.rel = "icon";
+  link.href = "favicon.svg";
+  link.type = "image/svg+xml";
+  document.head.appendChild(link);
 }
 
 async function getJSON(url) {
@@ -141,4 +186,9 @@ function buildGlossary() {
     </details>`;
 }
 
-document.addEventListener("DOMContentLoaded", () => { buildSidebar(); buildGlossary(); });
+document.addEventListener("DOMContentLoaded", () => {
+  buildSidebar();
+  buildGlossary();
+  initSimplify();
+  ensureFavicon();
+});

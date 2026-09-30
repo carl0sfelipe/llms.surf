@@ -44,6 +44,7 @@ body.gui {
   display: grid;
   grid-template-columns: 216px 1fr;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* ── sidebar persistente ───────────────────────────────────────────────── */
@@ -580,3 +581,214 @@ details.ver-mais pre {
   outline: none; border-color: var(--data-secondary);
 }
 .form-grid button { min-height: 46px; }  /* alvo de dedo confortável */
+
+/* ── foco visível (teclado e celular) ─────────────────────────────────── */
+.btn:focus-visible,
+#simplify:focus-visible,
+button.option:focus-visible,
+a.nav-link:focus-visible,
+a:focus-visible,
+details.porque > summary:focus-visible {
+  outline: 3px solid var(--data-secondary);
+  outline-offset: 3px;
+}
+
+/* ── Simplificar (todas as páginas) ───────────────────────────────────── */
+#simplify {
+  position: fixed;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 40;
+  min-height: 44px;
+  min-width: 44px;
+  padding: var(--space-2) var(--space-4);
+  font-size: 14px;
+}
+
+body.simple {
+  grid-template-columns: 1fr;
+}
+
+body.simple .sidebar,
+body.simple .telemetry-strip,
+body.simple #glossary,
+body.simple .tech,
+body.simple details.porque {
+  display: none !important;
+}
+
+body.simple[data-page="passos"] .passos-progress,
+body.simple[data-page="passos"] .passos-done,
+body.simple[data-page="passos"] .passos-later {
+  display: none;
+}
+
+body.simple[data-page="passos"] .passo-card {
+  font-size: 18px;
+}
+
+body.simple[data-page="passos"] .passo-card .passo-title {
+  font-size: 28px;
+}
+
+/* ── Passo a passo ────────────────────────────────────────────────────── */
+.passos-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  padding-right: 148px; /* o botão Simplificar não cobre o rótulo */
+}
+
+.passos-label {
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.passos-notice {
+  min-height: 1.4em;
+  margin: 0 0 var(--space-3);
+  color: var(--data-success);
+  font-weight: 600;
+}
+
+.passos-done,
+.passos-later {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+}
+
+.passos-line {
+  padding: var(--space-2) 0;
+  color: var(--fg-secondary);
+  font-size: 14px;
+}
+
+.passos-line.feito { color: var(--data-success); }
+.passos-line.depois { color: var(--fg-tertiary); }
+
+.passo-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-left: 4px solid var(--data-secondary);
+  border-radius: var(--radius);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+  max-width: 640px;
+}
+
+.passo-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 var(--space-3);
+  line-height: 1.25;
+}
+
+.passo-plain {
+  font-size: 17px;
+  margin: 0 0 var(--space-4);
+  line-height: 1.5;
+}
+
+.passo-extra {
+  color: var(--fg-secondary);
+  font-size: 14px;
+  margin: 0 0 var(--space-3);
+}
+
+.passo-cmd-wrap {
+  margin: 0 0 var(--space-3);
+}
+
+.passo-cmd-wrap code,
+.passo-extra code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--bg-default);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  display: block;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.passo-actions { display: flex; flex-direction: column; gap: var(--space-3); }
+
+button.option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface-hover);
+  color: var(--fg-primary);
+  cursor: pointer;
+}
+
+button.option.recommended {
+  border-color: var(--data-secondary);
+  background: var(--bg-surface-active);
+}
+
+button.option:hover,
+button.option:focus-visible {
+  border-color: var(--data-secondary);
+}
+
+.option-label { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+
+.option-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bg-default);
+  background: var(--data-secondary);
+  border-radius: 2px;
+  padding: 2px 6px;
+}
+
+.option-hint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fg-secondary);
+}
+
+.passo-err {
+  color: var(--data-alert-critical);
+  font-weight: 500;
+  margin: 0 0 var(--space-4);
+}
+
+details.porque { margin-top: var(--space-4); }
+details.porque > summary {
+  cursor: pointer;
+  color: var(--data-secondary);
+  font-size: 14px;
+}
+details.porque p { color: var(--fg-secondary); margin: var(--space-2) 0 0; }
+
+@media (max-width: 720px) {
+  body.gui > main.content { padding-top: calc(var(--space-5) + 44px); }
+  .passos-progress { padding-right: 0; flex-wrap: wrap; }
+}
+
+@media (max-width: 400px) {
+  main.content { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .passo-card { padding: var(--space-4); }
+  .passo-title { font-size: 22px; }
+  button.option { min-height: 56px; font-size: 16px; }
+  #simplify { top: var(--space-2); right: var(--space-2); font-size: 13px; }
+}
