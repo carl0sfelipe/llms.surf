@@ -133,7 +133,7 @@ for i in $(seq 0 $((TOTAL - 1))); do
   if [ ! -f "$spec" ]; then
     echo "  ❌ $task — spec não existe: $spec"; GATE_FAIL=1; continue
   fi
-  if [ ! -d "$dir/.git" ]; then
+  if ! git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then  # worktree tem .git ARQUIVO (incidente 2026-09-29)
     echo "  ❌ $task — workdir não é repo git: $dir"; GATE_FAIL=1; continue
   fi
   if ! bash "$REPO_ROOT/bin/check-spec.sh" "$spec" > "$WORK_TMP/gate-$i.txt" 2>&1; then
