@@ -9,11 +9,13 @@
 #
 # Usage: oracfit-gui.sh [--target DIR] [--workdir DIR] [--port N] [--bind ADDR]
 #                       [--auth-token SEGREDO] [--enable-dispatch]
+#                       [--owner-actions PATH]
 #   --target DIR       alvo com ring/ (habilita a página de calibração HITL)
 #   --workdir DIR      projeto com .dispatch/logs (default: $PWD)
 #   --auth-token       token de acesso (login /login · Bearer); obrigatório
 #                      se --bind fora do loopback (fail-closed); env ORACFIT_GUI_TOKEN
 #   --enable-dispatch  liga o POST /api/dispatch (ver docs/gui-remote.md)
+#   --owner-actions    jsonl de ações do dono (senão env ORACFIT_OWNER_ACTIONS)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,6 +28,7 @@ BIND="127.0.0.1"
 TARGET=""
 TOKEN="${ORACFIT_GUI_TOKEN:-}"
 ENABLE_DISPATCH=0
+OWNER_ACTIONS=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -35,10 +38,12 @@ while [ $# -gt 0 ]; do
     --bind) shift; BIND="${1:?}"; shift ;;
     --auth-token) shift; TOKEN="${1:?--auth-token requer segredo}"; shift ;;
     --enable-dispatch) ENABLE_DISPATCH=1; shift ;;
+    --owner-actions) shift; OWNER_ACTIONS="${1:?--owner-actions requer path}"; shift ;;
     --help|-h)
       cat <<EOF
 Usage: oracfit-gui.sh [--target DIR] [--workdir DIR] [--port N] [--bind ADDR]
                       [--auth-token SEGREDO] [--enable-dispatch]
+                      [--owner-actions PATH]
 
 GUI local do oracfit num servidor só (python3 stdlib):
   /home.html        agora: runs vivos, anéis abertos, disco, audit
@@ -89,6 +94,9 @@ if [ -n "$TOKEN" ]; then
 fi
 if [ "$ENABLE_DISPATCH" = "1" ]; then
   EXTRA+=(--enable-dispatch)
+fi
+if [ -n "$OWNER_ACTIONS" ]; then
+  EXTRA+=(--owner-actions "$OWNER_ACTIONS")
 fi
 
 echo "workdir=$WORKDIR"

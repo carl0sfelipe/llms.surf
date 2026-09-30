@@ -9,6 +9,36 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="gui.css" />
+  <style>
+    .passo-asked { font-size: 13px; color: var(--fg-secondary); margin: 0 0 var(--space-3); }
+    .selo { display: inline-block; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: var(--radius); margin: 0 0 var(--space-4); }
+    .selo-ok { color: var(--bg-default); background: var(--data-success); }
+    .selo-velho { color: var(--bg-default); background: var(--data-alert-warning); }
+    .selo-sumiu { color: #fff; background: var(--data-alert-critical); }
+    .passo-micro { margin: 0 0 var(--space-4); }
+    .passo-step-count { font-size: 14px; font-weight: 600; color: var(--fg-secondary); margin: 0 0 var(--space-2); }
+    .passo-step-text { font-size: 18px; font-weight: 600; margin: 0 0 var(--space-3); line-height: 1.4; }
+    .passo-duo { display: flex; gap: var(--space-3); }
+    .passo-duo .btn, .passo-duo a.btn { flex: 1; }
+    .ajuda-toggle { margin-top: var(--space-3); }
+    .ajuda-area { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border-default); }
+    .ajuda-hint { font-size: 16px; margin: 0 0 var(--space-3); }
+    .ajuda-drop { min-height: 72px; border: 2px dashed var(--border-default); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; color: var(--fg-secondary); font-size: 16px; margin: 0 0 var(--space-3); }
+    .ajuda-note-label { display: block; font-size: 15px; margin: 0 0 var(--space-2); }
+    #ajuda-note, #ajuda-file { width: 100%; font-size: 16px; margin: 0 0 var(--space-3); }
+    #ajuda-note { font-family: var(--font-sans); padding: var(--space-3); border-radius: var(--radius); border: 1px solid var(--border-default); background: var(--bg-default); color: var(--fg-primary); }
+    .ajuda-preview { display: block; max-width: 100%; margin: 0 0 var(--space-3); border: 1px solid var(--border-default); }
+    .ajuda-status { font-size: 16px; font-weight: 600; margin: var(--space-3) 0; color: var(--data-secondary); }
+    .ajuda-answer { font-size: 20px; font-weight: 600; line-height: 1.4; margin: 0 0 var(--space-4); white-space: pre-wrap; }
+    @media (max-width: 360px) {
+      .passo-title { font-size: 24px; }
+      .passo-plain { font-size: 18px; }
+      .passo-step-text { font-size: 20px; }
+      .ajuda-answer { font-size: 22px; }
+      .passo-actions .btn, .passo-actions a.btn, .passo-duo .btn, .passo-duo a.btn, button.option { min-height: 56px; font-size: 18px; }
+      .passo-duo { flex-direction: column; }
+    }
+  </style>
 </head>
 <body class="gui" data-page="passos">
   <nav class="sidebar" id="sidebar"></nav>
@@ -34,12 +64,18 @@
   let stamp = "";
   let lastData = null;
   let noticeTimer = 0;
+  let donoStepIdx = 0;
+  let donoStepId = "";
+  let ajudaOpen = false;
+  let ajudaImage = "";
+  let ajudaPasteBound = false;
 
   function stampOf(d) {
     const cur = (d.steps || []).find((s) => s.id === d.current) || {};
     const item = cur.item || {};
     const specs = (cur.specs || []).map((s) => s.path).join(",");
-    return [d.current, d.position, d.total, cur.remaining || 0, item.run_key || "", specs].join("|");
+    return [d.current, d.position, d.total, cur.remaining || 0,
+            item.run_key || "", item.id || "", specs].join("|");
   }
 
   function setNotice(text) {
@@ -77,28 +113,126 @@
     }).join("");
   }
 
+  function formatAskedAt(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}/${mm} ${hh}:${mi}`;
+  }
+
+  function askedHTML(step) {
+    if (step.id !== "dono" || !step.item || !step.item.asked_at) return "";
+    const ago = step.item.asked_ago || "";
+    const when = formatAskedAt(step.item.asked_at);
+    const line = when ? `pedido ${ago} · ${when}` : `pedido ${ago}`;
+    return `<p class="passo-asked">${esc(line)}</p>`;
+  }
+
+  function artifactHTML(step) {
+    const a = step.item && step.item.artifact;
+    if (!a) return "";
+    if (a.status === "sumiu") {
+      return `<p class="selo selo-sumiu">arquivo sumiu</p>`;
+    }
+    if (a.status === "velho") {
+      const name = String(a.stale_because || "").split("/").pop() || a.stale_because;
+      return `<p class="selo selo-velho">VELHO — mudou ${esc(name)} depois</p>`;
+    }
+    return `<p class="selo selo-ok">gerado ${esc(a.generated_ago || "")}</p>`;
+  }
+
+  function donoStepsHTML(step) {
+    const steps = (step.item && step.item.steps) || [];
+    if (!steps.length) return "";
+    const n = steps.length;
+    const i = Math.max(0, Math.min(donoStepIdx, n - 1));
+    const s = steps[i] || {};
+    const bits = [`<p class="passo-step-count">${i + 1} de ${n}</p>`];
+    bits.push(`<p class="passo-step-text">${esc(s.text || "")}</p>`);
+    const duo = [];
+    if (s.href) {
+      duo.push(`<a class="btn primary" id="passo-step-link" href="${esc(s.href)}" target="_blank" rel="noopener">Abrir</a>`);
+    }
+    if (s.copy) {
+      duo.push(`<button type="button" class="btn primary" id="passo-step-copy">Copiar</button>`);
+    }
+    if (duo.length === 2) bits.push(`<div class="passo-duo">${duo.join("")}</div>`);
+    else if (duo.length) bits.push(duo.join(""));
+    if (i < n - 1) {
+      bits.push(`<button type="button" class="btn primary" id="passo-proximo" data-primary>Próximo</button>`);
+    }
+    return `<div class="passo-micro">${bits.join("")}</div>`;
+  }
+
+  function ajudaHTML(step) {
+    if (step.id !== "dono" || !step.item || !step.item.id) return "";
+    const hidden = ajudaOpen ? "" : " hidden";
+    return `
+      <button type="button" class="btn ajuda-toggle" id="ajuda-abrir">Não tô achando</button>
+      <div class="ajuda-area" id="ajuda-area"${hidden}>
+        <p class="ajuda-hint">Cole um print (Ctrl+V), arraste para cá ou escolha um arquivo.</p>
+        <div class="ajuda-drop" id="ajuda-drop">solte o print aqui</div>
+        <input type="file" id="ajuda-file" accept="image/*" capture="environment">
+        <label class="ajuda-note-label" for="ajuda-note">o que você vê?</label>
+        <textarea id="ajuda-note" rows="2" placeholder="o que você vê?"></textarea>
+        <img class="ajuda-preview" id="ajuda-preview" alt="seu print" hidden>
+        <button type="button" class="btn primary" id="ajuda-enviar">Enviar</button>
+        <p class="ajuda-status" id="ajuda-status"></p>
+        <p class="ajuda-answer" id="ajuda-answer"></p>
+        <div class="passo-duo" id="ajuda-after" hidden>
+          <button type="button" class="btn primary" id="ajuda-resolveu">Resolveu</button>
+          <button type="button" class="btn" id="ajuda-ainda">Ainda não</button>
+        </div>
+      </div>`;
+  }
+
   function actionHTML(step) {
     const a = step.action || { kind: "none" };
+    const parts = [];
     if (a.kind === "choice") {
-      return `<div class="passo-actions" id="passo-actions">${optionButtons(a)}</div>`;
+      parts.push(optionButtons(a));
+    } else if (a.kind === "post") {
+      parts.push(`<button type="button" class="btn primary" id="passo-post" data-primary>${esc(a.label || "Despachar")}</button>`);
+    } else {
+      if (a.command) {
+        parts.push(`<p class="passo-cmd-wrap"><code id="passo-cmd">${esc(a.command)}</code></p>`);
+      }
+      const duo = [];
+      const both = !!(a.href && a.command);
+      if (a.href) {
+        const lab = both ? "Abrir" : (a.label || "Abrir");
+        duo.push(`<a class="btn primary" id="passo-link" data-primary href="${esc(a.href)}" target="_blank" rel="noopener">${esc(lab)}</a>`);
+      }
+      if (a.command) {
+        const lab = both ? "Copiar" : (a.label || "Copiar");
+        const prim = a.href ? "" : " data-primary";
+        duo.push(`<button type="button" class="btn primary" id="passo-copy"${prim}>${esc(lab)}</button>`);
+      }
+      if (duo.length === 2) parts.push(`<div class="passo-duo">${duo.join("")}</div>`);
+      else parts.push(...duo);
     }
-    if (a.kind === "copy") {
-      return `<div class="passo-actions">
-        <p class="passo-cmd-wrap"><code id="passo-cmd">${esc(a.command || "")}</code></p>
-        <button type="button" class="btn primary" id="passo-copy" data-primary>${esc(a.label || "Copiar")}</button>
-      </div>`;
-    }
-    if (a.kind === "post") {
-      return `<div class="passo-actions">
-        <button type="button" class="btn primary" id="passo-post" data-primary>${esc(a.label || "Despachar")}</button>
-      </div>`;
-    }
-    if (a.kind === "link" && a.href) {
-      return `<div class="passo-actions">
-        <a class="btn primary" id="passo-link" data-primary href="${esc(a.href)}">${esc(a.label || "Abrir")}</a>
-      </div>`;
-    }
-    return "";
+    const steps = (step.item && step.item.steps) || [];
+    const onLast = !steps.length || donoStepIdx >= steps.length - 1;
+    const hasDoFirst = !!(a.command || a.href)
+      || a.kind === "post"
+      || a.kind === "choice"
+      || (steps.length > 0 && !onLast);
+    (a.secondary || []).forEach((s) => {
+      if (s.id === "feito" && steps.length && !onLast) return;
+      const feito = s.id === "feito";
+      const ready = feito && !hasDoFirst;
+      const cls = feito
+        ? (ready ? "btn primary dono-feito" : "btn dono-feito")
+        : "btn dono-depois";
+      const primary = ready ? " data-primary" : "";
+      parts.push(`<button type="button" class="${cls}" id="passo-${esc(s.id)}"${primary}>${esc(s.label || "")}</button>`);
+    });
+    if (!parts.length) return "";
+    return `<div class="passo-actions" id="passo-actions">${parts.join("")}</div>`;
   }
 
   function extraHTML(step) {
@@ -106,7 +240,16 @@
     if (step.item && step.item.why_failed) {
       bits.push(`<p class="passo-extra">${esc(step.item.why_failed)}</p>`);
     }
-    if (step.remaining > 1) {
+    if (step.item && step.item.source) {
+      bits.push(`<p class="passo-extra tech">pedido por ${esc(step.item.source)}</p>`);
+    }
+    if (step.item && step.item.blocks) {
+      bits.push(`<p class="passo-extra tech">destrava: ${esc(step.item.blocks)}</p>`);
+    }
+    if (step.id === "dono" && step.remaining > 0) {
+      const n = step.remaining;
+      bits.push(`<p class="passo-extra">Depois desta, ainda tem ${n} ${n === 1 ? "outra" : "outras"}.</p>`);
+    } else if (step.id !== "dono" && step.remaining > 1) {
       const n = step.remaining - 1;
       bits.push(`<p class="passo-extra">Depois desta, ainda tem ${n} ${n === 1 ? "outra" : "outras"}.</p>`);
     }
@@ -122,6 +265,23 @@
     return bits.join("");
   }
 
+  function markFeitoPrimary() {
+    const feito = $("passo-feito");
+    if (!feito) return;
+    document.querySelectorAll("[data-primary]").forEach((el) => el.removeAttribute("data-primary"));
+    const copy = $("passo-copy");
+    const link = $("passo-link");
+    const stepLink = $("passo-step-link");
+    const stepCopy = $("passo-step-copy");
+    if (copy) copy.classList.remove("primary");
+    if (link) link.classList.remove("primary");
+    if (stepLink) stepLink.classList.remove("primary");
+    if (stepCopy) stepCopy.classList.remove("primary");
+    feito.classList.add("primary");
+    feito.setAttribute("data-primary", "");
+    feito.focus();
+  }
+
   function bindActions(step) {
     const a = step.action || {};
     if (a.kind === "choice") {
@@ -129,13 +289,174 @@
         btn.addEventListener("click", () => decide(step, btn.getAttribute("data-choice")));
       });
     }
-    if (a.kind === "copy") {
-      const btn = $("passo-copy");
-      if (btn) btn.addEventListener("click", () => copyCommand(a.command || "", btn));
+    const copyBtn = $("passo-copy");
+    if (copyBtn && a.command) {
+      copyBtn.addEventListener("click", async () => {
+        await copyCommand(a.command || "", copyBtn);
+        markFeitoPrimary();
+      });
     }
+    const link = $("passo-link");
+    if (link) link.addEventListener("click", () => markFeitoPrimary());
     if (a.kind === "post") {
       const btn = $("passo-post");
       if (btn) btn.addEventListener("click", () => postDispatch(a, btn));
+    }
+    const feito = $("passo-feito");
+    const depois = $("passo-depois");
+    if (feito) feito.addEventListener("click", () => ownerChoice(step, "feito"));
+    if (depois) depois.addEventListener("click", () => ownerChoice(step, "depois"));
+    const proximo = $("passo-proximo");
+    if (proximo) proximo.addEventListener("click", () => {
+      donoStepIdx += 1;
+      if (lastData) render(lastData);
+      focusPrimary();
+    });
+    const stepCopy = $("passo-step-copy");
+    if (stepCopy) {
+      const steps = (step.item && step.item.steps) || [];
+      const s = steps[Math.min(donoStepIdx, Math.max(0, steps.length - 1))] || {};
+      stepCopy.addEventListener("click", async () => {
+        await copyCommand(s.copy || "", stepCopy);
+        markFeitoPrimary();
+      });
+    }
+    bindAjuda(step);
+  }
+
+  function takeAjudaFile(f) {
+    if (!f || !f.type || f.type.indexOf("image/") !== 0) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      ajudaImage = String(reader.result || "");
+      ajudaOpen = true;
+      const area = $("ajuda-area");
+      if (area) area.hidden = false;
+      const img = $("ajuda-preview");
+      if (img && ajudaImage) { img.hidden = false; img.src = ajudaImage; }
+    };
+    reader.readAsDataURL(f);
+  }
+
+  function clearAjudaAnswer() {
+    const st = $("ajuda-status");
+    const ans = $("ajuda-answer");
+    const after = $("ajuda-after");
+    const img = $("ajuda-preview");
+    if (st) st.textContent = "";
+    if (ans) ans.textContent = "";
+    if (after) after.hidden = true;
+    if (img) { img.hidden = true; img.removeAttribute("src"); }
+  }
+
+  function bindAjuda(step) {
+    const id = step.item && step.item.id;
+    const abrir = $("ajuda-abrir");
+    if (abrir) abrir.addEventListener("click", () => {
+      ajudaOpen = true;
+      const area = $("ajuda-area");
+      if (area) area.hidden = false;
+    });
+    const file = $("ajuda-file");
+    if (file) file.addEventListener("change", () => {
+      const f = file.files && file.files[0];
+      if (f) takeAjudaFile(f);
+    });
+    const drop = $("ajuda-drop");
+    if (drop) {
+      drop.addEventListener("dragover", (e) => { e.preventDefault(); });
+      drop.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) takeAjudaFile(f);
+      });
+    }
+    const enviar = $("ajuda-enviar");
+    if (enviar) enviar.addEventListener("click", () => sendAjuda(id));
+    const resolveu = $("ajuda-resolveu");
+    if (resolveu) resolveu.addEventListener("click", () => {
+      ajudaOpen = false;
+      ajudaImage = "";
+      clearAjudaAnswer();
+      const area = $("ajuda-area");
+      if (area) area.hidden = true;
+    });
+    const ainda = $("ajuda-ainda");
+    if (ainda) ainda.addEventListener("click", () => {
+      ajudaImage = "";
+      clearAjudaAnswer();
+      const st = $("ajuda-status");
+      if (st) st.textContent = "Mande outro print.";
+      const fileEl = $("ajuda-file");
+      if (fileEl) fileEl.value = "";
+    });
+    if (!ajudaPasteBound) {
+      ajudaPasteBound = true;
+      document.addEventListener("paste", (e) => {
+        const cd = e.clipboardData;
+        if (!cd) return;
+        for (const it of cd.items) {
+          if (it.type.indexOf("image/") === 0) {
+            const f = it.getAsFile();
+            if (f) { e.preventDefault(); takeAjudaFile(f); }
+            return;
+          }
+        }
+      });
+    }
+    if (ajudaImage) {
+      const img = $("ajuda-preview");
+      if (img) { img.hidden = false; img.src = ajudaImage; }
+    }
+    if (ajudaOpen) {
+      const area = $("ajuda-area");
+      if (area) area.hidden = false;
+    }
+  }
+
+  async function sendAjuda(id) {
+    if (!id || !ajudaImage) {
+      setErr("Cole ou escolha um print primeiro.");
+      return;
+    }
+    setErr("");
+    const noteEl = $("ajuda-note");
+    const note = noteEl ? noteEl.value : "";
+    const st = $("ajuda-status");
+    const ans = $("ajuda-answer");
+    if (st) st.textContent = "olhando seu print…";
+    if (ans) ans.textContent = "";
+    try {
+      const { status, body } = await postJSON("/api/gui/ajuda", { id, image: ajudaImage, note });
+      if (body && body.ok) {
+        if (st) st.textContent = "";
+        if (ans) ans.textContent = body.answer || "";
+      } else {
+        if (st) st.textContent = (body && body.error) || `Não deu (código ${status}).`;
+      }
+      const after = $("ajuda-after");
+      if (after) after.hidden = false;
+    } catch (err) {
+      if (st) st.textContent = err.message || "Não deu para enviar o print.";
+    }
+  }
+
+  async function ownerChoice(step, choice) {
+    const id = step.item && step.item.id;
+    if (!id || !choice) return;
+    setErr("");
+    try {
+      const { status, body } = await postJSON("/api/gui/acao", { id, choice });
+      if (!body || !body.ok) {
+        setErr((body && body.error) || `Não deu para gravar (código ${status}).`);
+        return;
+      }
+      const d = await load({ focus: true, force: true });
+      const next = (d.steps || []).find((s) => s.id === body.next)
+        || (d.steps || []).find((s) => s.state === "agora");
+      if (next && next.title) setNotice(`Feito. Agora: ${next.title}`);
+    } catch (err) {
+      setErr(err.message || "Não deu para gravar.");
     }
   }
 
@@ -222,14 +543,29 @@
       `<li class="passos-line depois">${esc(s.title)}</li>`).join("");
 
     const step = (d.steps || []).find((s) => s.state === "agora") || {};
+    if (step.id === "dono" && step.item && step.item.id) {
+      if (step.item.id !== donoStepId) {
+        donoStepId = step.item.id;
+        donoStepIdx = 0;
+        ajudaOpen = false;
+        ajudaImage = "";
+      }
+    } else {
+      donoStepId = "";
+      donoStepIdx = 0;
+    }
     const why = step.why
       ? `<details class="porque"><summary>Por quê?</summary><p>${esc(step.why)}</p></details>`
       : "";
     $("passo-agora").innerHTML = `
+      ${askedHTML(step)}
       <h2 class="passo-title">${esc(step.title || "")}</h2>
       <p class="passo-plain">${esc(step.plain || "")}</p>
+      ${artifactHTML(step)}
       ${extraHTML(step)}
+      ${donoStepsHTML(step)}
       ${actionHTML(step)}
+      ${ajudaHTML(step)}
       ${why}`;
     bindActions(step);
   }

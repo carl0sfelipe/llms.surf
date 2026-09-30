@@ -23,6 +23,7 @@ ok() { echo "  PASS: $1"; pass=$((pass + 1)); }
 not() { echo "  FAIL: $1"; fail=$((fail + 1)); gui_dump_log "${SRV_LOG:-}"; }
 
 WORK=$(mktemp -d /tmp/test-gui-passos.XXXXXX)
+export ORACFIT_OWNER_ACTIONS="$WORK/sem-acoes.jsonl"  # GUI-2: isola do arquivo real do dono
 PIDS=()
 cleanup() {
   for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null; wait "$p" 2>/dev/null; done
@@ -76,12 +77,12 @@ gui_get "$BASE/gui.css" | grep -q 'body.simple' && ok "gui.css tem regras body.s
 
 echo "--- T2: /api/gui/steps ---"
 S=$(gui_get "$BASE/api/gui/steps")
-echo "$S" | J "assert [s['id'] for s in d['steps']]==['modelos','falhas','notas','despachar','pronto']" 2>/dev/null \
+echo "$S" | J "assert [s['id'] for s in d['steps']]==['modelos','dono','falhas','notas','despachar','pronto']" 2>/dev/null \
   && ok "ordem fixa dos passos" || not "ordem dos passos: $S"
 echo "$S" | J "assert [s['state'] for s in d['steps']].count('agora')==1" 2>/dev/null \
   && ok "exatamente 1 passo agora" || not "nº de passos agora != 1"
-echo "$S" | J "assert d['current']=='falhas' and d['position']==2 and d['total']==4" 2>/dev/null \
-  && ok "current=falhas, passo 2 de 4" || not "current/position/total errados"
+echo "$S" | J "assert d['current']=='falhas' and d['position']==3 and d['total']==5" 2>/dev/null \
+  && ok "current=falhas, passo 3 de 5 (dono feito)" || not "current/position/total errados"
 echo "$S" | J "st={s['id']:s['state'] for s in d['steps']}; assert st['modelos']=='feito' and st['notas']=='pulado' and st['pronto']=='depois'" 2>/dev/null \
   && ok "modelos feito, notas pulado, pronto depois" || not "estados de modelos/notas/pronto"
 echo "$S" | J "assert all(s['title'] and s['plain'] and len(s['plain'])<=140 for s in d['steps'])" 2>/dev/null \
