@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""oracfit-roi.py — o que cada executor custou e acertou, a partir dos ledgers."""
+"""oracfit-roi.py — what each executor cost and how often it got it right, from the ledgers.
+
+Unmeasured cost is shown as "n/a", never 0: older rows and direct-mode rows (model_id "orchestrator",
+cost_source "orchestrator-unmeasured") carry estimated_cost "0" without executor_out_tok.
+Design: docs/delegation-check.md §4.
+"""
 import argparse
 import json
 import os
@@ -8,107 +13,103 @@ from collections import defaultdict
 from pathlib import Path
 
 LEDGER = ".dispatch/ledger/mode.jsonl"
-CAMPOS = ("ts", "model_id", "task", "status", "attempt", "estimated_cost", "flash_work_s")
+REQUIRED = ("ts", "model_id", "task", "status", "attempt", "estimated_cost", "flash_work_s")
 
 
-def die(code, msg):
-    print(msg, file=sys.stderr)
+def fail(code, message):
+    print(message, file=sys.stderr)
     raise SystemExit(code)
 
 
-def novo():
-    return {
-        "runs": 0, "pass": 0, "primeira_n": 0, "pass_custo": 0,
-        "tent": 0.0, "tempo": 0.0, "custo_medido_usd": 0.0, "runs_com_custo": 0,
-    }
+def empty_totals():
+    return {"runs": 0, "pass": 0, "first_try": 0, "pass_with_cost": 0,
+            "attempts": 0.0, "time_s": 0.0, "measured_cost_usd": 0.0, "runs_with_cost": 0}
 
 
-def parse_row(d):
-    if not isinstance(d, dict) or any(k not in d for k in CAMPOS):
+def parse_row(row):
+    if not isinstance(row, dict) or any(k not in row for k in REQUIRED):
         return None
     try:
-        att = float(d["attempt"])
-        tempo = float(d["flash_work_s"])
-        cost = float(d["estimated_cost"])
-        out = float(d["executor_out_tok"]) if "executor_out_tok" in d else None
+        attempt = float(row["attempt"])
+        time_s = float(row["flash_work_s"])
+        cost = float(row["estimated_cost"])
+        out_tok = float(row["executor_out_tok"]) if "executor_out_tok" in row else None
     except (TypeError, ValueError):
         return None
-    return d["model_id"], d["status"], str(d["attempt"]), att, tempo, cost, out
+    return row["model_id"], row["status"], str(row["attempt"]), attempt, time_s, cost, out_tok
 
 
-def fecha(m):
-    r = m["runs"]
-    pc = m["pass_custo"]
+def summarize(t):
+    runs, paid_passes = t["runs"], t["pass_with_cost"]
     return {
-        "runs": r,
-        "pass": m["pass"],
-        "taxa_pass": m["pass"] / r,
-        "primeira": round(100 * m["primeira_n"] / r),
-        "tentativas_media": m["tent"] / r,
-        "tempo_medio_s": m["tempo"] / r,
-        "custo_medido_usd": m["custo_medido_usd"],
-        "runs_com_custo": m["runs_com_custo"],
-        "custo_por_pass_usd": (m["custo_medido_usd"] / pc) if pc else "n/d",
+        "runs": runs,
+        "pass": t["pass"],
+        "pass_rate": t["pass"] / runs,
+        "first_try_pct": round(100 * t["first_try"] / runs),
+        "mean_attempts": t["attempts"] / runs,
+        "mean_time_s": t["time_s"] / runs,
+        "measured_cost_usd": t["measured_cost_usd"],
+        "runs_with_cost": t["runs_with_cost"],
+        "cost_per_pass_usd": (t["measured_cost_usd"] / paid_passes) if paid_passes else "n/a",
     }
 
 
 def main():
     ap = argparse.ArgumentParser(prog="oracfit-roi")
     ap.add_argument("--workdir", action="append", default=[])
-    ap.add_argument("--desde")
+    ap.add_argument("--since", help="only rows with ts >= YYYY-MM-DD")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
-    wds = args.workdir or [os.getcwd()]
-    paths = [Path(w) / LEDGER for w in wds]
-    exist = [p for p in paths if p.is_file()]
-    if not exist:
-        die(3, "oracfit-roi: nenhum ledger encontrado: " + ", ".join(str(p) for p in paths))
-    acc, ign = defaultdict(novo), 0
-    for p in exist:
-        for raw in p.read_text(encoding="utf-8").splitlines():
+    paths = [Path(w) / LEDGER for w in (args.workdir or [os.getcwd()])]
+    found = [p for p in paths if p.is_file()]
+    if not found:
+        fail(3, "oracfit-roi: no ledger found: " + ", ".join(str(p) for p in paths))
+    totals, ignored = defaultdict(empty_totals), 0
+    for path in found:
+        for raw in path.read_text(encoding="utf-8").splitlines():
             if not raw.strip():
                 continue
             try:
-                d = json.loads(raw)
+                row = json.loads(raw)
             except json.JSONDecodeError:
-                ign += 1
+                ignored += 1
                 continue
-            row = parse_row(d)
-            if row is None:
-                ign += 1
+            parsed = parse_row(row)
+            if parsed is None:
+                ignored += 1
                 continue
-            mid, status, att_s, att, tempo, cost, out = row
-            if args.desde and str(d["ts"]) < args.desde:
+            model_id, status, attempt_text, attempt, time_s, cost, out_tok = parsed
+            if args.since and str(row["ts"]) < args.since:
                 continue
-            m = acc[mid]
-            m["runs"] += 1
-            m["tent"] += att
-            m["tempo"] += tempo
+            t = totals[model_id]
+            t["runs"] += 1
+            t["attempts"] += attempt
+            t["time_s"] += time_s
             if status == "pass":
-                m["pass"] += 1
-                if att_s == "1":
-                    m["primeira_n"] += 1
-            if out is not None and out > 0:
-                m["custo_medido_usd"] += cost
-                m["runs_com_custo"] += 1
+                t["pass"] += 1
+                if attempt_text == "1":
+                    t["first_try"] += 1
+            if out_tok is not None and out_tok > 0:
+                t["measured_cost_usd"] += cost
+                t["runs_with_cost"] += 1
                 if status == "pass":
-                    m["pass_custo"] += 1
-    modelos = {k: fecha(acc[k]) for k, _ in sorted(acc.items(), key=lambda kv: (-kv[1]["runs"], kv[0]))}
+                    t["pass_with_cost"] += 1
+    models = {k: summarize(totals[k])
+              for k, _ in sorted(totals.items(), key=lambda kv: (-kv[1]["runs"], kv[0]))}
     if args.json:
-        print(json.dumps({"modelos": modelos, "linhas_ignoradas": ign}, ensure_ascii=False))
+        print(json.dumps({"models": models, "ignored_lines": ignored}, ensure_ascii=False))
         return
-    for mid, r in modelos.items():
-        cm = "n/d" if r["runs_com_custo"] == 0 else r["custo_medido_usd"]
-        cpp = "n/d" if r["runs_com_custo"] == 0 else r["custo_por_pass_usd"]
-        print(
-            f"{mid}  runs={r['runs']}  pass={r['pass']}  taxa_pass={r['taxa_pass']}  "
-            f"primeira={r['primeira']}  tentativas_media={r['tentativas_media']}  "
-            f"tempo_medio_s={r['tempo_medio_s']}  custo_medido_usd={cm}  "
-            f"runs_com_custo={r['runs_com_custo']}  custo_por_pass_usd={cpp}"
-        )
-    sug = [f"{mid}={r['tentativas_media']}" for mid, r in modelos.items() if r["runs"] >= 3]
-    if sug:
-        print("tentativas_esperadas sugeridas para check-delegacao: " + " ".join(sug))
+    for model_id, r in models.items():
+        measured = r["runs_with_cost"] > 0
+        cost = f"{r['measured_cost_usd']:.4f}" if measured else "n/a"
+        per_pass = f"{r['cost_per_pass_usd']:.4f}" if measured and r["cost_per_pass_usd"] != "n/a" else "n/a"
+        print(f"{model_id}  runs={r['runs']}  pass={r['pass']}  pass_rate={r['pass_rate']:.2f}  "
+              f"first_try={r['first_try_pct']}%  mean_attempts={r['mean_attempts']:.2f}  "
+              f"mean_time_s={r['mean_time_s']:.1f}  measured_cost_usd={cost}  "
+              f"runs_with_cost={r['runs_with_cost']}  cost_per_pass_usd={per_pass}")
+    hints = [f"{m}={r['mean_attempts']:.2f}" for m, r in models.items() if r["runs"] >= 3]
+    if hints:
+        print("suggested expected attempts for delegation-check: " + " ".join(hints))
 
 
 if __name__ == "__main__":

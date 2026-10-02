@@ -221,7 +221,7 @@ if [ -n "${DISPATCH_MODEL_REF:-}" ]; then
   # queimava max_attempts do gauntlet com oracle falhando antes de alguém
   # perceber o erro de integração. Falha rápida, com instrução acionável.
   # MODEL_REGISTRY: mesmo override do runner e do run-with-fallback (fixtures de teste).
-  registry_file="${MODEL_REGISTRY:-${ORACFIT_ROOT}/model-registry.json}"
+  registry_file="${MODEL_REGISTRY:-${ROOT}/model-registry.json}"
   if [ -f "$registry_file" ] && [ -n "$model_ref" ]; then
     if ! python3 - "$model_ref" "$registry_file" <<'PYREG'
 import json, sys
@@ -307,8 +307,8 @@ gauntlet_dir="$(oracfit_inbox_dir)/${RUN_ID}.gauntlet"
 gauntlet_accum="${gauntlet_dir}/feedback.md"
 mkdir -p "$gauntlet_dir"
 : >"$gauntlet_accum"
-# Custo real do executor, uma linha JSON por tentativa (runner claude-code; os outros ignoram).
-# Somado no ledger abaixo — proposta docs/proposta-check-delegacao.md §4.
+# Real executor cost, one JSON line per attempt (claude-code runner; other runners ignore it).
+# Summed into the ledger below — docs/delegation-check.md §4.
 export ORACFIT_COST_FILE="${gauntlet_dir}/executor-cost.jsonl"
 : >"$ORACFIT_COST_FILE"
 
@@ -473,11 +473,11 @@ with open(path, "a") as f:
 
   oracfit_emit_event attempt_finished attempt="$attempt" runner_exit="$runner_rc" duration_s="$stage_s"
 
-  # Exit 3 = erro de uso (modelo errado, auth, escrita negada): a próxima tentativa falha igual.
-  # Parar aqui em vez de queimar o gauntlet (incidente 2026-10-02-claude-code-runner-sai-0-com-escrita-negada).
+  # Exit 3 = usage error (wrong model, auth, denied write): the next attempt would fail the same way.
+  # Stop here instead of burning the gauntlet (incident 2026-10-02-claude-code-runner-sai-0-com-escrita-negada).
   if [ "$runner_rc" -eq 3 ]; then
     oracfit_emit_event runner_usage_error attempt="$attempt"
-    echo "runner saiu 3 (erro de uso) — tentativas interrompidas; corrija a configuração e despache de novo" >&2
+    echo "runner exited 3 (usage error) — attempts stopped; fix the configuration and dispatch again" >&2
     break
   fi
 
@@ -564,14 +564,14 @@ fi
 t_run1=$(python3 -c 'import time; print(time.time())')
 frontier_wait_s=$(python3 -c "print(round(float('$t_run1')-float('$t_run0'), 3))")
 [ -n "$frontier_wait_s" ] || frontier_wait_s=0
-# Custo real quando o runner informa (claude-code); senão 0 como antes (stub/free).
+# Real cost when the runner reports it (claude-code); otherwise 0 as before (stub/free).
 read -r estimated_cost executor_in_tok executor_out_tok < <(python3 - "${ORACFIT_COST_FILE:-}" <<'PY' 2>/dev/null || echo "0 0 0"
 import json, sys
 c = i = o = 0
 try:
-    for linha in open(sys.argv[1]):
+    for line in open(sys.argv[1]):
         try:
-            d = json.loads(linha)
+            d = json.loads(line)
         except ValueError:
             continue
         c += float(d.get("cost_usd") or 0)
