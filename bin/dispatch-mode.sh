@@ -221,7 +221,7 @@ if [ -n "${DISPATCH_MODEL_REF:-}" ]; then
   # queimava max_attempts do gauntlet com oracle falhando antes de alguém
   # perceber o erro de integração. Falha rápida, com instrução acionável.
   # MODEL_REGISTRY: mesmo override do runner e do run-with-fallback (fixtures de teste).
-  registry_file="${MODEL_REGISTRY:-${ORACFIT_ROOT}/model-registry.json}"
+  registry_file="${MODEL_REGISTRY:-${ROOT}/model-registry.json}"
   if [ -f "$registry_file" ] && [ -n "$model_ref" ]; then
     if ! python3 - "$model_ref" "$registry_file" <<'PYREG'
 import json, sys
@@ -307,6 +307,10 @@ gauntlet_dir="$(oracfit_inbox_dir)/${RUN_ID}.gauntlet"
 gauntlet_accum="${gauntlet_dir}/feedback.md"
 mkdir -p "$gauntlet_dir"
 : >"$gauntlet_accum"
+# Real executor cost, one JSON line per attempt (claude-code runner; other runners ignore it).
+# Summed into the ledger below — docs/delegation-check.md §4.
+export ORACFIT_COST_FILE="${gauntlet_dir}/executor-cost.jsonl"
+: >"$ORACFIT_COST_FILE"
 
 # Guard de zonas protegidas (v3.5 — relatório fábrica-agentic §3, fase "Core
 # Hijacking": payload convence o modelo a usar os próprios privilégios de tool
@@ -469,6 +473,14 @@ with open(path, "a") as f:
 
   oracfit_emit_event attempt_finished attempt="$attempt" runner_exit="$runner_rc" duration_s="$stage_s"
 
+  # Exit 3 = usage error (wrong model, auth, denied write): the next attempt would fail the same way.
+  # Stop here instead of burning the gauntlet (incident 2026-10-02-claude-code-runner-sai-0-com-escrita-negada).
+  if [ "$runner_rc" -eq 3 ]; then
+    oracfit_emit_event runner_usage_error attempt="$attempt"
+    echo "runner exited 3 (usage error) — attempts stopped; fix the configuration and dispatch again" >&2
+    break
+  fi
+
   oracle_log="${gauntlet_dir}/oracle-attempt-${attempt}.log"
   set +e
   oracfit_gauntlet_run_oracle_capture "$spec_file" "$ORACFIT_WORKDIR" "$oracle_log"
@@ -552,8 +564,25 @@ fi
 t_run1=$(python3 -c 'import time; print(time.time())')
 frontier_wait_s=$(python3 -c "print(round(float('$t_run1')-float('$t_run0'), 3))")
 [ -n "$frontier_wait_s" ] || frontier_wait_s=0
-# stub/free cost table = 0
-estimated_cost="0"
+# Real cost when the runner reports it (claude-code); otherwise 0 as before (stub/free).
+read -r estimated_cost executor_in_tok executor_out_tok < <(python3 - "${ORACFIT_COST_FILE:-}" <<'PY' 2>/dev/null || echo "0 0 0"
+import json, sys
+c = i = o = 0
+try:
+    for line in open(sys.argv[1]):
+        try:
+            d = json.loads(line)
+        except ValueError:
+            continue
+        c += float(d.get("cost_usd") or 0)
+        i += int(d.get("in_tok") or 0) + int(d.get("cache_read_tok") or 0) + int(d.get("cache_write_tok") or 0)
+        o += int(d.get("out_tok") or 0)
+except OSError:
+    pass
+print(round(c, 6), i, o)
+PY
+)
+[ -n "$estimated_cost" ] || estimated_cost=0
 
 # Quem serviu, veredito da allowlist e sidecar do kernel — mesma leitura do ledger do dispatch.sh.
 oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}"
@@ -566,6 +595,8 @@ oracfit_emit_metric_and_ledger \
   flash_work_s="$flash_work_s" \
   frontier_wait_s="$frontier_wait_s" \
   estimated_cost="$estimated_cost" \
+  executor_in_tok="${executor_in_tok:-0}" \
+  executor_out_tok="${executor_out_tok:-0}" \
   task="$task_name" \
   status="$final_status" \
   "${ORACFIT_FREE_FIELDS[@]}"

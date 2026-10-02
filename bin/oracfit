@@ -105,6 +105,14 @@ BASE
   oracfit gui-tunnel --auth-token SEGREDO [--target DIR] [--enable-dispatch]
                                            # link https p/ celular (cloudflared)
   oracfit hitl <target-dir> [--port N]      # calibração: nota real 0-10 por anel
+  oracfit verify <spec> <task> [--before]  # direct mode: the orchestrator
+                                        #   implements; red→green oracle in
+                                        #   the ledger/panel, no model call
+  oracfit roi [--workdir DIR]... [--since YYYY-MM-DD] [--json]
+                                        # cost and hit rate per executor
+  oracfit delegation-check --deliverable-lines N --executor <id>
+                                        # worth delegating? run BEFORE writing
+                                        #   the spec (exit 10 = do it directly)
   oracfit acao add <id> --title T --plain P # pedido de agente ao dono (GUI)
   oracfit acao list [--json] | done <id> | snooze <id> <horas>
 
@@ -447,6 +455,9 @@ case "$cmd" in
   help|--help|-h|"") cmd_help ;;
   start|first-proof|tldr|smoke) cmd_first_proof "$@" ;;
   run) cmd_run "$@" ;;
+  verify) exec "$SCRIPT_DIR/oracfit-verify.sh" "$@" ;;
+  roi) exec python3 "$SCRIPT_DIR/oracfit-roi.py" "$@" ;;
+  delegation-check) exec python3 "$SCRIPT_DIR/delegation-check.py" "$@" ;;
   panel|abrir|open) exec "$SCRIPT_DIR/oracfit-panel.sh" "$@" ;;
   gui) exec "$SCRIPT_DIR/oracfit-gui.sh" "$@" ;;
   acao) exec python3 "$SCRIPT_DIR/oracfit-acao.py" "$@" ;;

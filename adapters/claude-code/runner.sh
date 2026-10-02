@@ -118,6 +118,20 @@ EXIT_CODE=$?
 
 echo "$OUTPUT"
 
+# Real executor cost → ledger (docs/delegation-check.md §4: the ledger used to record "0"), and a
+# denied write → exit 3 right away instead of 0 (incident 2026-10-02: five attempts burned without a
+# single file written, because without DISPATCH_ALLOWED_TOOLS every Write is silently denied).
+SUMMARY=$(printf '%s\n' "$OUTPUT" | python3 "$ADAPTER_DIR/result_summary.py" 2>/dev/null || true)
+if [ -n "$SUMMARY" ]; then
+  [ -n "${ORACFIT_COST_FILE:-}" ] && printf '%s\n' "$SUMMARY" >> "$ORACFIT_COST_FILE"
+  DENIED_WRITES=$(printf '%s' "$SUMMARY" | python3 -c 'import json,sys; print(json.load(sys.stdin)["denied_writes"])')
+  if [ "$EXIT_CODE" -eq 0 ] && [ "${DENIED_WRITES:-0}" -gt 0 ]; then
+    echo "runner.sh (claude-code): $DENIED_WRITES write(s) denied — this run cannot deliver anything." >&2
+    echo "  Set DISPATCH_ALLOWED_TOOLS to the minimum the task needs, e.g. \"Read,Write,Edit,Glob,Grep,Bash(python3:*)\"" >&2
+    exit 3
+  fi
+fi
+
 if [ $EXIT_CODE -ne 0 ]; then
   if echo "$OUTPUT" | grep -qiE '429|rate.?limit'; then
     exit 2
