@@ -108,6 +108,8 @@ BASE
   oracfit verificar <spec> <task> [--antes]  # modo direto: o orquestrador
                                         #   implementa; oráculo vermelho→verde
                                         #   no ledger/painel, sem modelo
+  oracfit roi [--workdir DIR]... [--desde AAAA-MM-DD] [--json]
+                                        # custo e acerto por executor, do ledger
   oracfit check-delegacao <spec> --executor <id>  # vale a pena delegar
                                         #   esta spec a este executor
   oracfit acao add <id> --title T --plain P # pedido de agente ao dono (GUI)
@@ -453,6 +455,7 @@ case "$cmd" in
   start|first-proof|tldr|smoke) cmd_first_proof "$@" ;;
   run) cmd_run "$@" ;;
   verificar) exec "$SCRIPT_DIR/oracfit-verificar.sh" "$@" ;;
+  roi) exec python3 "$SCRIPT_DIR/oracfit-roi.py" "$@" ;;
   check-delegacao) exec python3 "$SCRIPT_DIR/check-delegacao.py" "$@" ;;
   panel|abrir|open) exec "$SCRIPT_DIR/oracfit-panel.sh" "$@" ;;
   gui) exec "$SCRIPT_DIR/oracfit-gui.sh" "$@" ;;
