@@ -31,7 +31,10 @@ outra coisa para fazer em paralelo; (e) o contexto do orquestrador precisa ser p
 
 ## 2. A verificação — `bin/check-delegacao.py <spec> --executor <model_id>`
 
-Roda **antes** de escrever a spec completa (sobre um rascunho de 5 linhas) e de novo antes do dispatch.
+**Roda antes de escrever a spec** — `oracfit check-delegacao --entrega <linhas> [--contexto a,b] --executor X`:
+o custo caro é o orquestrador escrever a spec, então recusar só o dispatch não economiza nada (o dono, 2026-10-02).
+Nesse modo a spec é estimada (`RAZAO_SPEC_TIPICA` = 0,94, medida nas specs de hoje) e decide só por custo.
+Com a spec pronta, `check-delegacao <spec>` mede de verdade (útil para calibrar, não para economizar).
 
 ### Entradas (todas medidas, nada chutado)
 - `spec_tok` = caracteres da spec ÷ 4.

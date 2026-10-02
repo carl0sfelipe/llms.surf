@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""check-delegacao.py — vale a pena delegar esta spec a este executor?"""
+"""check-delegacao.py — vale a pena delegar esta spec a este executor?
+
+Dois modos:
+  check-delegacao.py <spec> --executor X             mede uma spec já escrita
+  check-delegacao.py --entrega N [--contexto a,b] --executor X   ANTES de escrever a spec (o dono, 2026-10-02:
+      recusar só a inferência não adianta se o token da spec já foi gasto). Spec estimada; decide só por custo.
+"""
 import argparse
 import json
 import math
@@ -14,6 +20,8 @@ FATOR_SAIDA = 1.3
 TENTATIVAS_PADRAO = 1.5
 RAZAO_MAX = 0.5
 MARGEM = 0.7
+# spec ÷ entrega medido em 2026-10-02 (tests/fixtures/delegacao: 0,91 e 0,98); recalibrar com `oracfit roi`.
+RAZAO_SPEC_TIPICA = 0.94
 ORCAMENTO = re.compile(r"(?:≤|<=)\s*(\d+)\s+(?:linhas|lines)", re.I)
 TICK = re.compile(r"`([^`]+)`")
 
@@ -75,7 +83,9 @@ class Parser(argparse.ArgumentParser):
 def main():
     raiz = Path(__file__).resolve().parent.parent
     ap = Parser(prog="check-delegacao")
-    ap.add_argument("spec")
+    ap.add_argument("spec", nargs="?")
+    ap.add_argument("--entrega", type=int, help="linhas a entregar (modo antes da spec)")
+    ap.add_argument("--contexto", default="", help="arquivos que o executor vai ler, separados por vírgula")
     ap.add_argument("--executor", required=True)
     ap.add_argument("--orquestrador", default="claude-opus-5-5")
     ap.add_argument("--precos", default=str(raiz / "core/precos.json"))
@@ -84,17 +94,26 @@ def main():
     ap.add_argument("--proteger-contexto", action="store_true")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
-    try:
-        texto = Path(args.spec).read_text(encoding="utf-8")
-    except OSError as e:
-        die(3, f"check-delegacao: {e}")
-    spec_tok = math.ceil(len(texto) * TOK_POR_CHAR)
-    ns = [int(n) for n in ORCAMENTO.findall(secao(texto, "ENTREGÁVEIS"))]
-    if not ns:
-        die(3, 'check-delegacao: declare o orçamento de linhas nos ENTREGÁVEIS (ex.: "arquivo.py (≤ 80 linhas)")')
-    saida_tok = sum(ns) * TOK_POR_LINHA
+    antes = args.spec is None
+    if antes:
+        if not args.entrega or args.entrega <= 0:
+            die(3, "check-delegacao: sem spec, diga o tamanho da entrega: --entrega <linhas>")
+        saida_tok = args.entrega * TOK_POR_LINHA
+        spec_tok = math.ceil(RAZAO_SPEC_TIPICA * saida_tok)
+        citados = [c.strip() for c in args.contexto.split(",") if c.strip()]
+    else:
+        try:
+            texto = Path(args.spec).read_text(encoding="utf-8")
+        except OSError as e:
+            die(3, f"check-delegacao: {e}")
+        spec_tok = math.ceil(len(texto) * TOK_POR_CHAR)
+        ns = [int(n) for n in ORCAMENTO.findall(secao(texto, "ENTREGÁVEIS"))]
+        if not ns:
+            die(3, 'check-delegacao: declare o orçamento de linhas nos ENTREGÁVEIS (ex.: "arquivo.py (≤ 80 linhas)")')
+        saida_tok = sum(ns) * TOK_POR_LINHA
+        citados = TICK.findall(secao(texto, "Dados verificados"))
     ctx = 0.0
-    for raw in TICK.findall(secao(texto, "Dados verificados")):
+    for raw in citados:
         f = Path(args.workdir) / raw
         if f.is_file():
             ctx += f.stat().st_size * TOK_POR_CHAR
@@ -115,7 +134,7 @@ def main():
         veredito, motivo = "DELEGAR", "orquestrador tem trabalho em paralelo"
     elif args.proteger_contexto:
         veredito, motivo = "DELEGAR", "proteger o contexto do orquestrador"
-    elif spec_tok / saida_tok > RAZAO_MAX:
+    elif not antes and spec_tok / saida_tok > RAZAO_MAX:
         pct = round(100 * spec_tok / saida_tok)
         veredito, motivo = "DIRETO", f"spec é {pct}% da entrega ({spec_tok} de {saida_tok} tok)"
     else:
@@ -127,7 +146,7 @@ def main():
         "saida_tok": saida_tok, "contexto_tok": inteiro_se_cabe(ctx),
         "tentativas": inteiro_se_cabe(tent), "custo_delegar": delegar,
         "custo_direto": direto, "executor": args.executor,
-        "orquestrador": args.orquestrador,
+        "orquestrador": args.orquestrador, "modo": "antes" if antes else "spec",
     }
     if args.json:
         print(json.dumps(rec, ensure_ascii=False))

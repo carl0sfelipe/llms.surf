@@ -97,6 +97,24 @@ echo "== 9. oracfit check-delegacao = o script"
 [ "$(rc_de "$OF" check-delegacao "$TR13" --executor qwen-3.8-27b --workdir "$W")" -eq 0 ] \
   && grep -q DELEGAR "$TMPDIR/last.log" && ok "oracfit DELEGAR" || not "oracfit DELEGAR"
 
+echo "== modo antes da spec (--entrega): decide sem gastar a spec"
+CD="$ROOT/bin/check-delegacao.py"
+V="$(mktemp -d)"; head -c 200000 /dev/zero | tr '\0' x >"$V/ctx.txt"
+set +e
+python3 "$CD" --entrega 160 --executor claude-sonnet-5 --workdir "$V" >/dev/null 2>&1; r1=$?
+python3 "$CD" --entrega 160 --contexto ctx.txt --executor claude-sonnet-5 --workdir "$V" >/dev/null 2>&1; r2=$?
+python3 "$CD" --entrega 160 --executor qwen-3.8-27b --workdir "$V" >/dev/null 2>&1; r3=$?
+python3 "$CD" --executor claude-sonnet-5 --workdir "$V" >/dev/null 2>&1; r4=$?
+j="$(python3 "$CD" --entrega 160 --executor claude-sonnet-5 --workdir "$V" --json 2>/dev/null)"
+set -e
+rm -rf "$V"
+[ "$r1" -eq 10 ] && ok "antes: 160 linhas sem contexto → DIRETO" || not "antes: DIRETO (veio $r1)"
+[ "$r2" -eq 0 ] && ok "antes: contexto de 50k tok → DELEGAR" || not "antes: DELEGAR com contexto (veio $r2)"
+[ "$r3" -eq 0 ] && ok "antes: placa → DELEGAR" || not "antes: placa (veio $r3)"
+[ "$r4" -eq 3 ] && ok "sem spec e sem --entrega → uso" || not "sem --entrega (veio $r4)"
+printf '%s' "$j" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["modo"]=="antes" and d["spec_tok"]==1805 and d["saida_tok"]==1920, d' \
+  && ok "antes: spec estimada (0,94 × 1920 = 1805 tok)" || not "antes: spec estimada"
+
 echo
 echo "pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]
