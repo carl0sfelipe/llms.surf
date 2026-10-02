@@ -7,6 +7,6 @@
     "claude-sonnet-5": {"in": 2.00, "out": 10.00, "cache_read": 0.20, "nota": "alias 'sonnet' do claude CLI resolve para o Sonnet atual (5.5), mesmo preço"},
     "claude-haiku-4-5": {"in": 1.00, "out": 5.00, "cache_read": null},
     "qwen-3.8-27b": {"in": 0, "out": 0, "cache_read": 0, "nota": "placa: GPU própria, custo só de luz"},
-    "cursor-grok-4.6-xhigh-fast": {"in": null, "out": null, "cache_read": null, "nota": "assinatura Cursor, preço por token [A DEFINIR] — uso só no painel cursor.com/dashboard"}
+    "grok-4.6-xhigh-fast": {"in": null, "out": null, "cache_read": null, "nota": "assinatura Cursor, preço por token [A DEFINIR] — uso só no painel cursor.com/dashboard"}
   }
 }
