@@ -47,11 +47,11 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 ## Counts (from this git tree  -  tests/test-site-honesty.sh)
 
 - version: 0.4.1
-- incidents: 115 (excludes incidents/uso/)
-- models in registry: 29,
+- incidents: 119 (excludes incidents/uso/)
+- models in registry: 30,
 - modes: 21
 - adapters: 8 + 1 stub
-- test suites: 37
+- test suites: 46
 
 ## Surf aliases (the UI names — tree ids stay canonical)
 
@@ -85,7 +85,7 @@ GitHub issue; leaving costs one click.
 - SKILL.md  -  operating manual (start here after clone)
 - fluxos/dispatch/SKILL.md  -  how to dispatch work to a model
 - adapters/<name>/  -  runner contract per CLI
-- incidents/  -  the ledger; 115 postmortems in this cut
+- incidents/  -  the ledger; 119 postmortems in this cut
 - LICENSE  -  AGPL-3.0 (core) + MIT (kernel, adapters). See NOTICE.
 - site/index.html?as=agent  -  HTML twin of this file
 - site/blog/  -  writing (source: site/blog/posts/*.md)
