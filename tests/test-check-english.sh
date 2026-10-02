@@ -64,6 +64,8 @@ rm "$R/bin/block.py"
 echo "== 5. English words that look Portuguese are not flagged"
 printf 'ESTATE = "data"; parameter = "model"; antennas = 1  # pass the result\n' >"$R/bin/eng.py"
 [ "$(rc_of --base main)" -eq 0 ] && ok "no false positive" || { not "no false positive"; cat "$TMPDIR/last.log"; }
+printf '#!/bin/bash\noracfit acao add x  # existing subcommand, renamed later\n' >"$R/bin/legacy"
+[ "$(rc_of --base main)" -eq 0 ] && ok "calling a legacy interface name is allowed" || { not "legacy name"; cat "$TMPDIR/last.log"; }
 # english-ok-end
 
 echo "== 6. a base that does not exist is a usage error"

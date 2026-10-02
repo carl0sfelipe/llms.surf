@@ -87,6 +87,8 @@ on a fresh branch from `main`, with no other work in flight on this repo.
 identifiers, env vars and references, and it skips the Portuguese-on-purpose paths from §1. The same script
 is used to rebase any branch that was cut before the rename (`apply-rename.py --on-branch`), so late work is
 not lost. Gate: every suite green, `git grep -i oracfit` matches only `incidents/` and `docs/stories/`.
+The same PR empties `LEGACY_NAMES` in `bin/check-english.py` (existing interface names that new code
+may call until they are renamed: `acao`, `painel`, `feito`, ...).
 Done by the orchestrator directly: it is a script plus a review, not a large writing task.
 
 **Phase 2 — translate comments and messages, one directory per PR.** Order by size from §2:

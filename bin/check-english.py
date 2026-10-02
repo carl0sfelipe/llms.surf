@@ -54,6 +54,9 @@ DENY = {
     "tarefas", "tentativa", "tentativas", "todos", "trocar", "trocador", "usuario", "valor",
     "veredito", "verificacao", "verificar", "voce",
 }
+# Names of interfaces that already exist (CLI subcommands, routes, headers, file names). New code has
+# to call them until docs/english-refactor-plan.md phase 1 renames them; that phase empties this set.
+LEGACY_NAMES = {"acao", "acoes", "adiar", "delegar", "feito", "painel", "saude"}
 # english-ok-end
 MARK = "english-ok"
 WORD = re.compile(f"[A-Za-z{LATIN_ACCENTED}]+")
@@ -95,7 +98,7 @@ def problems(line):
     m = ACCENTED.search(line)
     if m:
         found.append(f"non-English letter '{m.group()}'")
-    hits = sorted({w for w in words(line) if w in DENY})
+    hits = sorted({w for w in words(line) if w in DENY and w not in LEGACY_NAMES})
     if hits:
         found.append("Portuguese word(s): " + ", ".join(hits))
     return found
