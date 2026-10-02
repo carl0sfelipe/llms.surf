@@ -104,4 +104,4 @@ Rode a partir de um diretório temporário vazio como --workdir (contexto 0, led
 - ORACFIT_ROOT=$PWD bash tests/test-claude-code-cost.sh
 
 ## Oráculo
-- comando: ORACFIT_ROOT=$PWD bash tests/test-check-delegacao.sh && ORACFIT_ROOT=$PWD bash tests/test-verificar.sh && ORACFIT_ROOT=$PWD bash tests/test-claude-code-cost.sh && test $(wc -l < bin/check-delegacao.py) -le 160
+- comando: test -f tests/test-check-delegacao.sh && test -f bin/check-delegacao.py && ORACFIT_ROOT=$PWD bash tests/test-check-delegacao.sh && ORACFIT_ROOT=$PWD bash tests/test-verificar.sh && ORACFIT_ROOT=$PWD bash tests/test-claude-code-cost.sh && test $(wc -l < bin/check-delegacao.py) -le 160

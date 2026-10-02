@@ -72,4 +72,4 @@ estimated_cost 0.4, 0.5, 0.6; 1 run claude-sonnet-5 fail attempt 5 sem executor_
 - ORACFIT_ROOT=$PWD bash tests/test-verificar.sh
 
 ## Oráculo
-- comando: ORACFIT_ROOT=$PWD bash tests/test-oracfit-roi.sh && ORACFIT_ROOT=$PWD bash tests/test-verificar.sh && test $(wc -l < bin/oracfit-roi.py) -le 130
+- comando: test -f tests/test-oracfit-roi.sh && test -f bin/oracfit-roi.py && ORACFIT_ROOT=$PWD bash tests/test-oracfit-roi.sh && ORACFIT_ROOT=$PWD bash tests/test-verificar.sh && test $(wc -l < bin/oracfit-roi.py) -le 130
