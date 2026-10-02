@@ -14,7 +14,7 @@
 | `e36e4daa` TEL-1 | 7.0 KB | ~12 KB (391 insertions in 18 files) | 88 s | 1 |
 
 Sources: `wc -c /opt/inference/dispatch/*.md`, `git show --stat`, `.dispatch/ledger/mode.jsonl`.
-The specs are kept as test fixtures in `tests/fixtures/delegacao/`.
+The specs are kept as test fixtures in `tests/fixtures/delegation/`.
 
 - **Spec ÷ delivery ≈ 0.55–0.65.** The orchestrator (the most expensive model) wrote more than half of what it
   would have written doing the task itself, and then **read it all back** in review. Review is not optional:

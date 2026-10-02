@@ -17,12 +17,14 @@ rc_of() { set +e; "$@" >"$TMPDIR/last.log" 2>&1; echo $?; set -e; }
 last_ledger_row() { python3 -c "import json,sys; d=json.loads(open('$W/.dispatch/ledger/mode.jsonl').read().splitlines()[-1]); $1"; }
 
 W="$TMPDIR/w"; mkdir -p "$W"; cd "$W"
+# english-ok-begin: check-spec reads Portuguese headings today.
 cat >spec.md <<'EOF'
 # verify fixture
 
 ## Oráculo
 - comando: test -f delivered
 EOF
+# english-ok-end
 export ORACFIT_WORKDIR="$W"
 
 echo "== 1. closing a run that was never opened → usage error"

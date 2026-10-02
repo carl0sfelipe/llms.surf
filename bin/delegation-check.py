@@ -24,13 +24,14 @@ OUTPUT_FACTOR = 1.3
 DEFAULT_ATTEMPTS = 1.5
 MAX_SPEC_RATIO = 0.5
 MARGIN = 0.7
-# spec ÷ delivered output, measured on the 2026-10-02 specs (tests/fixtures/delegacao: 0.91 and 0.98).
+# spec ÷ delivered output, measured on the 2026-10-02 specs (tests/fixtures/delegation: 0.91 and 0.98).
 SPEC_TO_OUTPUT_RATIO = 0.94
-LINE_BUDGET = re.compile(r"(?:≤|<=)\s*(\d+)\s+(?:linhas|lines)", re.I)
 BACKTICKED = re.compile(r"`([^`]+)`")
-# The spec format still has Portuguese headings; accept both until the English-only rename lands.
+# english-ok-begin: the spec format still has Portuguese headings; accept both until the rename lands.
+LINE_BUDGET = re.compile(r"(?:≤|<=)\s*(\d+)\s+(?:linhas|lines)", re.I)
 DELIVERABLES = ("DELIVERABLES", "ENTREGÁVEIS")
 VERIFIED_DATA = ("Verified data", "Dados verificados")
+# english-ok-end
 
 
 def fail(code, message):

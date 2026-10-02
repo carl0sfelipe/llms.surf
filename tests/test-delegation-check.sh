@@ -8,10 +8,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CHECK="$ROOT/bin/delegation-check.py"
 OF="$ROOT/bin/oracfit"
-FIX="$ROOT/tests/fixtures/delegacao"
-TR13="$FIX/tr-1-3-catalogo-plano.md"
-TR67="$FIX/tr-6-7-demanda-politica.md"
-TEL="$FIX/tel-1-telemetria-backup.md"
+FIX="$ROOT/tests/fixtures/delegation"
+TR13="$FIX/tr-1-3-catalog-plan.md"
+TR67="$FIX/tr-6-7-demand-policy.md"
+TEL="$FIX/tel-1-telemetry-backup.md"
 TMPDIR="$(mktemp -d /tmp/oracfit-delegation-check.XXXXXX)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
@@ -40,7 +40,7 @@ echo "== 2. tr-6-7 → output_tok 1800 (the Objective section's budgets are not 
 [ "$(rc_of "${RUN[@]}" "$TR67" --executor claude-sonnet-5 --json)" -eq 10 ] && ok "exit 10" || not "exit 10"
 json_assert 'assert d["output_tok"] == 1800, d' && ok "output_tok 1800" || not "output_tok 1800"
 
-echo "== 3. placa (no per-token cost) → DELEGATE"
+echo "== 3. local GPU (no per-token cost) → DELEGATE"
 [ "$(rc_of "${RUN[@]}" "$TR13" --executor qwen-3.8-27b)" -eq 0 ] && grep -q DELEGATE "$TMPDIR/last.log" && ok "tr-1-3" || not "tr-1-3"
 [ "$(rc_of "${RUN[@]}" "$TR67" --executor qwen-3.8-27b)" -eq 0 ] && grep -q DELEGATE "$TMPDIR/last.log" && ok "tr-6-7" || not "tr-6-7"
 
@@ -91,7 +91,7 @@ V="$TMPDIR/v"; mkdir -p "$V"; head -c 200000 /dev/zero | tr '\0' x >"$V/ctx.txt"
 [ "$(rc_of "${RUN[@]}" --deliverable-lines 160 --context ctx.txt --executor claude-sonnet-5 --workdir "$V")" -eq 0 ] \
   && ok "50k-token context → DELEGATE" || not "context → DELEGATE"
 [ "$(rc_of "${RUN[@]}" --deliverable-lines 160 --executor qwen-3.8-27b --workdir "$V")" -eq 0 ] \
-  && ok "placa → DELEGATE" || not "placa → DELEGATE"
+  && ok "local GPU → DELEGATE" || not "local GPU → DELEGATE"
 [ "$(rc_of "${RUN[@]}" --executor claude-sonnet-5 --workdir "$V")" -eq 3 ] \
   && ok "no spec and no --deliverable-lines → usage error" || not "usage error"
 [ "$(rc_of "${RUN[@]}" --deliverable-lines 160 --executor claude-sonnet-5 --workdir "$V" --json)" -eq 10 ] || not "json rc"

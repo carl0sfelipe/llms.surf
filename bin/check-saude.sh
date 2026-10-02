@@ -109,6 +109,17 @@ echo "── Docs ────────────────────�
 checar "números de README derivam da árvore" bash bin/check-docs.sh
 
 echo ""
+echo "── Language ──────────────────────────────────────────"
+# New code is English-only (AGENTS.md, "Language"): contributors are international. Only lines
+# added since origin/main are checked; the older Portuguese debt goes away with
+# docs/english-refactor-plan.md. Skipped when origin/main is not available (shallow clone).
+if git rev-parse -q --verify origin/main >/dev/null 2>&1; then
+  checar "new code is in English" python3 bin/check-english.py --base origin/main
+else
+  printf "  ⓘ %-${LARGURA}s %s\n" "new code is in English" "origin/main not available — skipped"
+fi
+
+echo ""
 echo "── Registry ──────────────────────────────────────────"
 # id_status que afirma estado de PROVIDER (401, auth, saldo, quota) apodrece:
 # a causa some quando a credencial é trocada ou a cota reseta, e o registry

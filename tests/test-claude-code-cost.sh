@@ -69,7 +69,8 @@ if FAKE_JSON="$TMPDIR/txt.json" "$RUNNER" claude-sonnet-5 "$SPEC" >/dev/null 2>&
 unset ORACFIT_COST_FILE
 
 echo "== 5. dispatch-mode end to end"
-spec_e2e() { # $1 = file the oracle checks for. Headings and the no-invention clause stay in Portuguese: check-spec only accepts those today.
+# english-ok-begin: spec headings and the no-invention clause are Portuguese because check-spec only accepts those today.
+spec_e2e() { # $1 = file the oracle checks for
   cat <<EOF
 # claude-code cost fixture
 
@@ -89,6 +90,7 @@ No numeric facts.
 NUNCA use declare const como workaround.
 EOF
 }
+# english-ok-end
 run_e2e() { # $1 = dir, $2 = fake JSON, $3 = FAKE_TOUCH ("" = writes nothing)
   mkdir -p "$1"
   spec_e2e marker >"$1/spec.md"

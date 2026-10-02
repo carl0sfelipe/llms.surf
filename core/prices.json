@@ -1,12 +1,12 @@
 {
   "$comment": "USD per million tokens, read by bin/delegation-check.py (docs/delegation-check.md). Kept out of model-registry.json on purpose: CI checks that file's model count. null = unknown — the check refuses to decide on an unknown price instead of guessing.",
-  "source": "claude-api skill 'Current Models' pricing table (cached 2026-09-25); placa = own GPU",
+  "source": "claude-api skill 'Current Models' pricing table (cached 2026-09-25); local GPU = no per-token cost",
   "updated": "2026-10-02",
   "models": {
     "claude-opus-5-5": {"in": 4.00, "out": 20.00, "cache_read": 0.20, "role": "orchestrator"},
     "claude-sonnet-5": {"in": 2.00, "out": 10.00, "cache_read": 0.20, "note": "the claude CLI alias 'sonnet' resolves to the current Sonnet (5.5), same price"},
     "claude-haiku-4-5": {"in": 1.00, "out": 5.00, "cache_read": null},
-    "qwen-3.8-27b": {"in": 0, "out": 0, "cache_read": 0, "note": "placa: own GPU, electricity only"},
+    "qwen-3.8-27b": {"in": 0, "out": 0, "cache_read": 0, "note": "local GPU: electricity only"},
     "grok-4.6-xhigh-fast": {"in": null, "out": null, "cache_read": null, "note": "Cursor subscription; per-token price unknown — usage only on the cursor.com/dashboard page"}
   }
 }
