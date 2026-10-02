@@ -1,5 +1,5 @@
 ---
-status: aberto
+status: corrigido
 ---
 # Runner claude-code sai 0 com toda escrita negada — 5 tentativas queimadas sem um arquivo
 
@@ -12,6 +12,13 @@ existe", que parece erro do modelo e não da configuração.
 
 ## Correção (feita no uso)
 Redespacho com allowlist estreita: `DISPATCH_ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash(python3:*),…"`.
+
+## Correção (feita, branch feat/check-delegacao)
+- `adapters/claude-code/resultado.py` lê o JSON do `claude -p`; `runner.sh` sai **3** quando houve Write/Edit negado
+  (Bash negado sozinho não derruba) e grava custo/tokens em `$ORACFIT_COST_FILE`.
+- `bin/dispatch-mode.sh` para as tentativas em exit 3 (evento `runner_usage_error`) e soma o custo real no ledger
+  (`estimated_cost`, `executor_in_tok`, `executor_out_tok`). Prova: `tests/test-claude-code-cost.sh` (11/11), com o
+  caso deste incidente: fail em **1** tentativa, não 5.
 
 ## Melhoria proposta (lado do serviço)
 1. `runner.sh` (claude-code): spec com seção `ENTREGÁVEIS` e sem `DISPATCH_ALLOWED_TOOLS`/`DISPATCH_UNSAFE`

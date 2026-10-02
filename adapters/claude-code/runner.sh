@@ -118,6 +118,20 @@ EXIT_CODE=$?
 
 echo "$OUTPUT"
 
+# Custo real do executor → ledger (proposta check-delegacao §4: antes o ledger gravava "0"), e
+# escrita negada → exit 3 na hora em vez de 0 (incidente 2026-10-02: 5 tentativas queimadas sem
+# um arquivo escrito, porque sem DISPATCH_ALLOWED_TOOLS todo Write é negado em silêncio).
+RESUMO=$(printf '%s\n' "$OUTPUT" | python3 "$ADAPTER_DIR/resultado.py" 2>/dev/null || true)
+if [ -n "$RESUMO" ]; then
+  [ -n "${ORACFIT_COST_FILE:-}" ] && printf '%s\n' "$RESUMO" >> "$ORACFIT_COST_FILE"
+  DENIED_WRITES=$(printf '%s' "$RESUMO" | python3 -c 'import json,sys; print(json.load(sys.stdin)["denied_writes"])')
+  if [ "$EXIT_CODE" -eq 0 ] && [ "${DENIED_WRITES:-0}" -gt 0 ]; then
+    echo "runner.sh (claude-code): $DENIED_WRITES escrita(s) negada(s) — o run não pode entregar nada." >&2
+    echo "  Defina DISPATCH_ALLOWED_TOOLS com o mínimo da tarefa, ex.: \"Read,Write,Edit,Glob,Grep,Bash(python3:*)\"" >&2
+    exit 3
+  fi
+fi
+
 if [ $EXIT_CODE -ne 0 ]; then
   if echo "$OUTPUT" | grep -qiE '429|rate.?limit'; then
     exit 2

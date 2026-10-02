@@ -307,6 +307,10 @@ gauntlet_dir="$(oracfit_inbox_dir)/${RUN_ID}.gauntlet"
 gauntlet_accum="${gauntlet_dir}/feedback.md"
 mkdir -p "$gauntlet_dir"
 : >"$gauntlet_accum"
+# Custo real do executor, uma linha JSON por tentativa (runner claude-code; os outros ignoram).
+# Somado no ledger abaixo — proposta docs/proposta-check-delegacao.md §4.
+export ORACFIT_COST_FILE="${gauntlet_dir}/executor-cost.jsonl"
+: >"$ORACFIT_COST_FILE"
 
 # Guard de zonas protegidas (v3.5 — relatório fábrica-agentic §3, fase "Core
 # Hijacking": payload convence o modelo a usar os próprios privilégios de tool
@@ -469,6 +473,14 @@ with open(path, "a") as f:
 
   oracfit_emit_event attempt_finished attempt="$attempt" runner_exit="$runner_rc" duration_s="$stage_s"
 
+  # Exit 3 = erro de uso (modelo errado, auth, escrita negada): a próxima tentativa falha igual.
+  # Parar aqui em vez de queimar o gauntlet (incidente 2026-10-02-claude-code-runner-sai-0-com-escrita-negada).
+  if [ "$runner_rc" -eq 3 ]; then
+    oracfit_emit_event runner_usage_error attempt="$attempt"
+    echo "runner saiu 3 (erro de uso) — tentativas interrompidas; corrija a configuração e despache de novo" >&2
+    break
+  fi
+
   oracle_log="${gauntlet_dir}/oracle-attempt-${attempt}.log"
   set +e
   oracfit_gauntlet_run_oracle_capture "$spec_file" "$ORACFIT_WORKDIR" "$oracle_log"
@@ -552,8 +564,25 @@ fi
 t_run1=$(python3 -c 'import time; print(time.time())')
 frontier_wait_s=$(python3 -c "print(round(float('$t_run1')-float('$t_run0'), 3))")
 [ -n "$frontier_wait_s" ] || frontier_wait_s=0
-# stub/free cost table = 0
-estimated_cost="0"
+# Custo real quando o runner informa (claude-code); senão 0 como antes (stub/free).
+read -r estimated_cost executor_in_tok executor_out_tok < <(python3 - "${ORACFIT_COST_FILE:-}" <<'PY' 2>/dev/null || echo "0 0 0"
+import json, sys
+c = i = o = 0
+try:
+    for linha in open(sys.argv[1]):
+        try:
+            d = json.loads(linha)
+        except ValueError:
+            continue
+        c += float(d.get("cost_usd") or 0)
+        i += int(d.get("in_tok") or 0) + int(d.get("cache_read_tok") or 0) + int(d.get("cache_write_tok") or 0)
+        o += int(d.get("out_tok") or 0)
+except OSError:
+    pass
+print(round(c, 6), i, o)
+PY
+)
+[ -n "$estimated_cost" ] || estimated_cost=0
 
 # Quem serviu, veredito da allowlist e sidecar do kernel — mesma leitura do ledger do dispatch.sh.
 oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}"
@@ -566,6 +595,8 @@ oracfit_emit_metric_and_ledger \
   flash_work_s="$flash_work_s" \
   frontier_wait_s="$frontier_wait_s" \
   estimated_cost="$estimated_cost" \
+  executor_in_tok="${executor_in_tok:-0}" \
+  executor_out_tok="${executor_out_tok:-0}" \
   task="$task_name" \
   status="$final_status" \
   "${ORACFIT_FREE_FIELDS[@]}"
