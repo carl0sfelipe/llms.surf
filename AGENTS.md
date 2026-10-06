@@ -13,7 +13,7 @@ chrome) is the owner's template. **Numbers are not.**
   description, tags) then `python3 site/blog/build.py`. Do not hand-edit
   the generated `site/blog/index.html` or `site/blog/<slug>/index.html`.
   `site/.nojekyll` keeps GitHub Pages from running Jekyll on the `.md`.
-- Copy that says "open source" → `LICENSE` is proprietary. Don't.
+- License: AGPL-3.0 (core) + MIT (kernel, adapters). See NOTICE.
 - Do **not** put a hosted-inference SKU, empty tps/$/M table, or "Swell is
   not live" product page on the site. That product does not exist yet.
 
