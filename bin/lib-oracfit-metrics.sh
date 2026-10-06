@@ -20,6 +20,21 @@ oracfit_emit_metric_and_ledger() {
   ledger="$(oracfit_ledger_path)"
   mkdir -p "$(dirname "$ledger")"
 
+  # T18/T19 → ledger de modo: run-with-fallback deixa <efetivo>.kernel com
+  # kernel_shadow_diff / policy_version_* quando LLMS_KERNEL=shadow|on. Sem o
+  # sidecar (flag off) nenhuma chave entra — schema não enfraquece. Incidente
+  # 2026-09-19 (E5, máquina do dono): 2 runs em shadow e o medidor lia
+  # "no-shadow-traffic" porque o dado parava no sidecar.
+  local sidecar kv
+  sidecar="${DISPATCH_EFETIVO_FILE:-}"
+  if [ -n "$sidecar" ] && [ -f "${sidecar%.efetivo}.kernel" ]; then
+    while IFS= read -r kv || [ -n "$kv" ]; do
+      case "$kv" in
+        kernel_shadow_diff=?*|policy_version_crate=?*|policy_version_sha=?*) set -- "$@" "$kv" ;;
+      esac
+    done < "${sidecar%.efetivo}.kernel"
+  fi
+
   # Event for panel (read-only consumers — AD-17)
   oracfit_emit_event metric "$@"
 

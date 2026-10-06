@@ -88,6 +88,37 @@ if str(row["oracle_exit"]) != "0":
 PY
 fi
 
+# T18/T19 → ledger de modo (incidente E5 2026-09-19: 2 runs em shadow, medidor
+# lia no-shadow-traffic porque o sidecar .kernel nunca chegava ao mode.jsonl).
+if [ ! -x "$ROOT/kernel/target/release/dispatch-policy" ]; then
+  (cd "$ROOT/kernel" && cargo build --release >/tmp/t20-kernel-build.log 2>&1) \
+    || not_ "cargo build --release do kernel falhou (ver /tmp/t20-kernel-build.log)"
+fi
+rm -f "$WD/.dispatch/stub-proof"
+rc=0
+ORACFIT_ROOT="$ROOT" DISPATCH_RUNNER="$ROOT/adapters/stub/runner.sh" \
+  KERNEL_TEST_ID=T01 LLMS_KERNEL=shadow \
+  bash "$ROOT/bin/oracfit" run kernel_test "$WD/spec.md" t20-t01-shadow --workdir "$WD" \
+  >"$WD/mode-shadow.out" 2>&1 || rc=$?
+[ "$rc" -eq 0 ] && ok "oracfit run kernel_test em LLMS_KERNEL=shadow exit 0" || not_ "shadow run rc=$rc $(tail -8 "$WD/mode-shadow.out")"
+python3 - "$LEDGER" <<'PY' && ok "mode.jsonl em shadow: kernel_shadow_diff=0 + policy_version_crate" || not_ "shadow não chegou ao mode.jsonl"
+import json, sys
+row = json.loads(open(sys.argv[1]).read().splitlines()[-1])
+assert row.get("task") == "t20-t01-shadow", row
+assert str(row.get("kernel_shadow_diff")) == "0", row
+assert row.get("policy_version_crate"), row
+assert row.get("policy_version_sha"), row
+PY
+python3 - "$LEDGER" <<'PY' && ok "mode.jsonl com flag off: sem kernel_shadow_diff (schema intacto)" || not_ "flag off gravou campo de shadow"
+import json, sys
+rows = [json.loads(l) for l in open(sys.argv[1]).read().splitlines() if l.strip()]
+off = [r for r in rows if r.get("task") == "t20-t01"]
+assert off and all("kernel_shadow_diff" not in r and "policy_version_crate" not in r for r in off), off
+PY
+rc=0; out=$(ORACFIT_WORKDIR="$WD" LEDGER_DIR="$WD/no-central" bash "$ROOT/bin/check-shadow-ledger.sh" 2>&1) || rc=$?
+[ "$rc" -eq 0 ] && echo "$out" | grep -q "shadow: 1 linhas · diff!=0: 0" \
+  && ok "check-shadow-ledger vê a linha do modo (diff-zero)" || not_ "medidor rc=$rc: $out"
+
 echo ""
 echo "=== $pass passed, $fail failed ==="
 [ "$fail" -eq 0 ]

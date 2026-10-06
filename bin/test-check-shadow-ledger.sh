@@ -60,11 +60,33 @@ assert d["shadow_rows"] == 2 and d["diff_rows"] == 1 and d["verdict"] == "diff-n
 assert d["diffs"][0]["task_name"] == "ruim", d
 ' 2>/dev/null && ok "--json: shadow_rows/diff_rows/verdict/diffs" || not_ "--json contrato: $out"
 
-# 6. LEDGER_DIR sobrepõe o default
+# 6. LEDGER_DIR sobrepõe o default (sem mode.jsonl no workdir → só o central)
 mkdir -p "$WD/ld" && cp "$WD/zero.jsonl" "$WD/ld/ledger.jsonl"
-rc=0; out=$(LEDGER_DIR="$WD/ld" bash "$CHK" 2>&1) || rc=$?
+rc=0; out=$(LEDGER_DIR="$WD/ld" ORACFIT_WORKDIR="$WD/vazio" bash "$CHK" 2>&1) || rc=$?
 [ "$rc" -eq 0 ] && echo "$out" | grep -q "$WD/ld/ledger.jsonl" \
   && ok "LEDGER_DIR respeitado" || not_ "LEDGER_DIR rc=$rc: $out"
+
+# 7. ledger de modo (chaves planas, ts em vez de started_at) agregado ao central
+mkdir -p "$WD/wd/.dispatch/ledger"
+cat > "$WD/wd/.dispatch/ledger/mode.jsonl" <<'EOF'
+{"v":1,"ts":"2026-09-22T01:00:00+00:00","run_id":"R1","mode_id":"kernel_test","stage":"multi","oracle_exit":"2","attempt":"3","task":"p1-T01","status":"fail","provider_efetivo":"","kernel_shadow_diff":"0","policy_version_crate":"0.1.0","policy_version_sha":"abcdef123456789"}
+{"v":1,"ts":"2026-09-22T02:00:00+00:00","run_id":"R2","mode_id":"normal","stage":"run","oracle_exit":"0","attempt":"1","task":"off-run","status":"pass"}
+EOF
+rc=0; out=$(LEDGER_DIR="$WD/ld" ORACFIT_WORKDIR="$WD/wd" bash "$CHK" 2>&1) || rc=$?
+[ "$rc" -eq 0 ] && echo "$out" | grep -q "shadow: 4 linhas · diff!=0: 0 · dias cobertos: 3" \
+  && echo "$out" | grep -q "mode.jsonl" \
+  && ok "central + mode.jsonl agregados (4 linhas, 3 dias, chaves planas lidas)" || not_ "agregação rc=$rc: $out"
+
+# 8. diff no ledger de modo nomeia o arquivo e a task
+cat > "$WD/wd/.dispatch/ledger/mode.jsonl" <<'EOF'
+{"v":1,"ts":"2026-09-22T01:00:00+00:00","run_id":"R3","mode_id":"kernel_test","task":"p1-T02","status":"fail","kernel_shadow_diff":"1","policy_version_crate":"0.1.0"}
+EOF
+rc=0; out=$(bash "$CHK" "$WD/wd/.dispatch/ledger/mode.jsonl" --json 2>/dev/null) || rc=$?
+[ "$rc" -eq 1 ] && echo "$out" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+assert d["diff_rows"] == 1 and d["diffs"][0]["task_name"] == "p1-T02" and d["diffs"][0]["ledger"].endswith("mode.jsonl"), d
+' 2>/dev/null && ok "diff em mode.jsonl → exit 1 com task e ledger" || not_ "diff em modo rc=$rc: $out"
 
 echo ""
 echo "=== $pass passed, $fail failed ==="
