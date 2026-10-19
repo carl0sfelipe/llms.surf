@@ -1,0 +1,74 @@
+# MODE KNOWLEDGE_NICHES — turn a large, use-it-or-lose-it token budget into
+# verified evergreen knowledge: niche research loops, writers, reviewers,
+# refiners and a feedback editor, all on one cheap/fast model, with the
+# frontier host acting as CTO and an orchestrator agent as manager.
+#
+# Born from the 2026-10-19 run for the Orbe store (23 niches, 49 agents at
+# peak, ~92M input+output tokens and ~1B cache tokens in about 4 hours):
+# 184 posts, 89 reviewed with 3,820 numbers checked (16.9% corrected),
+# 211 store-catalog corrections verified with a second source (92% confirmed).
+# Full retrospective: docs/modes/knowledge-niches-retrospective.md
+# Flow (what to do, in what order): fluxos/knowledge-niches/SKILL.md
+#
+# Writers ship a claim manifest per post; check-claims.py (zero tokens) settles
+# most numbers before any reviewer model runs.
+#
+# Every stage is a deterministic command over the niche workspace ($KN_HOME).
+# The models run inside the loops started by those commands; the mode only
+# sequences phases and gates each one with an oracle that reads files.
+id: knowledge_niches
+version: "1"
+name: knowledge_niches
+description: >
+  Volume phase (plan + map) fills niche knowledge bases and post briefs;
+  quality phase (reduce) reviews, refines, lints and verifies; export ships
+  only reviewed posts. Quality phase starts when briefs outnumber what writers
+  can absorb or when the budget pacing check says so. Publishing needs a human.
+run_attempt_budget: 3
+stages:
+  - role: plan
+    command: >
+      cd "$KN_HOME" && python3 bin/seed-niches.py --brief "$ORACFIT_SPEC_FILE"
+    stage_oracle: >
+      test "$(ls -d "$KN_HOME"/niches/n[0-9][0-9]-*/ 2>/dev/null | wc -l)" -ge 1 &&
+      ! grep -L '^## Primary sources' "$KN_HOME"/niches/n[0-9][0-9]-*/SPEC.md | grep -q .
+    oracle: true
+    max_attempts: 2
+  - role: map
+    rate_limit_s: 5
+    preflight: >
+      awk '/MemAvailable/{exit !($2/1024 > 3500)}' /proc/meminfo ||
+      { echo "ERROR: less than 3.5 GB RAM available; refusing to start loops" >&2; exit 1; }
+    command: >
+      cd "$KN_HOME" && bash bin/niches.sh start --phase volume
+      --until-briefs "${KN_BRIEF_TARGET:-100}" --max-hours "${KN_VOLUME_HOURS:-2}"
+    stage_oracle: >
+      test "$(cat "$KN_HOME"/niches/n*/posts/*.md 2>/dev/null | grep -c '^title:')" -ge 1 &&
+      ! grep -h 'oracle=[1-9]' "$KN_HOME"/niches/*/loop.log | awk 'END{exit !(NR <= 5)}'
+    oracle: true
+    max_attempts: 1
+  - role: reduce
+    command: >
+      cd "$KN_HOME" && bash bin/lint-posts.sh &&
+      { python3 "$ORACFIT_ROOT/fluxos/knowledge-niches/bin/check-claims.py" niches/n*/posts/*.md
+        --cache niches/.claims-cache || true; } &&
+      bash bin/niches.sh start --phase quality --max-hours "${KN_QUALITY_HOURS:-2}"
+    stage_oracle: >
+      test "$(ls "$KN_HOME"/niches/n*/.review/*/ok 2>/dev/null | wc -l)" -ge 1 &&
+      grep -q '^## L[0-9]' "$KN_HOME"/niches/LESSONS.md
+    oracle: true
+    max_attempts: 1
+  - role: export
+    command: >
+      cd "$KN_HOME" && python3 bin/export-posts.py --only-reviewed --dry-run
+    stage_oracle: >
+      test -s "$KN_HOME"/export/last-batch.md
+    oracle: true
+    max_attempts: 2
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: false
+  safety_ceiling: 2
+publish: human_approval
+on_fail: halt
