@@ -37,9 +37,10 @@ niches/
   eNN-writer/ vNN-reviewer/ rNN-refiner/ m01-editor/ qNN-verifier/   (each: _template.md DONE.md loop.log .cycle/)
 lint/          Vale config + one style per output language
 bin/           niches.sh (loops, RAM guard, backoff) · panel.py · lint-posts.sh · fix-frontmatter.py · export-posts.py
+               check-claims.py (in this repo: fluxos/knowledge-niches/bin/)
 ```
 
-Each agent has its own workdir because the dispatch lock is single-flight per workdir.
+Each agent has its own workdir because the dispatch lock is single-flight per git root. **The workspace must not be inside a git repository**: a `git init` above it makes every agent share one lock and serializes the whole run (happened on 2026-10-19; keep the backup repo outside, with `--git-dir`).
 Shared files are edited by exactly one role; everything else communicates through marker files
 (`.post/<id>/claim|done|blocked`, `.review/<slug>/ok|rejected`). Claims use `mkdir`, which is atomic.
 
@@ -78,6 +79,23 @@ as a PR against a dev branch. Production belongs to whoever owns production.
 consumer of the quota, including the manager itself. Cut the lowest-value consumers first:
 research of niches far from revenue → extra writers → extra reviewers → refiners → store QA last.
 
+## Claim manifest: make review cheap at write time
+
+Most review work was checking that each number exists on the page it cites — and the dominant error
+was a real number cited to a page that does not say it. So the writer, who already has the page open,
+ships `posts/<slug>.claims.json`: one entry per number with the exact post phrase, the value, the URL and
+the **exact sentence copied from the source**. `bin/check-claims.py` (zero tokens, cached fetch) then checks
+
+1. coverage — every number in the body has a claim;
+2. coherence — the value is in the post phrase; one fact never has two values;
+3. source — the quote is still on the page and contains the value.
+
+The reviewer model opens only what failed plus a small sample of passing claims, and keeps the judgment
+work (overclaiming, duplicates, lessons). The same manifest powers later freshness audits: re-run the
+checker monthly and `source_changed` lists exactly which posts cite a page that moved.
+Limits: JavaScript-rendered or bot-blocked pages return `fetch_failed` and go to the model; a quote that
+exists does not prove it was read correctly — that is what the sample is for.
+
 ## Guardrails (mechanism, not protocol)
 
 - RAM guard in the loop: no new cycle below 3.5 GB available; writers back off first.
@@ -85,6 +103,7 @@ research of niches far from revenue → extra writers → extra reviewers → re
   pricing mentions "quota" and "429".
 - `check-spec.sh` must pass for every template before the first dispatch (preflight refuses otherwise).
 - Atomic claims with `mkdir`; one owner per shared file.
+- Writer oracle fails if the claim manifest is missing or `check-claims.py` fails.
 - Front matter quoted by script before linting; posts with unresolved placeholders are refused at export.
 
 ## HALT

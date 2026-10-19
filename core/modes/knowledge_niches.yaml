@@ -10,6 +10,9 @@
 # Full retrospective: docs/modes/knowledge-niches-retrospective.md
 # Flow (what to do, in what order): fluxos/knowledge-niches/SKILL.md
 #
+# Writers ship a claim manifest per post; check-claims.py (zero tokens) settles
+# most numbers before any reviewer model runs.
+#
 # Every stage is a deterministic command over the niche workspace ($KN_HOME).
 # The models run inside the loops started by those commands; the mode only
 # sequences phases and gates each one with an oracle that reads files.
@@ -47,6 +50,8 @@ stages:
   - role: reduce
     command: >
       cd "$KN_HOME" && bash bin/lint-posts.sh &&
+      { python3 "$ORACFIT_ROOT/fluxos/knowledge-niches/bin/check-claims.py" niches/n*/posts/*.md
+        --cache niches/.claims-cache || true; } &&
       bash bin/niches.sh start --phase quality --max-hours "${KN_QUALITY_HOURS:-2}"
     stage_oracle: >
       test "$(ls "$KN_HOME"/niches/n*/.review/*/ok 2>/dev/null | wc -l)" -ge 1 &&

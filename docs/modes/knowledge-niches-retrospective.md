@@ -143,7 +143,8 @@ human approval for any spend, production owned by the production agent.
 
 1. Monetization primitives exist before writing (affiliate module or no placeholder at all; email capture block).
 2. Niches chosen by durability × demand × closeness to revenue; each with method and primary sources.
-3. Lint, front-matter fixer and export validator run from minute one.
+3. Lint, front-matter fixer, export validator and the claim manifest (`check-claims.py`) run from minute one.
+   Keep the workspace outside any git repository (one dispatch lock per git root).
 4. Writers and reviewers from the start at a 1:1 ratio; review the oldest first.
 5. Pacing table updated at every quota reading, counting every consumer.
 6. Store QA niche on from the start: it paid for itself in one afternoon.
