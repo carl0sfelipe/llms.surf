@@ -11,6 +11,7 @@ O trabalho é executado por **fluxos**, não por memória de regras. Comece por 
 | medir um modelo antes de gravar no registry | `fluxos/verify/SKILL.md` |
 | transformar uma falha em proteção real | `fluxos/incident/SKILL.md` |
 | saber onde foi parar a regra N | `fluxos/_comum/mapa-regras.md` |
+| keep agent context small, pointer-checked and purged | `fluxos/context-map/SKILL.md` |
 
 O fluxo diz o que fazer, em que ordem, e grava o estado no artefato. As regras abaixo são só o que **não** coube em passo nem em código.
 
