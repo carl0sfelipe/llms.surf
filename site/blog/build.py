@@ -335,7 +335,7 @@ def page(
         <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
         <span class="logo-word">llms.surf</span>
       </a>
-      <p class="foot-surf">Built in Saquarema, Brazil — where you never paddle on a guess. Neither do we.</p>
+      <p class="foot-surf">Built in Saquarema, Brazil.</p>
     </div>
     <nav class="foot-links" aria-label="Project links">
       <a href="{prefix}llms.txt">llms.txt</a>
