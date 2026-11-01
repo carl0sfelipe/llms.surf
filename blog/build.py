@@ -197,6 +197,17 @@ def render_md(src: str) -> str:
                 f'<blockquote class="quote"><p class="q-text">{inline(" ".join(q))}</p></blockquote>'
             )
             continue
+        img = re.match(r"^!\[([^\]]*)\]\(([^)\s]+)\)\s*$", line)
+        if img:
+            flush_para(para)
+            alt = html.escape(img.group(1), quote=True)
+            src = html.escape(img.group(2), quote=True)
+            out.append(
+                f'<figure class="post-fig"><img src="{src}" alt="{alt}" loading="lazy" '
+                'style="width:100%;height:auto;border-radius:14px"></figure>'
+            )
+            i += 1
+            continue
         ul = re.match(r"^[-*] (.+)$", line)
         ol = re.match(r"^(\d+)\. (.+)$", line)
         if ul or ol:
@@ -233,6 +244,7 @@ def page(
     crumb: str,
     body: str,
     extra_head: str = "",
+    image: str = "",
 ) -> str:
     desc = html.escape(description)
     tit = html.escape(title)
@@ -255,10 +267,11 @@ def page(
 <meta property="og:title" content="{tit}">
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{html.escape(canonical)}">
-<meta property="og:image" content="{prefix}og.png">
+<meta property="og:image" content="{html.escape(CANONICAL_HOST + image) if image else prefix + 'og.png'}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{tit}">
 <meta name="twitter:description" content="{desc}">
+{f'<meta name="twitter:image" content="{html.escape(CANONICAL_HOST + image)}">' if image else ""}
 <script src="{prefix}journey.js" data-key="llms.surf.journey"></script>
 <style>html,body{{background:#0b0b0b!important;background-color:#0b0b0b!important;color:#e8e8e8!important;color-scheme:only dark;min-height:100%;min-height:100dvh;forced-color-adjust:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
 <link rel="stylesheet" href="{prefix}styles.css?v=202609101645">
@@ -368,6 +381,7 @@ def write_post(post: dict) -> None:
         prefix="../../",
         crumb=crumb,
         body=article,
+        image=post.get("image", ""),
     )
     (dest / "index.html").write_text(html_out, encoding="utf-8")
 
