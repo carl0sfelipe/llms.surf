@@ -1,0 +1,9 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 440' width='900' height='440' role='img' font-family='Inter,Segoe UI,Helvetica,Arial,sans-serif'><title>The flywheel</title><style>
+.g{transform-box:fill-box;transform-origin:left center;animation:grow 1.4s cubic-bezier(.2,.8,.2,1) both}
+.gu{transform-box:fill-box;transform-origin:center bottom;animation:growu 1.4s cubic-bezier(.2,.8,.2,1) both}
+.f{animation:fade .8s ease both}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes growu{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.g,.gu,.f{animation:none}}
+</style><rect width='900' height='440' rx='14' fill='#0d1117'/><text x='32' y='46' font-size='24' fill='#e6edf3' text-anchor='start' font-weight='700'>The flywheel</text><text x='32' y='74' font-size='15' fill='#8b949e' text-anchor='start' font-weight='400'>A small sibling turns home machines into a test fleet</text><circle cx='450' cy='250' r='120' fill='none' stroke='#30363d' stroke-width='3'/><circle r='8' fill='#3FB950'><animateMotion dur='6s' repeatCount='indefinite' path='M450 130 A120 120 0 1 1 449.9 130'/></circle><circle cx='450' cy='130' r='10' fill='#22D3EE'/><text x='450.0' y='108.0' font-size='16' fill='#22D3EE' text-anchor='middle' font-weight='600'>Lab ships ~30B MoE</text><circle cx='570' cy='250' r='10' fill='#e6edf3'/><text x='590.0' y='256.0' font-size='16' fill='#e6edf3' text-anchor='start' font-weight='600'>Community forks, quants, kernels</text><circle cx='450' cy='370' r='10' fill='#3FB950'/><text x='450.0' y='406.0' font-size='16' fill='#3FB950' text-anchor='middle' font-weight='600'>Findings + incidents</text><circle cx='330' cy='250' r='10' fill='#f0883e'/><text x='310.0' y='256.0' font-size='16' fill='#f0883e' text-anchor='end' font-weight='600'>Ideas reach the frontier</text></svg>

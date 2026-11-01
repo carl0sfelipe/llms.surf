@@ -11,8 +11,11 @@ tags:
   - qwen
   - glm
   - feedback
+image: /blog/why-frontier-models-need-a-30b-moe/img/hero.png
 canonical: https://llms.surf/blog/why-frontier-models-need-a-30b-moe
 ---
+
+![Share of Steam PCs that can run each model size](/blog/why-frontier-models-need-a-30b-moe/img/hero.svg)
 
 A frontier lab can hire a few hundred great engineers. A model that runs on a 16 GB graphics card recruits everyone who owns one, and in Steam's September 2026 hardware survey that was the most common amount of video memory, owned by 27% of users. Essentially none can hold a 120B model on the card, even at 4 bits. The best argument for shipping a small mixture-of-experts (MoE) model is not the model itself. It is what thousands of curious people do with it when they can run it at home, and how much of that work flows back into the frontier.
 
@@ -41,11 +44,15 @@ A 4-bit file takes about 0.63 GB per billion parameters (Qwen3.6-35B-A3B's Q4 fi
 
 Share of Steam users in September 2026. "Runs with experts in RAM" counts machines where GPU memory plus system RAM holds the file with 6 GB to spare, assuming VRAM and RAM are independent; it only applies to MoE models with few active parameters ([our calculation and assumptions](/blog/why-frontier-models-need-a-30b-moe/medicoes/README.md)).
 
+![Who can run each model size](/blog/why-frontier-models-need-a-30b-moe/img/pool.svg)
+
 Read the table from top to bottom. Halving a model from 120B to 60B moves it from about 1% of machines to about a quarter, but almost nobody can hold it on the GPU alone. Halving again to ~35B doubles the hybrid pool to more than half of all machines and makes it fully GPU-resident for 7%. At ~20B, more than a third of users fit it entirely on the card. The first halving multiplies the pool about 25 times. The second roughly doubles it again and is the first size a meaningful share of people can run entirely on the card.
 
 Steam measures gamers, not researchers, so treat it as a map of the hardware people own, not a headcount. But researchers, students and hobbyists buy the same cards. The repos below were built on exactly those tiers: 12 GB, 16 GB and 24 GB cards, DDR4 desktops and laptops.
 
 Why MoE matters here: Qwen3.6-35B-A3B stores 35B parameters but reads about 3B per token, routing through 8 of its 256 experts plus a shared one ([InsiderLLM](https://insiderllm.com/guides/qwen-3-6-local-ai-guide/)). Generation is limited by memory bandwidth, so when the experts sit in slow system RAM, each token only pulls a small slice of them. A dense 60B with the same offload reads every weight for every token and slows to a crawl. That is why the last column only exists for MoE models.
+
+![256 experts, 9 read per token](/blog/why-frontier-models-need-a-30b-moe/img/moe.svg)
 
 ## What the download data says
 
@@ -55,48 +62,23 @@ Small models get used. Among models that declare a parameter count, those under 
 
 The labs that ship mostly giant models feel it. Hugging Face measured how much of each lab's 2026 downloads came from models above 70B:
 
-| Lab | Share of 2026 downloads from models above 70B |
-|---|---:|
-| MiniMax | ~100% |
-| Moonshot | 88% |
-| DeepSeek | 55% |
-| Z.ai | 39% |
-| NVIDIA | 14% |
-| Meta | 9% |
-| Google, Microsoft, IBM Granite | ~0% |
-
-Source: ([Hugging Face, Summer 2026](https://huggingface.co/blog/state-of-open-models-summer-2026)).
+![Downloads above 70B by lab](/blog/why-frontier-models-need-a-30b-moe/img/lab-size.svg)
 
 Moonshot, which publishes only frontier-size models, had 37 million downloads in 2026. Qwen, which publishes everything from 0.6B up, had 2,045 million, about 55 times more ([Hugging Face, Summer 2026](https://huggingface.co/blog/state-of-open-models-summer-2026)).
 
 Downloads are only half the story. The other half is what people build on top:
 
-| Base family | Derivative models on the Hub |
-|---|---:|
-| Qwen | 151,448 |
-| Google | 82,506 |
-| Meta (all) | ~58,200 |
-| Llama repository | ~32,200 |
-
-Source: ([Hugging Face, Summer 2026](https://huggingface.co/blog/state-of-open-models-summer-2026)); Meta and Llama derived from the reported 2.6× and 4.7× ratios.
+![Derivative models by family](/blog/why-frontier-models-need-a-30b-moe/img/derivatives.svg)
 
 Qwen's share of new derivative models on the Hub went from 1% in January 2024 to 69% in February 2026, according to the ATOM Report. Its family covers every size a home machine can hold, and it ships under Apache 2.0.
 
 The work behind those derivatives is overwhelmingly done outside the lab. This is the clearest single number in the whole debate:
 
-> **28,531** GGUF conversions of Qwen models exist on the Hub. Qwen published **54** of them. ([Hugging Face, Summer 2026](https://huggingface.co/blog/state-of-open-models-summer-2026))
+![28,531 GGUF conversions vs 54 by Qwen](/blog/why-frontier-models-need-a-30b-moe/img/gguf.svg)
 
 And the format people use to run models at home is the fastest-growing thing on the Hub:
 
-| Library / format | Growth |
-|---|---:|
-| GGUF | +464% |
-| LeRobot | +194% |
-| MLX | +148% |
-| diffusers | +21% |
-| transformers / PEFT | +16% |
-
-Source: ([Hugging Face, Summer 2026](https://huggingface.co/blog/state-of-open-models-summer-2026)). GGUF builds now exist even for ~284B and ~2.8T models.
+![Growth by format](/blog/why-frontier-models-need-a-30b-moe/img/formats.svg)
 
 The same community keeps growing. r/LocalLLaMA, where many of the techniques in this post first appeared, has about 861,000 members and added about 307,000 in the last year ([GummySearch](https://gummysearch.com/r/LocalLLaMA/)).
 
@@ -213,6 +195,8 @@ This is the part I am building. I'm working on cloudfair.tech, a service for ver
 
 The same machinery fits incident feedback almost exactly:
 
+![Feedback receipts pipeline](/blog/why-frontier-models-need-a-30b-moe/img/receipts.svg)
+
 1. **Split on the user's machine.** The local agent writes two records. The technical record holds only the closed-schema fields above. The private context, meaning prompts, file paths, code and the full log, never leaves the machine. Only a salted hash of it goes into the technical record, so the user can later prove what they saw if they choose to share it.
 2. **Sanitize with published code.** A deterministic, open-source sanitizer builds the technical record, and its version hash goes into the record. Because the schema has no free-text fields, anyone can check that a record contains no prose, paths or code by validating it against the published schema. No trust in the lab or in me is needed for that check.
 3. **Sign it.** The agent signs the record with a key created on that install, not tied to a name. The lab can deduplicate reports and weigh a reporter's track record without knowing who they are.
@@ -228,6 +212,8 @@ What this proves, mathematically:
 What it does not prove: that a field value inside the schema could never be identifying in some edge case, or that the user ran the published sanitizer rather than a modified one. The first is handled by keeping the schema small and coarse (VRAM tier, not GPU serial). The second can be tightened later with a zero-knowledge proof that the record is the sanitizer's output for the committed raw log. That is heavier engineering, and the schema-plus-receipt design works without it.
 
 The cost is small. One Bitcoin transaction anchors a whole batch: cloudfair's design puts a 48-byte root in an OP_RETURN output and estimates about US$0.00003 per record at its planned batch sizes.
+
+![The flywheel](/blog/why-frontier-models-need-a-30b-moe/img/loop.svg)
 
 ## The 16 GB rule for labs
 
