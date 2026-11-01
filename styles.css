@@ -466,3 +466,9 @@ html.reveal-pending .reveal.in{opacity:1;transform:none}
 .wl-form{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0 .25rem}
 .wl-email{background:#0B0E14;border:1px solid var(--line,#22303f);border-radius:8px;color:var(--fg,#D7E2EA);font-family:"JetBrains Mono",monospace;font-size:.95rem;padding:.6rem .8rem;min-width:min(320px,80vw)}
 .wl-email:focus{outline:2px solid #22D3EE;outline-offset:1px}
+.post-details{margin:1.5rem 0;border:1px solid #30363d;border-radius:12px;padding:0 1.1rem}
+.post-details>summary{cursor:pointer;padding:.9rem 0;font-weight:600;color:#22D3EE;list-style:none}
+.post-details>summary::-webkit-details-marker{display:none}
+.post-details>summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
+.post-details[open]>summary::before{transform:rotate(90deg)}
+.post-details[open]{padding-bottom:.6rem}
