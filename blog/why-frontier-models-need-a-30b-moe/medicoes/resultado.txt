@@ -1,0 +1,5 @@
+tamanho | arquivo 4-bit | só GPU 4-bit | só GPU 3-bit | GPU+RAM 4-bit (offload, MoE)
+120B | 76 GB | 0.00% | 0.50% | 1.02%
+60B | 38 GB | 0.50% | 1.91% | 25.50%
+35B | 22 GB | 7.41% | 9.84% | 53.90%
+20B | 13 GB | 37.05% | 50.94% | 74.66%
