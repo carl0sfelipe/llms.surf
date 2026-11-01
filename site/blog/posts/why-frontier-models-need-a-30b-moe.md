@@ -1,8 +1,8 @@
 ---
-title: "Why your frontier model needs a ~30B MoE sibling"
+title: "Why frontier models need a ~30B MoE sibling"
 description: "Shrinking a model from 120B to 35B takes it from ~1% of PCs to over half. Why that recruits more minds than any lab can hire, told through the repos that made Qwen3.6-35B-A3B run on DDR4 and 12 GB cards."
 date: 2026-10-31
-slug: why-your-frontier-needs-a-30b-moe
+slug: why-frontier-models-need-a-30b-moe
 lang: en
 author: Carlos
 tags:
@@ -11,7 +11,7 @@ tags:
   - qwen
   - glm
   - feedback
-canonical: https://llms.surf/blog/why-your-frontier-needs-a-30b-moe
+canonical: https://llms.surf/blog/why-frontier-models-need-a-30b-moe
 ---
 
 A frontier lab can hire a few hundred great engineers. A model that runs on a 16 GB graphics card recruits everyone who owns one, and in Steam's September 2026 hardware survey that was the most common amount of video memory, owned by 27% of users. Essentially none can hold a 120B model on the card, even at 4 bits. The best argument for shipping a small mixture-of-experts (MoE) model is not the model itself. It is what thousands of curious people do with it when they can run it at home, and how much of that work flows back into the frontier.
@@ -39,7 +39,7 @@ A 4-bit file takes about 0.63 GB per billion parameters (Qwen3.6-35B-A3B's Q4 fi
 | ~35B | ~22 GB | 7.4% | ~54% |
 | ~20B | ~13 GB | 37% | ~75% |
 
-Share of Steam users in September 2026. "Runs with experts in RAM" counts machines where GPU memory plus system RAM holds the file with 6 GB to spare, assuming VRAM and RAM are independent; it only applies to MoE models with few active parameters ([our calculation and assumptions](/blog/why-your-frontier-needs-a-30b-moe/medicoes/README.md)).
+Share of Steam users in September 2026. "Runs with experts in RAM" counts machines where GPU memory plus system RAM holds the file with 6 GB to spare, assuming VRAM and RAM are independent; it only applies to MoE models with few active parameters ([our calculation and assumptions](/blog/why-frontier-models-need-a-30b-moe/medicoes/README.md)).
 
 Read the table from top to bottom. Halving a model from 120B to 60B moves it from about 1% of machines to about a quarter, but almost nobody can hold it on the GPU alone. Halving again to ~35B doubles the hybrid pool to more than half of all machines and makes it fully GPU-resident for 7%. At ~20B, more than a third of users fit it entirely on the card. The first halving multiplies the pool about 25 times. The second roughly doubles it again and is the first size a meaningful share of people can run entirely on the card.
 
@@ -262,7 +262,7 @@ If GLM-5.5 Flash turns out to be a ~32B open MoE, it will be the first new conte
 - [Codersera — Qwen 3.7 status](https://codersera.com/blog/qwen-3-7-release-date-whats-new-2026/)
 - [InsiderLLM — Qwen 3.6 guide](https://insiderllm.com/guides/qwen-3-6-local-ai-guide/)
 - [Steam Hardware & Software Survey — September 2026](https://store.steampowered.com/hwsurvey/Steam-Hardware-Software-Survey-Welcome-to-Steam)
-- [Our calculation — who can run each size](/blog/why-your-frontier-needs-a-30b-moe/medicoes/README.md)
+- [Our calculation — who can run each size](/blog/why-frontier-models-need-a-30b-moe/medicoes/README.md)
 - [Cerebras — REAP](https://www.cerebras.ai/blog/reap)
 - [PowerInfer paper](https://arxiv.org/pdf/2312.12456v1.pdf)
 - [Tsinghua MADSys — KTransformers (SOSP 2025)](https://madsys.cs.tsinghua.edu.cn/publication/ktransformers-unleashing-the-full-potential-of-cpu/gpu-hybrid-inference-for-moe-models/)
