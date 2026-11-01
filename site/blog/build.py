@@ -197,6 +197,20 @@ def render_md(src: str) -> str:
                 f'<blockquote class="quote"><p class="q-text">{inline(" ".join(q))}</p></blockquote>'
             )
             continue
+        det = re.match(r"^:::details (.+)$", line)
+        if det:
+            flush_para(para)
+            inner: list[str] = []
+            i += 1
+            while i < n and lines[i].strip() != ":::":
+                inner.append(lines[i])
+                i += 1
+            i += 1
+            out.append(
+                f'<details class="post-details"><summary>{inline(det.group(1))}</summary>'
+                f'{render_md(chr(10).join(inner))}</details>'
+            )
+            continue
         img = re.match(r"^!\[([^\]]*)\]\(([^)\s]+)\)\s*$", line)
         if img:
             flush_para(para)
@@ -274,7 +288,7 @@ def page(
 {f'<meta name="twitter:image" content="{html.escape(CANONICAL_HOST + image)}">' if image else ""}
 <script src="{prefix}journey.js" data-key="llms.surf.journey"></script>
 <style>html,body{{background:#0b0b0b!important;background-color:#0b0b0b!important;color:#e8e8e8!important;color-scheme:only dark;min-height:100%;min-height:100dvh;forced-color-adjust:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
-<link rel="stylesheet" href="{prefix}styles.css?v=202609101645">
+<link rel="stylesheet" href="{prefix}styles.css?v=202611010300">
 <script>(function(){{function p(){{var h=document.documentElement,b=document.body;h.style.setProperty("color-scheme","only dark");h.style.setProperty("background-color","#0b0b0b","important");h.style.setProperty("color","#e8e8e8","important");if(!b)return;b.style.setProperty("color-scheme","only dark");b.style.setProperty("background-color","#0b0b0b","important");b.style.setProperty("color","#e8e8e8","important");}}if(document.body)p();else document.addEventListener("DOMContentLoaded",p);}})();</script>
 {HEAD_FONTS}
 {extra_head}

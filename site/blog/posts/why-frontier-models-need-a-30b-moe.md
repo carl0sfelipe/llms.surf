@@ -189,9 +189,10 @@ A lab does not need to run anything on the user's machine. It needs to publish t
 
 Asking people to "trust us, we only keep the technical part" will not be enough. Agents running on someone's machine see their code, their documents and their prompts. The feedback channel has to make that leak impossible to hide, not just promise it.
 
-### Making it provable: feedback receipts
+One way to make that provable is with verifiable receipts. Disclosure: that is what I am building, at cloudfair.tech. If you are curious how it would work, open the box below; otherwise skip it, the argument does not depend on it.
 
-This is the part I am building. I'm working on cloudfair.tech, a service for verifiable receipts: records where some fields are public, others stay private, and anyone can check, with nothing but SHA-256 and a public blockchain, that a record existed and was not changed. Its first version issues receipts for random draws: each draw is hashed with its private inputs, thousands of hashes go into a Merkle tree (the same RFC 6962 structure used by Certificate Transparency), and the tree's root is written into a Bitcoin transaction. An auditor can verify any single draw without seeing the private inputs of any other.
+:::details How feedback receipts would work (optional, my project)
+I'm working on cloudfair.tech, a service for verifiable receipts: records where some fields are public, others stay private, and anyone can check, with nothing but SHA-256 and a public blockchain, that a record existed and was not changed. Its first version issues receipts for random draws: each draw is hashed with its private inputs, thousands of hashes go into a Merkle tree (the same RFC 6962 structure used by Certificate Transparency), and the tree's root is written into a Bitcoin transaction. An auditor can verify any single draw without seeing the private inputs of any other.
 
 The same machinery fits incident feedback almost exactly:
 
@@ -212,6 +213,7 @@ What this proves, mathematically:
 What it does not prove: that a field value inside the schema could never be identifying in some edge case, or that the user ran the published sanitizer rather than a modified one. The first is handled by keeping the schema small and coarse (VRAM tier, not GPU serial). The second can be tightened later with a zero-knowledge proof that the record is the sanitizer's output for the committed raw log. That is heavier engineering, and the schema-plus-receipt design works without it.
 
 The cost is small. One Bitcoin transaction anchors a whole batch: cloudfair's design puts a 48-byte root in an OP_RETURN output and estimates about US$0.00003 per record at its planned batch sizes.
+:::
 
 ![The flywheel](/blog/why-frontier-models-need-a-30b-moe/img/loop.svg)
 
