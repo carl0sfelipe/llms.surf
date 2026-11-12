@@ -206,6 +206,24 @@ grep -q "plan .*tier:mid" "$W/show-tow.txt" && ok "show lists every stage" || no
 grep -q "command:" "$W/show-mine.txt" && ok "show says a mechanical stage runs a command" || not "show does not mark the mechanical stage"
 "$L" mode show no_such_mode >/dev/null 2>&1; [ $? -eq 3 ] && ok "show refuses an unknown mode" || not "show accepted an unknown mode"
 
+echo "== 12. the flywheel works on a machine without PyYAML"
+# The loader has a second reader for machines without PyYAML. The whole
+# custom-mode path has to work there too: init, validate, show, run.
+mkdir -p "$W/noyaml"
+printf 'raise ImportError("PyYAML is not installed here")\n' >"$W/noyaml/yaml.py"
+workdir four
+"$L" spec init task.md >/dev/null
+stub_oracle task.md
+export PYTHONPATH="$W/noyaml"
+"$L" mode init my_break >/dev/null 2>&1 && ok "init without PyYAML" || not "init failed without PyYAML"
+"$L" mode validate my_break >/dev/null 2>&1 && ok "validate without PyYAML" || not "validate failed without PyYAML"
+"$L" mode show my_break >"$W/show-noyaml.txt" 2>&1 && grep -q "mode: my_break" "$W/show-noyaml.txt" \
+  && ok "show without PyYAML" || not "show failed without PyYAML"
+rm -f .dispatch/stub-proof
+"$L" run my_break task.md t-noyaml >"$W/noyaml.log" 2>&1 && [ "$(status_of t-noyaml)" = pass ] \
+  && ok "run without PyYAML: pass" || { not "run failed without PyYAML"; tail -6 "$W/noyaml.log"; }
+unset PYTHONPATH
+
 echo ""
 echo "mode tooling: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
