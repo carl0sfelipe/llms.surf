@@ -169,6 +169,33 @@ rm -f .dispatch/stub-proof
 grep -q "role=unlock" "$W/elev.log" && ok "the unlock stage ran" || { not "the unlock stage never ran"; tail -8 "$W/elev.log"; }
 grep -q "role=plan" "$W/elev.log" && not "the plan stage ran after a red unlock" || ok "the plan stage never started"
 
+echo "== 10. a mechanical stage retries its command until it works"
+cat >core/modes/mech_retry.yaml <<'RETRY'
+id: mech_retry
+version: "1"
+name: mech retry
+description: a mechanical stage that fails once and then works
+stages:
+  - role: run
+    command: bash -c 'n=$(cat .dispatch/counter 2>/dev/null || echo 0); n=$((n+1)); echo $n > .dispatch/counter; [ "$n" -ge 2 ]'
+    oracle: true
+    max_attempts: 3
+gauntlet:
+  enabled: true
+on_fail: halt
+RETRY
+python3 - "$W/spec_retry.md" <<'PY'
+import re, sys
+text = open("task.md", encoding="utf-8").read()
+text = re.sub(r"^- command: .*", "- command: grep -q 2 .dispatch/counter", text, flags=re.M)
+text = re.sub(r"^VERIFICATION: .*", "VERIFICATION: grep -q 2 .dispatch/counter", text, flags=re.M)
+open(sys.argv[1], "w", encoding="utf-8").write(text)
+PY
+rm -rf .dispatch
+"$L" run mech_retry "$W/spec_retry.md" t-retry >"$W/retry.log" 2>&1
+[ "$(status_of t-retry)" = pass ] && ok "the mechanical stage passed on the second attempt" || { not "the mechanical stage did not retry"; tail -8 "$W/retry.log"; }
+grep -q "STAGE COMMAND FAILED" "$W/retry.log" && ok "the first attempt failure is on the record" || not "the first attempt failure is invisible"
+
 echo ""
 echo "mode tooling: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
