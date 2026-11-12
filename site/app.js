@@ -81,6 +81,23 @@ const DATA = {
     "bin/llms-surf gui"
   ],
 
+  customMode: [
+    "llms-surf spec init task.md",
+    "llms-surf mode init my_break            # a scaffold, or --from tow",
+    "llms-surf mode validate my_break",
+    "llms-surf mode show my_break            # what it does, without opening the YAML",
+    "llms-surf run my_break task.md t-my-break",
+    "llms-surf mode share my_break > my_break.yaml",
+    "# somewhere else, on someone else's machine:",
+    "llms-surf mode add my_break.yaml"
+  ],
+
+  customModeFacts: [
+    ["a stage can be mechanical", "command: runs a script, no model is dispatched, the oracle decides whether it worked"],
+    ["a red stage stops the chain", "an unlock that fails never starts the run — the expensive part is not spent twice"],
+    ["privacy is location", "the mode lives in your workdir; sharing is the YAML you post, nothing else"]
+  ],
+
   chips: ["opencode", "Claude Code", "Cursor", "Hermes", "qwen-code", "llama.cpp", "zcode", "prime-agent"],
   adapterChip: "+ stub (and your adapter — one YAML)"
 };
@@ -271,20 +288,24 @@ function buildQuotes() {
   });
 }
 
-function buildQuickstart() {
-  $$(".js-qs").forEach(qs => {
-    qs.replaceChildren();
-    DATA.quickstart.forEach(c => {
+function renderLines(lines) {
+  $$(".js-cm").forEach(cm => {
+    cm.replaceChildren();
+    lines.forEach(c => {
       const line = el("div", "qs-line");
-      line.append(el("span", "qs-prompt", "$ "), el("span", "qs-cmd", c));
-      qs.append(line);
+      const isComment = c.trim().startsWith("#");
+      line.append(el("span", isComment ? "qs-comment" : "qs-prompt", isComment ? "" : "$ "),
+                  el("span", "qs-cmd", c));
+      cm.append(line);
     });
   });
-  $$(".js-copy-qs").forEach(btn => {
+}
+
+function bindCopy(selector, text) {
+  $$(selector).forEach(btn => {
     if (btn.dataset.bound) return;
     btn.dataset.bound = "1";
     btn.addEventListener("click", () => {
-      const text = DATA.quickstart.join("\n");
       const done = () => {
         btn.textContent = "copied ✓";
         btn.classList.add("ok");
@@ -302,6 +323,31 @@ function buildQuickstart() {
         navigator.clipboard.writeText(text).then(done).catch(fallback);
       } else fallback();
     });
+  });
+}
+
+function buildQuickstart() {
+  $$(".js-qs").forEach(qs => {
+    qs.replaceChildren();
+    DATA.quickstart.forEach(c => {
+      const line = el("div", "qs-line");
+      line.append(el("span", "qs-prompt", "$ "), el("span", "qs-cmd", c));
+      qs.append(line);
+    });
+  });
+  bindCopy(".js-copy-qs", DATA.quickstart.join("\n"));
+}
+
+function buildCustomMode() {
+  renderLines(DATA.customMode);
+  bindCopy(".js-copy-cm", DATA.customMode.join("\n"));
+  const facts = $("#cm-facts");
+  if (!facts) return;
+  facts.replaceChildren();
+  DATA.customModeFacts.forEach(([head, text]) => {
+    const item = el("div", "cm-fact");
+    item.append(el("span", "cm-fact-k", head), el("span", "cm-fact-t", text));
+    facts.append(item);
   });
 }
 
@@ -480,6 +526,7 @@ if ($("#mech-grid"))  buildMechs();
 if ($$(".js-chips").length) buildChips();
 if ($("#wall-grid"))  buildQuotes();
 buildQuickstart();
+buildCustomMode();
 fillCounts();
 buildBathy();
 initLoop();
