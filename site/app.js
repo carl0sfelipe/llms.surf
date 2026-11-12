@@ -37,7 +37,7 @@ const DATA = {
   },
 
   stats: {
-    incidents: 120,
+    incidents: 121,
     models: 30,
     modes: 21,
     adapters: 8,
