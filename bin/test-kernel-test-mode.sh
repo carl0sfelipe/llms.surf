@@ -8,6 +8,11 @@
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# A parent dispatch exports DISPATCH_MODEL_REF. That override replaces
+# kernel_test's tier:cheap with a concrete id, skips run-with-fallback,
+# and leaves provider_efetivo empty — the field this test asserts.
+# Same isolation as bin/test-free-path.sh.
+unset DISPATCH_MODEL_REF
 pass=0
 fail=0
 ok() { echo "  PASS: $1"; pass=$((pass + 1)); }

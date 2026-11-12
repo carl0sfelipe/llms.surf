@@ -3,6 +3,11 @@
 # cursor-agent falso no PATH reproduz a amostra real tests/fixtures/cursor-stream-sample.jsonl.
 set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# A parent dispatch exports ORACFIT_EVENTS_FILE / ORACFIT_RUN_ID. The runner
+# would then write this fixture's events into the parent's log, and the
+# "no run id" case would look green because $EV in the fixture workdir
+# stayed empty.
+unset ORACFIT_EVENTS_FILE ORACFIT_RUN_ID
 RUNNER="$REPO_ROOT/adapters/cursor/runner.sh"
 FIX="$REPO_ROOT/tests/fixtures/cursor-stream-sample.jsonl"
 pass=0; fail=0

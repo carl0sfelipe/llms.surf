@@ -22,6 +22,13 @@ git -C "$ROOT" ls-files -z | (cd "$ROOT" && tar --null -T - -cf -) | tar -C "$TM
 
 # O quickstart do site, palavra por palavra, a partir da árvore virgem.
 cd "$TMP" || exit 1
+# A parent dispatch exports DISPATCH_ROOT / DISPATCH_MODEL_REF / ORACFIT_*
+# pointing at the live tree. A virgin clone must not inherit them:
+# lib-oracfit-root.sh refuses ORACFIT_ROOT=$TMP with DISPATCH_ROOT still
+# set to the parent, and the model override would skip the stub chain.
+unset DISPATCH_ROOT DISPATCH_MODEL_REF DISPATCH_EFETIVO_FILE \
+  ORACFIT_EVENTS_FILE ORACFIT_RUN_ID ORACFIT_COST_FILE \
+  ORACFIT_INTERRUPT_FILE ORACFIT_SESSION_FILE
 export ORACFIT_ROOT="$TMP"
 export DISPATCH_RUNNER="$TMP/adapters/stub/runner.sh"
 export ORACFIT_WORKDIR="$TMP"
