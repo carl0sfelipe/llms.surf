@@ -82,6 +82,11 @@ printf 'id: broken\nstages: nope\n' >"$W/broken.yaml"
 for example in glassy outside_set mechanical elevate; do
   "$L" mode add "$ROOT/examples/$example.yaml" >/dev/null 2>&1 && ok "example $example installs" || not "example $example"
 done
+# The loop closes here: the mode somebody else wrote runs in this workdir.
+"$L" spec init task.md >/dev/null 2>&1 && stub_oracle task.md
+rm -f .dispatch/stub-proof
+"$L" run my_break task.md t-shared >"$W/shared.log" 2>&1 && [ "$(status_of t-shared)" = pass ] \
+  && ok "the shared mode runs here" || { not "the shared mode does not run here"; tail -6 "$W/shared.log"; }
 
 echo "== 7. a mechanical stage runs its command, it does not call a model"
 # A stage with `command:` and no model_ref is mechanical. With one stage it used
