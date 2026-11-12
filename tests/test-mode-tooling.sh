@@ -196,6 +196,16 @@ rm -rf .dispatch
 [ "$(status_of t-retry)" = pass ] && ok "the mechanical stage passed on the second attempt" || { not "the mechanical stage did not retry"; tail -8 "$W/retry.log"; }
 grep -q "STAGE COMMAND FAILED" "$W/retry.log" && ok "the first attempt failure is on the record" || not "the first attempt failure is invisible"
 
+echo "== 11. mode show tells the shape of a mode without opening the YAML"
+"$L" mode show tow >"$W/show-tow.txt" 2>&1 && ok "show tow" || { not "show tow"; cat "$W/show-tow.txt"; }
+grep -q "mode: unlock_plan" "$W/show-tow.txt" && ok "show resolves the alias to the id" || not "show did not resolve the alias"
+grep -q "unlock .*tier:expensive" "$W/show-tow.txt" && ok "show names the tier of each stage" || not "show does not name the tiers"
+grep -q "plan .*tier:mid" "$W/show-tow.txt" && ok "show lists every stage" || not "show does not list every stage"
+"$L" mode show mech_one >"$W/show-mine.txt" 2>&1 && grep -q "mode: mech_one" "$W/show-mine.txt" \
+  && ok "show works on a custom mode" || { not "show does not work on a custom mode"; cat "$W/show-mine.txt"; }
+grep -q "command:" "$W/show-mine.txt" && ok "show says a mechanical stage runs a command" || not "show does not mark the mechanical stage"
+"$L" mode show no_such_mode >/dev/null 2>&1; [ $? -eq 3 ] && ok "show refuses an unknown mode" || not "show accepted an unknown mode"
+
 echo ""
 echo "mode tooling: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

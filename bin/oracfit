@@ -127,6 +127,7 @@ CUSTOM (terreno v1 · runtime multi-stage = v2)
                                      #   paddle=normal tow=unlock_plan
                                      #   surfcheck=ui_visual_qa
   oracfit mode validate <id|yaml>
+  oracfit mode show <id|alias|yaml>     # the shape of a mode, without opening the YAML
   oracfit mode lint <id|yaml>       # v4: claims→mecanismos + shadow de id
   oracfit mode init <id> [--from <mode|alias>]  # scaffold, or a copy of paddle/tow/any mode
   oracfit mode add <yaml>           # install a shared YAML (validated) in the workdir overlay
@@ -247,6 +248,70 @@ cmd_mode_validate() {
   local file
   file=$(resolve_mode_yaml "${1:?usage: oracfit mode validate <id|path.yaml>}")
   exec python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" validate "$file"
+}
+
+cmd_mode_show() {
+  # mode show <id|alias|path.yaml> — the shape of a mode, without opening the YAML
+  local file
+  file=$(resolve_mode_yaml "${1:?usage: oracfit mode show <id|alias|path.yaml>}")
+  MODE_YAML="$file" python3 - "$SCRIPT_DIR/lib-oracfit-mode-loader.py" <<'PY'
+import importlib.util, os, sys
+
+loader_path = sys.argv[1]
+spec = importlib.util.spec_from_file_location("mode_loader", loader_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+path = os.environ["MODE_YAML"]
+data = mod._load_yaml(open(path, encoding="utf-8").read())
+if not isinstance(data, dict):
+    print("ERROR: this mode file is not a mapping", file=sys.stderr)
+    sys.exit(2)
+
+print(f"mode: {data.get('id')}  (version {data.get('version')})")
+if data.get("name"):
+    print(f"name: {data['name']}")
+if data.get("description"):
+    print("description:")
+    for line in str(data["description"]).strip().splitlines():
+        print(f"  {line}")
+print(f"file: {path}")
+
+stages = data.get("stages") or []
+print(f"stages: {len(stages)}")
+for index, stage in enumerate(stages, 1):
+    if not isinstance(stage, dict):
+        continue
+    role = stage.get("role") or "?"
+    if stage.get("command"):
+        what = f"command: {str(stage['command']).strip().splitlines()[0]}"
+    else:
+        what = f"model: {stage.get('model_ref') or '(none)'}"
+    notes = []
+    if stage.get("oracle") is True:
+        notes.append("oracle")
+    elif isinstance(stage.get("oracle"), str):
+        notes.append(f"oracle: {stage['oracle']}")
+    if stage.get("input"):
+        notes.append(f"input: {stage['input']}")
+    if stage.get("artifacts"):
+        notes.append(f"artifacts: {stage['artifacts']}")
+    if stage.get("owner_question"):
+        notes.append(f"owner_question: {stage['owner_question']}")
+    if stage.get("max_attempts"):
+        notes.append(f"max_attempts: {stage['max_attempts']}")
+    tail = f"   [{', '.join(notes)}]" if notes else ""
+    print(f"  {index}. {role:<12} {what}{tail}")
+
+gauntlet = data.get("gauntlet") or {}
+if gauntlet:
+    parts = [f"{key}={gauntlet[key]}" for key in sorted(gauntlet)]
+    print("gauntlet: " + ", ".join(parts))
+if data.get("on_fail"):
+    print(f"on_fail: {data['on_fail']}")
+if data.get("run_attempt_budget"):
+    print(f"run_attempt_budget: {data['run_attempt_budget']}")
+PY
 }
 
 cmd_mode_lint() {
@@ -596,6 +661,7 @@ case "$cmd" in
     shift || true
     case "$sub" in
       validate) cmd_mode_validate "$@" ;;
+      show) cmd_mode_show "$@" ;;
       lint) cmd_mode_lint "$@" ;;
       init) cmd_mode_init "$@" ;;
       add) cmd_mode_add "$@" ;;

@@ -142,6 +142,9 @@ oracfit mode init big_day --from tow        # tow == unlock_plan
 oracfit mode validate my_break
 oracfit mode lint my_break
 
+# see what a mode does, without opening the YAML
+oracfit mode show tow            # a surf alias works here too
+
 # run it
 oracfit run my_break task.md t-my-break
 
