@@ -1,0 +1,15 @@
+id: mechanical
+version: "1"
+name: Mechanical
+description: >
+  A stage that runs a script instead of calling a model. The work is done by
+  the command; the oracle in the task spec is what decides whether it worked.
+  Nothing is spent on a model here.
+stages:
+  - role: run
+    command: bash scripts/build.sh
+    oracle: true
+    max_attempts: 1
+gauntlet:
+  enabled: true
+on_fail: halt
