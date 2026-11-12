@@ -83,6 +83,54 @@ for example in glassy outside_set; do
   "$L" mode add "$ROOT/examples/$example.yaml" >/dev/null 2>&1 && ok "example $example installs" || not "example $example"
 done
 
+echo "== 7. a mechanical stage runs its command, it does not call a model"
+# A stage with `command:` and no model_ref is mechanical. With one stage it used
+# to go through dispatch-mode.sh, which knows only models: the mode called an
+# LLM where the author asked for a script.
+workdir three
+"$L" spec init task.md >/dev/null
+stub_oracle task.md
+mkdir -p core/modes
+cat >core/modes/mech_one.yaml <<'MECH'
+id: mech_one
+version: "1"
+name: mech one
+description: one mechanical stage, no model at all
+stages:
+  - role: run
+    command: bash -c 'mkdir -p .dispatch && echo stub_ok > .dispatch/stub-proof'
+    oracle: true
+    max_attempts: 1
+gauntlet:
+  enabled: true
+on_fail: halt
+MECH
+rm -f .dispatch/stub-proof
+"$L" run mech_one task.md t-mech >"$W/mech.log" 2>&1
+grep -q "mechanical stage run: running command" "$W/mech.log" && ok "the command ran" || { not "mechanical stage"; tail -5 "$W/mech.log"; }
+grep -q "stub runner: wrote" "$W/mech.log" && not "a model was called for a mechanical stage" || ok "no model called for a mechanical stage"
+[ "$(status_of t-mech)" = pass ] && ok "mechanical mode: pass" || not "mechanical mode did not pass"
+
+echo "== 8. a mechanical stage that fails does not report a pass"
+cat >core/modes/mech_fail.yaml <<'MECH'
+id: mech_fail
+version: "1"
+name: mech fail
+description: a mechanical stage whose command fails
+stages:
+  - role: run
+    command: bash -c 'exit 3'
+    oracle: true
+    max_attempts: 1
+gauntlet:
+  enabled: true
+on_fail: halt
+MECH
+rm -f .dispatch/stub-proof
+"$L" run mech_fail task.md t-mech-fail >"$W/mech-fail.log" 2>&1
+[ "$(status_of t-mech-fail)" != pass ] && ok "a failing command is not a pass" || not "failing command reported as pass"
+grep -q "mechanical stage run: running command" "$W/mech-fail.log" && ok "the failing command did run" || { not "the failing command never ran"; tail -8 "$W/mech-fail.log"; }
+
 echo ""
 echo "mode tooling: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

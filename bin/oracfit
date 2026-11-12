@@ -417,14 +417,20 @@ cmd_run() {
   # continuam gravando o id do tree (D2).
   mode="$(resolve_mode_alias "$mode")"
   # P5: multi-stage modes (unlock_plan, vision_catalog, …) use dispatch-stages.sh
-  local mode_yaml stage_n
+  local mode_yaml stage_n has_command
   mode_yaml="${ORACFIT_WORKDIR:-$PWD}/core/modes/${mode}.yaml"
   [ -f "$mode_yaml" ] || mode_yaml="${ROOT}/core/modes/${mode}.yaml"
   stage_n=1
+  has_command=0
   if [ -f "$mode_yaml" ]; then
     stage_n=$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" dump "$mode_yaml" 2>/dev/null | python3 -c 'import json,sys; print(len((json.load(sys.stdin).get("stages") or [])))' 2>/dev/null || echo 1)
+    # A stage that declares its own command is mechanical: it runs that command,
+    # no model. dispatch-mode.sh only dispatches models, so a single mechanical
+    # stage has to go through dispatch-stages.sh too — otherwise the mode calls
+    # an LLM where the author asked for a script.
+    has_command=$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" dump "$mode_yaml" 2>/dev/null | python3 -c 'import json,sys; print(1 if any((s or {}).get("command") for s in (json.load(sys.stdin).get("stages") or [])) else 0)' 2>/dev/null || echo 0)
   fi
-  if [ "${stage_n:-1}" -gt 1 ] 2>/dev/null; then
+  if [ "${stage_n:-1}" -gt 1 ] 2>/dev/null || [ "${has_command:-0}" -eq 1 ] 2>/dev/null; then
     exec "$SCRIPT_DIR/dispatch-stages.sh" "$mode" "$@"
   fi
   exec "$SCRIPT_DIR/dispatch-mode.sh" "$mode" "$@"
