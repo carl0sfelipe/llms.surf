@@ -131,6 +131,44 @@ rm -f .dispatch/stub-proof
 [ "$(status_of t-mech-fail)" != pass ] && ok "a failing command is not a pass" || not "failing command reported as pass"
 grep -q "mechanical stage run: running command" "$W/mech-fail.log" && ok "the failing command did run" || { not "the failing command never ran"; tail -8 "$W/mech-fail.log"; }
 
+echo "== 9. an elevate chain halts on the red stage and never starts the next one"
+# The elevate shape (unlock -> plan -> run) is only worth anything if a red
+# unlock stops the chain: otherwise the money is already spent before anyone
+# looks. The oracle here is a grep for a file nobody writes, so the unlock is
+# red from the first attempt.
+cat >core/modes/elev_two.yaml <<'ELEV'
+id: elev_two
+version: "1"
+name: elev two
+description: two stages, the first one is red
+stages:
+  - role: unlock
+    model_ref: tier:cheap
+    oracle: true
+    max_attempts: 1
+  - role: plan
+    model_ref: tier:cheap
+    input: prev_stage
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 3
+on_fail: halt
+ELEV
+python3 - "$W/spec_task.md" <<'PY'
+import re, sys
+text = open("task.md", encoding="utf-8").read()
+text = re.sub(r"^- command: .*", "- command: grep -q never_written .dispatch/stub-proof", text, flags=re.M)
+text = re.sub(r"^VERIFICATION: .*", "VERIFICATION: grep -q never_written .dispatch/stub-proof", text, flags=re.M)
+open(sys.argv[1], "w", encoding="utf-8").write(text)
+PY
+rm -f .dispatch/stub-proof
+"$L" run elev_two "$W/spec_task.md" t-elev >"$W/elev.log" 2>&1
+[ "$(status_of t-elev)" != pass ] && ok "a red unlock is not a pass" || not "red unlock reported as pass"
+grep -q "role=unlock" "$W/elev.log" && ok "the unlock stage ran" || { not "the unlock stage never ran"; tail -8 "$W/elev.log"; }
+grep -q "role=plan" "$W/elev.log" && not "the plan stage ran after a red unlock" || ok "the plan stage never started"
+
 echo ""
 echo "mode tooling: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
