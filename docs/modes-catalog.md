@@ -120,6 +120,20 @@ value above 3600, and the runtime clamps one that slipped past), and a human
 interrupt ends it instead of waiting it out. A stage that declares no throttle
 is not slowed down.
 
+**`prompt_template:` is the prompt of the stage, and the runtime keeps it.**
+A stage that declares `prompt_template: vision_product_fields` is naming the
+file that is that stage's prompt. A bare name resolves to
+`core/prompts/<name>.md` (the workdir first, then `ORACFIT_ROOT`); a value
+that already ends in `.md` or contains `/` is a path relative to the workdir.
+The file's content is injected into the spec as
+`## Stage prompt (prompt_template: <name>)`, right after the base spec and
+before `input: prev_stage`, the ground truth and the human message. A
+declared template whose file is missing fails the stage
+(`PROMPT TEMPLATE NOT FOUND: <name>`) — it is not a warning. A stage that
+declares nothing is not affected. Both runtimes honor it. The loader only
+checks that the value is a non-empty string: it does not know the user's
+workdir, so it cannot demand the file exists.
+
 **Tiers.** `tier:cheap`, `tier:mid`, `tier:expensive` and `tier:vision` expand
 into an ordered chain of models from the free catalog / registry. The first
 provider with usable credentials wins; the rest are fallbacks. A registry id
@@ -228,6 +242,8 @@ run before anything is spent downstream.
   non-empty command strings
 - `freshness_targets` must be a non-empty list of paths
 - `rate_limit_s`, on any stage, must be a number between 0 and 3600
+- `prompt_template`, when present, must be a non-empty string (the file is
+  checked at run time)
 - `run_attempt_budget` must be a positive integer
 
 The canonical check is mechanical: `oracfit mode validate <id>` — exit 0 means

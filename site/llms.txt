@@ -47,11 +47,11 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 ## Counts (from this git tree  -  tests/test-site-honesty.sh)
 
 - version: 0.4.1
-- incidents: 125 (excludes incidents/uso/)
+- incidents: 126 (excludes incidents/uso/)
 - models in registry: 30,
 - modes: 21
 - adapters: 8 + 1 stub
-- test suites: 52
+- test suites: 53
 
 ## Surf aliases (the UI names — tree ids stay canonical)
 
@@ -81,7 +81,7 @@ oracfit mode share my_break > my_break.yaml
 oracfit mode add my_break.yaml         # somewhere else, on someone else's machine
 ```
 
-Six facts about a mode file:
+Seven facts about a mode file:
 
 - A stage is a model (`model_ref`) or a script (`command`) - never both. A
   mechanical stage dispatches no model at all: the command runs and the
@@ -98,6 +98,9 @@ Six facts about a mode file:
   stage, and two calls of the same model, are at least that many seconds
   apart. Both runtimes wait, the wait is announced, and a human interrupt
   ends it.
+- `prompt_template: vision_product_fields` - the file is read and its content
+  is the prompt of that stage. Declared and missing fails the stage
+  (`PROMPT TEMPLATE NOT FOUND`). Both runtimes honor it.
 - `model_ref: tier:cheap` expands to an ordered chain of models; a registry
   id pins one model exactly. The grammar is in docs/modes-catalog.md.
 
@@ -120,7 +123,7 @@ GitHub issue; leaving costs one click.
 - docs/modes-catalog.md  -  the mode YAML grammar, in full
 - examples/  -  four modes to copy: one cheap stage, unlock + run, mechanical, elevate
 - adapters/<name>/  -  runner contract per CLI
-- incidents/  -  the ledger; 125 postmortems in this cut
+- incidents/  -  the ledger; 126 postmortems in this cut
 - LICENSE  -  AGPL-3.0 (core) + MIT (kernel, adapters). See NOTICE.
 - site/index.html?as=agent  -  HTML twin of this file
 - site/blog/  -  writing (source: site/blog/posts/*.md)

@@ -400,6 +400,21 @@ def validate(path):
             )
             sys.exit(2)
 
+        # prompt_template is a promise the runtime now keeps (the file is
+        # read and handed to the model as the stage's prompt). The loader
+        # does not know the user's workdir, so it cannot demand the file
+        # exists; it only refuses a value the runtime could not honor — an
+        # empty or non-string name.
+        if "prompt_template" in stage:
+            prompt_template = stage["prompt_template"]
+            if not isinstance(prompt_template, str) or not prompt_template.strip():
+                print(
+                    f"FAIL {p}: prompt_template must be a non-empty string, got "
+                    f"{type(prompt_template).__name__}: {prompt_template!r}",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+
         # S8 owner_question: bool true ou string não-vazia (ex.: once)
         owner_q = stage.get("owner_question")
         if owner_q is not None:

@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
+source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
 
 CREDIT="Oracfit — Carlos Felipe"
 MAX_ATTEMPTS_DEFAULT=3
@@ -256,6 +257,26 @@ for stage in stages:
         break
 ')"
 stage_role="${stage_role:-run}"
+# prompt_template of the stage this runtime dispatches (the first stage
+# that carries a model_ref). Same reader as artifacts / rate_limit_s.
+prompt_template="$(printf '%s' "$mode_stage_json" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    print("")
+    raise SystemExit(0)
+stages = data.get("stages") or []
+for stage in stages:
+    if not isinstance(stage, dict):
+        continue
+    if stage.get("model_ref"):
+        value = stage.get("prompt_template")
+        print(value if isinstance(value, str) else "")
+        break
+')"
+prompt_template_path=""
+prompt_template_missing=false
 # The throttle the mode declares: two calls of the same model, or two
 # attempts of the same stage, are at least rate_limit_s seconds apart. Read
 # from the stage that carries the model_ref - the stage this runtime
@@ -400,6 +421,15 @@ gauntlet_dir="$(oracfit_inbox_dir)/${RUN_ID}.gauntlet"
 gauntlet_accum="${gauntlet_dir}/feedback.md"
 mkdir -p "$gauntlet_dir"
 : >"$gauntlet_accum"
+if [ -n "$prompt_template" ]; then
+  if ! prompt_template_path="$(oracfit_prompt_template_resolve "$prompt_template")"; then
+    prompt_template_path=""
+    prompt_template_missing=true
+    echo "PROMPT TEMPLATE NOT FOUND: $prompt_template" >&2
+    printf '%s\n' "PROMPT TEMPLATE NOT FOUND: $prompt_template" \
+      >"${gauntlet_dir}/oracle-attempt-1.log"
+  fi
+fi
 # Real executor cost, one JSON line per attempt (claude-code runner; other runners ignore it).
 # Summed into the ledger below — docs/delegation-check.md §4.
 export ORACFIT_COST_FILE="${gauntlet_dir}/executor-cost.jsonl"
@@ -448,7 +478,7 @@ resume_session_id=""
 if [ -n "$resume_run_id" ]; then
   resume_session_id="$(cat "$(oracfit_session_file "$RUN_ID")" 2>/dev/null || true)"
 fi
-while [ "$attempt" -lt "$max_attempts" ]; do
+while [ "$prompt_template_missing" = false ] && [ "$attempt" -lt "$max_attempts" ]; do
   attempt=$((attempt + 1))
   oracfit_emit_event attempt_started attempt="$attempt" mode="$mode_id"
 
@@ -471,6 +501,16 @@ while [ "$attempt" -lt "$max_attempts" ]; do
   fi
 
   run_spec_file="$spec_file"
+  # prompt_template first: after the base spec, before ground truth,
+  # artifacts context and the human message.
+  if [ -n "$prompt_template_path" ]; then
+    pt_composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-prompt-XXXXXX")"
+    {
+      cat "$run_spec_file"
+      oracfit_prompt_template_emit "$prompt_template" "$prompt_template_path"
+    } >"$pt_composed"
+    run_spec_file="$pt_composed"
+  fi
   # P4: refresh ground-truth from ## Dados verificados every attempt/resume.
   gauntlet_gt="${gauntlet_dir}/ground-truth.md"
   oracfit_gauntlet_extract_ground_truth "$spec_file" >"$gauntlet_gt" 2>/dev/null || : >"$gauntlet_gt"
@@ -480,7 +520,8 @@ while [ "$attempt" -lt "$max_attempts" ]; do
     # mkstemp criar arquivo literal na 1a chamada e falhar "File exists" nas seguintes
     # (descoberto 2026-08-10 no relancamento do piloto content_factory).
     gauntlet_composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-gauntlet-XXXXXX")"
-    oracfit_gauntlet_compose_spec "$spec_file" "$gauntlet_accum" "$gauntlet_composed" "$gauntlet_gt"
+    oracfit_gauntlet_compose_spec "$run_spec_file" "$gauntlet_accum" "$gauntlet_composed" "$gauntlet_gt"
+    [ "$run_spec_file" != "$spec_file" ] && rm -f "$run_spec_file"
     run_spec_file="$gauntlet_composed"
     oracfit_emit_event gauntlet_compose attempt="$attempt" has_feedback="$([ -s "$gauntlet_accum" ] && echo true || echo false)" has_ground_truth="$([ -s "$gauntlet_gt" ] && echo true || echo false)"
   fi
