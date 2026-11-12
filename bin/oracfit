@@ -227,6 +227,16 @@ resolve_mode_yaml() { # $1=id|path — imprime caminho ou sai 3
     file="${ORACFIT_ROOT:-$ROOT}/core/modes/${target}.yaml"
   fi
   if [ ! -f "$file" ]; then
+    # A surf alias is a name for a mode: `oracfit run paddle` works, so
+    # `oracfit mode validate paddle` has to work too.
+    local canonical
+    canonical="$(resolve_mode_alias "$target" || true)"
+    if [ -n "$canonical" ]; then
+      file="${ORACFIT_WORKDIR:-$PWD}/core/modes/${canonical}.yaml"
+      [ -f "$file" ] || file="${ORACFIT_ROOT:-$ROOT}/core/modes/${canonical}.yaml"
+    fi
+  fi
+  if [ ! -f "$file" ]; then
     echo "ERROR: mode yaml not found: $target (tried ${ORACFIT_WORKDIR:-$PWD}/core/modes/${target}.yaml and ${ORACFIT_ROOT:-$ROOT}/core/modes/${target}.yaml)" >&2
     exit 3
   fi
