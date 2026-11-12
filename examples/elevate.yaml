@@ -1,0 +1,24 @@
+id: elevate
+version: "1"
+name: Elevate
+description: >
+  The cheap shape of tow: an expensive unlock clears the way, a cheap run does
+  the work with the unlock in its input. A red unlock halts the run, so the
+  money is not spent twice.
+stages:
+  - role: unlock
+    model_ref: tier:expensive
+    artifacts: unlock/
+    oracle: true
+    max_attempts: 3
+  - role: run
+    model_ref: tier:cheap
+    input: prev_stage
+    oracle: true
+    max_attempts: 3
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 5
+on_fail: halt

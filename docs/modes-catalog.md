@@ -159,6 +159,19 @@ oracfit mode add ./pasted-mode.yaml
 validates before it writes, refuses to overwrite an id with different content,
 and writes nothing when the file is invalid.
 
+Four ready-made examples live in `examples/`:
+
+| File | Shape |
+|---|---|
+| `glassy.yaml` | one cheap stage — the simplest mode there is |
+| `outside_set.yaml` | an expensive unlock, then a cheap run |
+| `mechanical.yaml` | a stage that runs a script, no model at all |
+| `elevate.yaml` | unlock, then run with the unlock in its input |
+
+```bash
+oracfit mode add ./examples/mechanical.yaml
+```
+
 ## 8. Two modes worth knowing
 
 | Mode | Alias | Shape |

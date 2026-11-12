@@ -79,7 +79,7 @@ sed 's/max_attempts: 3/max_attempts: 9/' "$W/pasted-from-an-issue.txt" >"$W/othe
 printf 'id: broken\nstages: nope\n' >"$W/broken.yaml"
 "$L" mode add "$W/broken.yaml" >/dev/null 2>&1 && not "invalid yaml installed" || ok "invalid yaml refused"
 [ ! -e core/modes/broken.yaml ] && ok "nothing written for the invalid one" || not "invalid file landed"
-for example in glassy outside_set; do
+for example in glassy outside_set mechanical elevate; do
   "$L" mode add "$ROOT/examples/$example.yaml" >/dev/null 2>&1 && ok "example $example installs" || not "example $example"
 done
 
