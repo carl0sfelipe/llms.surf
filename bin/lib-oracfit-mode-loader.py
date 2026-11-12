@@ -125,10 +125,35 @@ def _load_yaml(text):
     return result
 
 
+def _strip_inline_comment(val):
+    """Drop a trailing YAML comment from a scalar value.
+
+    YAML only starts a comment at a '#' that follows a space, so 'tier:cheap' keeps
+    its value and 'tier:cheap   # the cheap tier' becomes 'tier:cheap'. Without this,
+    a commented ref reaches the tier resolver and resolves to no model at all.
+    """
+    out = []
+    quote = None
+    for i, ch in enumerate(val):
+        if quote:
+            out.append(ch)
+            if ch == quote:
+                quote = None
+            continue
+        if ch in ('"', "'"):
+            quote = ch
+            out.append(ch)
+            continue
+        if ch == "#" and (i == 0 or val[i - 1] in (" ", "\t")):
+            break
+        out.append(ch)
+    return "".join(out).strip()
+
+
 def _split_keyval(line):
     colon_idx = line.index(":")
     key = line[:colon_idx].strip()
-    val = line[colon_idx + 1:].strip()
+    val = _strip_inline_comment(line[colon_idx + 1:].strip())
     return key, val
 
 

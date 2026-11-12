@@ -398,7 +398,7 @@ for line in open(sys.argv[1]):
       if [ -z "$model_ref" ]; then
         # Stage mecânico: roda o command do YAML. Se vazio, cai pro comando do spec.
         if [ -z "$stage_command" ]; then
-          stage_command="$(grep -iE '^[-*][[:space:]]*comando:' "$run_spec" | head -1 | sed -E 's/^[-*][[:space:]]*comando:[[:space:]]*//I')"
+          stage_command="$(grep -iE '^[-*][[:space:]]*(comando|command):' "$run_spec" | head -1 | sed -E 's/^[-*][[:space:]]*(comando|command):[[:space:]]*//I')"
         fi
         if [ -n "$stage_command" ]; then
           echo "mechanical stage $role: running command" >&2

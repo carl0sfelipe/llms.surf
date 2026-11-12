@@ -32,11 +32,12 @@ faltando=()
 # ã ocupa dois bytes. O efeito era falso negativo silencioso — spec que já
 # trazia a cláusula com acento era reprovada, e o autor era mandado acrescentar
 # o que já estava lá. Descoberto em 2026-07-28 ao escrever as specs SEP-01..03.
-grep -qiE 'n(a|ã)o invente|n(a|ã)o acrescente|sem inventar|nenhum n(u|ú)mero al(e|é)m|al(e|é)m destes' "$SPEC" \
+# english-ok-begin: each clause is accepted in Portuguese and in English (README shows `## Oracle`)
+grep -qiE 'n(a|ã)o invente|n(a|ã)o acrescente|sem inventar|nenhum n(u|ú)mero al(e|é)m|al(e|é)m destes|do not invent|don.t invent|never invent|nothing beyond|no number beyond' "$SPEC" \
   || faltando+=("cláusula anti-invenção (ex.: 'Nao invente numero, prazo ou fonte alem dos listados')")
 
 # 2. Bloco de dados verificados.
-grep -qiE 'dados verificados|contexto real|verificado\)|\(verificado' "$SPEC" \
+grep -qiE 'dados verificados|contexto real|verificado\)|\(verificado|verified data|\(verified|verified\)' "$SPEC" \
   || faltando+=("bloco de dados verificados (o que o modelo PODE usar)")
 
 # 3. Verificação semântica, não só existência de arquivo.
@@ -51,11 +52,11 @@ grep -qiE 'dados verificados|contexto real|verificado\)|\(verificado' "$SPEC" \
 #    CONTEÚDO, não apenas existência de arquivo.
 COMANDO_SEMANTICO='grep|python3|node |npx|npm run|curl|test |diff|wc |psql|jq'
 
-if grep -qiE '^VERIFICA(C|Ç)(A|Ã)O:' "$SPEC"; then
-  LINHA=$(grep -iE '^VERIFICA(C|Ç)(A|Ã)O:' "$SPEC" | head -1)
+if grep -qiE '^(VERIFICA(C|Ç)(A|Ã)O|VERIFICATION):' "$SPEC"; then
+  LINHA=$(grep -iE '^(VERIFICA(C|Ç)(A|Ã)O|VERIFICATION):' "$SPEC" | head -1)
   echo "$LINHA" | grep -qE "$COMANDO_SEMANTICO" \
     || faltando+=("verificação semântica — '$LINHA' só checa existência; use grep/python3/etc")
-elif grep -qiE '^#{1,6}[[:space:]].*verifica' "$SPEC"; then
+elif grep -qiE '^#{1,6}[[:space:]].*verif(ica|y|ication)' "$SPEC"; then
   grep -qE "$COMANDO_SEMANTICO" "$SPEC" \
     || faltando+=("comando de verificação que prove propriedade do conteúdo (só há 'ls' ou nada)")
 else
@@ -67,8 +68,8 @@ fi
 # calcular oracle_exit; sem a seção, o ledger continua cego a ponto de "log
 # não vazio" ser a única evidência de sucesso (dispatch d-07 alucinou e
 # registrou "ok" — ver plan_dispatch_2.0_fixed.md).
-if grep -qiE '^#{1,6}[[:space:]]*or(a|á)culo' "$SPEC"; then
-  grep -qiE '^[-*][[:space:]]*comando:' "$SPEC" \
+if grep -qiE '^#{1,6}[[:space:]]*(or(a|á)culo|oracle)' "$SPEC"; then
+  grep -qiE '^[-*][[:space:]]*(comando|command):' "$SPEC" \
     || faltando+=("seção ## Oráculo sem linha 'comando:' com o teste executável")
   # Incidente 2026-08-10-backtick-no-comando-do-oraculo: crase na linha `- comando:`
   # vira SUBSTITUIÇÃO de comando no eval (lib-oracfit-gauntlet.sh + check-oracle.py):
@@ -76,7 +77,7 @@ if grep -qiE '^#{1,6}[[:space:]]*or(a|á)culo' "$SPEC"; then
   # → '{"ok":true...}: command not found' → exit 127 fantasma. O oráculo "falha"
   # pelo motivo errado e o check-oracle.py pode classificar como "fails-correctly"
   # liberando dispatch quebrado. A linha de comando tem que ser TEXTO CRU, sem crase.
-  if grep -qE '^[-*][[:space:]]*comando:.*`' "$SPEC"; then
+  if grep -qiE '^[-*][[:space:]]*(comando|command):.*`' "$SPEC"; then
     faltando+=("linha 'comando:' do oráculo contém CRASE (backtick) — vira substituição no eval e gera exit 127 fantasma. Use texto cru sem crase (incidente 2026-08-10-backtick-no-comando-do-oraculo)")
   fi
 else
@@ -84,15 +85,16 @@ else
 fi
 
 # Soft hint (não falha): ## Barra melhora o gauntlet (referência nomeada/fetchable).
-if ! grep -qiE '^#{1,6}[[:space:]]*barra' "$SPEC"; then
+if ! grep -qiE '^#{1,6}[[:space:]]*bar(ra)?[[:space:]]*$' "$SPEC"; then
   echo "HINT: spec sem ## Barra — gauntlet usa só o oráculo como metric (ok). Template: fluxos/_comum/artefato-template.md" >&2
 fi
 
 # 5. Cláusula anti-fantasma (incidente 2026-07-29-declare-fantasma-formatBrlAmount.md).
 # declare const é TypeScript legal mas RUNTIME inexistente. O flash usa como
 # workaround quando não resolve import — compila, oráculo de tsc passa, produção quebra.
-grep -qiE 'n(a|ã)o use declare|sem declare const|proibido declare|NUNCA.*declare' "$SPEC" \
+grep -qiE 'n(a|ã)o use declare|sem declare const|proibido declare|NUNCA.*declare|do not use declare|never.*declare|without declare const' "$SPEC" \
   || faltando+=("cláusula anti-fantasma (ex.: 'NUNCA use declare const como workaround — importe de verdade')")
+# english-ok-end
 if [ ${#faltando[@]} -eq 0 ]; then
   echo "✅ spec OK (declara dados verificados e proíbe invenção): $SPEC"
   exit 0

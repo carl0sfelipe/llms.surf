@@ -52,9 +52,11 @@ fi
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 ORACULO_CMD=""
 ORACULO_EXPECT="0"
-if [ -f "$SPEC_FILE" ] && grep -qiE '^#{1,6}[[:space:]]*or(a|á)culo' "$SPEC_FILE"; then
-  ORACULO_CMD=$(grep -iE '^[-*][[:space:]]*comando:' "$SPEC_FILE" | head -1 | sed -E 's/^[-*][[:space:]]*comando:[[:space:]]*//' | sed -E 's/^`(.*)`$/\1/')
-  LINHA_EXPECT=$(grep -iE '^[-*][[:space:]]*exit esperado:' "$SPEC_FILE" | head -1)
+# english-ok-begin: spec headings are accepted in Portuguese and in English
+if [ -f "$SPEC_FILE" ] && grep -qiE '^#{1,6}[[:space:]]*(or(a|á)culo|oracle)' "$SPEC_FILE"; then
+  ORACULO_CMD=$(grep -iE '^[-*][[:space:]]*(comando|command):' "$SPEC_FILE" | head -1 | sed -E 's/^[-*][[:space:]]*(comando|command):[[:space:]]*//I' | sed -E 's/^`(.*)`$/\1/')
+  LINHA_EXPECT=$(grep -iE '^[-*][[:space:]]*(exit esperado|expected exit):' "$SPEC_FILE" | head -1)
+# english-ok-end
   if [ -n "$LINHA_EXPECT" ]; then
     ORACULO_EXPECT=$(echo "$LINHA_EXPECT" | grep -oE '[0-9]+' | head -1)
     [ -n "$ORACULO_EXPECT" ] || ORACULO_EXPECT="0"
