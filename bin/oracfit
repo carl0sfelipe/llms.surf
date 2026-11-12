@@ -42,7 +42,7 @@ Oracfit: '$1' está reservado (lifecycle CLI, AD-8/AD-14).
 Painel não executa stop/rerun. Por enquanto:
   - parar run ativo: Ctrl+C no terminal do runner
   - rerun: oracfit run <mode> …  (novo run_id)
-Ver: _bmad-output/planning-artifacts/v1-modes-catalog.md
+Ver: docs/modes-catalog.md
 EOF
   exit 2
 }
@@ -163,14 +163,14 @@ ROOT vs workdir
   workdir      = projeto (.dispatch/logs/)
 
 oracle_exit=2 = oráculo QUEBRADO, não 'falta trabalho'.
-Sintaxe completa: _bmad-output/planning-artifacts/v1-modes-catalog.md
+Sintaxe completa: docs/modes-catalog.md
 Oracfit — Carlos Felipe
 EOF
 }
 
 cmd_modes() {
   # Workdir overlay first, then ROOT — same resolution order as dispatch-mode.sh
-  # (AD-16, v1-modes-catalog.md §4). A workdir mode with the same id as a ROOT
+  # (AD-16, docs/modes-catalog.md §1). A workdir mode with the same id as a ROOT
   # mode shadows it in listing, matching what `oracfit run <id>` would actually
   # execute.
   # macOS ships bash 3.2 (no `declare -A`) — use a newline list + grep -xF as

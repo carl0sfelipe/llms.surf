@@ -181,7 +181,7 @@ if [ -z "$class_arg" ]; then
   class_arg="MECANICO_TRANSFORM"
 fi
 
-# Custom mode resolution order (AD-16, v1-modes-catalog.md §4): workdir overlay
+# Custom mode resolution order (AD-16, docs/modes-catalog.md §1): workdir overlay
 # first, then the shared ORACFIT_ROOT install. Lets a project define its own
 # core/modes/<id>.yaml (e.g. via `oracfit mode init`, which already scaffolds
 # there) without forking or polluting the shared dispatch checkout — this is

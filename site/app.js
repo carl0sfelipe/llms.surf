@@ -37,12 +37,12 @@ const DATA = {
   },
 
   stats: {
-    incidents: 121,
+    incidents: 122,
     models: 30,
     modes: 21,
     adapters: 8,
     adaptersStub: 1,
-    suites: 47,
+    suites: 48,
     version: "0.4.1"
   },
 
