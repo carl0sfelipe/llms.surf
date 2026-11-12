@@ -366,7 +366,7 @@ version: "1"
 name: ${id}
 description: one honest line about what this mode does
 stages:                       # 1..N, run in order; a red stage never starts the next one
-  - role: run                 # unlock | plan | run | map | reduce
+  - role: run                 # unlock | plan | run | map | reduce | export | render | vision_gate
     model_ref: tier:cheap     # tier:cheap | tier:mid | tier:expensive | tier:vision
     oracle: true              # the gate is the command in your spec (## Oracle)
     max_attempts: 3
