@@ -364,7 +364,7 @@ for target in targets:
     owner_asked=false
     [ -f "$(oracfit_inbox_dir)/${RUN_ID}.question.md" ] && owner_asked=true
     inbox_jsonl="$(oracfit_inbox_file "$RUN_ID")"
-    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ] || [ -n "$prev_chain_file" ]; then
+    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ] || [ -n "$prev_chain_file" ] || [ -n "$artifacts" ]; then
       composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-stage-XXXXXX")"
       {
         cat "$spec_file"
@@ -372,7 +372,11 @@ for target in targets:
         echo "## Stage context (Oracfit multi-stage)"
         echo "- role: $role"
         echo "- artifacts_dir: \`$art_dir\`"
-        echo "- Write stage proof to that directory if you are the stub/builder."
+        if [ -n "$artifacts" ]; then
+          echo "- The stage MUST leave a non-empty file in that directory: a stage that declares \`artifacts:\` and writes nothing there fails."
+        else
+          echo "- Write stage proof to that directory if you are the stub/builder."
+        fi
         if [ -n "$prev_chain_file" ] && [ -s "$prev_chain_file" ]; then
           echo ""
           echo "## Previous stage output (input: prev_stage)"
@@ -578,6 +582,19 @@ for line in open(sys.argv[1]):
         fi
       } >"$oracle_log"
       oracle_exit="$stage_oracle_exit"
+    elif [ -n "$artifacts" ] && [ -z "$(find "$art_dir" -type f ! -empty -print -quit 2>/dev/null)" ]; then
+      # A stage that declares `artifacts:` promised to leave something there.
+      # Nothing there = the promise broken: the stage wrote nothing, and the
+      # stages that read it (input: prev_stage) would read an empty hand-off.
+      # The reason goes to the oracle log, so the next attempt gets it as
+      # feedback instead of guessing again.
+      {
+        echo "STAGE ARTIFACTS EMPTY: role=$role attempt=$attempt dir=$art_dir"
+        echo "The stage declared 'artifacts: $artifacts' and left no non-empty file there."
+      } >"$oracle_log"
+      echo "STAGE ARTIFACTS EMPTY: role=$role attempt=$attempt dir=$art_dir" >&2
+      echo "The stage declared 'artifacts: $artifacts' and left no non-empty file there." >&2
+      oracle_exit=1
     elif [ "$oracle" != "true" ]; then
       # A stage with only a deterministic stage oracle has no ordinary spec
       # oracle. Its success is the stage oracle's exit 0, never the runner rc.

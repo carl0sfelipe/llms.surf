@@ -89,6 +89,13 @@ runtime would call the model and drop the command without a word.
 **Roles.** `unlock`, `plan`, `run`, `map`, `reduce`, `export`, `render`,
 `vision_gate`. A `map` stage must declare `rate_limit_s > 0`.
 
+**`artifacts:` is a promise.** A stage that declares `artifacts: plan/` is
+telling the runtime where its output goes, and the runtime holds it to that:
+the model is told the directory, and a stage that leaves no non-empty file
+there fails (and retries, up to `max_attempts`). A stage that declares
+nothing is not gated — there is no promise to keep. The same rule holds in the
+single-stage runtime.
+
 **`input: prev_stage`.** A stage that declares it reads the work of the stages
 before it. For every stage that ran, the runtime renders the answer it produced
 (the runner log) and the files it wrote in its artifacts directory, and injects

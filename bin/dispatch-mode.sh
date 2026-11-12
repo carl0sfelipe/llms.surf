@@ -224,6 +224,37 @@ for stage in stages:
 else:
     print(data.get("model_ref") or "")
 ')"
+# The artifacts promise: a stage that declares `artifacts:` promised to leave
+# something there. Read through the loader (the same reader the rest of the
+# runtime uses) and kept in a variable the attempt loop can check.
+mode_stage_json="$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" dump "$mode_yaml" 2>/dev/null || true)"
+artifacts="$(printf '%s' "$mode_stage_json" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    print("")
+    raise SystemExit(0)
+stages = data.get("stages") or []
+for stage in stages:
+    if isinstance(stage, dict) and stage.get("artifacts"):
+        print(stage["artifacts"])
+        break
+')"
+stage_role="$(printf '%s' "$mode_stage_json" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    print("")
+    raise SystemExit(0)
+stages = data.get("stages") or []
+for stage in stages:
+    if isinstance(stage, dict) and stage.get("role"):
+        print(stage["role"])
+        break
+')"
+stage_role="${stage_role:-run}"
 # E5-M3: o default antigo (deepseek-v4-flash-free) tinha hint morto e ficou
 # sendo servido em silêncio — a classe exata do incidente E5. Default agora é
 # a rota free do catálogo carimbado (resolve loud se o catálogo estiver ausente).
@@ -282,6 +313,17 @@ export DISPATCH_EFETIVO_FILE="$ORACFIT_WORKDIR/.dispatch/pids/mode-${RUN_ID}.efe
 mkdir -p "$(dirname "$DISPATCH_EFETIVO_FILE")"
 rm -f "$DISPATCH_EFETIVO_FILE"
 t_run0=$(python3 -c 'import time; print(time.time())')
+
+# The artifacts dir of this stage (only when the mode declares one). The
+# runner writes there, the gate below reads it, and the model is told where
+# it is — a declared artifacts dir is a promise the runtime keeps.
+art_dir=""
+if [ -n "$artifacts" ]; then
+  art_dir="$ORACFIT_WORKDIR/.dispatch/artifacts/${RUN_ID}/${artifacts}"
+  mkdir -p "$art_dir"
+  export ORACFIT_STAGE_ROLE="$stage_role"
+  export ORACFIT_STAGE_ARTIFACTS="$art_dir"
+fi
 
 # Persiste mode/spec/task por run_id — sem isso `oracfit resume` não teria
 # como reconstruir o dispatch depois que o processo termina (o run_id sozinho
@@ -389,6 +431,21 @@ while [ "$attempt" -lt "$max_attempts" ]; do
     oracfit_gauntlet_compose_spec "$spec_file" "$gauntlet_accum" "$gauntlet_composed" "$gauntlet_gt"
     run_spec_file="$gauntlet_composed"
     oracfit_emit_event gauntlet_compose attempt="$attempt" has_feedback="$([ -s "$gauntlet_accum" ] && echo true || echo false)" has_ground_truth="$([ -s "$gauntlet_gt" ] && echo true || echo false)"
+  fi
+
+  # The artifacts promise, told to the model: the stage has to write there.
+  if [ -n "$art_dir" ]; then
+    art_composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-artifacts-XXXXXX")"
+    {
+      cat "$run_spec_file"
+      echo ""
+      echo "## Stage context (Oracfit single-stage)"
+      echo "- role: $stage_role"
+      echo "- artifacts_dir: \`$art_dir\`"
+      echo "- The stage MUST leave a non-empty file in that directory: a stage that declares \`artifacts:\` and writes nothing there fails."
+    } >"$art_composed"
+    [ "$run_spec_file" != "$spec_file" ] && rm -f "$run_spec_file"
+    run_spec_file="$art_composed"
   fi
 
   inbox_file="$(oracfit_inbox_file "$RUN_ID")"
@@ -499,10 +556,21 @@ with open(path, "a") as f:
   fi
 
   oracle_log="${gauntlet_dir}/oracle-attempt-${attempt}.log"
-  set +e
-  oracfit_gauntlet_run_oracle_capture "$spec_file" "$ORACFIT_WORKDIR" "$oracle_log"
-  oracle_exit=$?
-  set -e
+  if [ -n "$art_dir" ] && [ -z "$(find "$art_dir" -type f ! -empty -print -quit 2>/dev/null)" ]; then
+    # A stage that declares `artifacts:` promised to leave something there.
+    # Nothing there = the promise broken. The reason lands in the oracle log,
+    # so the next attempt gets it as feedback instead of guessing again.
+    oracle_exit=1
+    {
+      echo "STAGE ARTIFACTS EMPTY: role=$stage_role attempt=$attempt dir=$art_dir"
+      echo "The stage declared 'artifacts: $artifacts' and left no non-empty file there."
+    } >"$oracle_log"
+  else
+    set +e
+    oracfit_gauntlet_run_oracle_capture "$spec_file" "$ORACFIT_WORKDIR" "$oracle_log"
+    oracle_exit=$?
+    set -e
+  fi
   oracfit_emit_event oracle_result exit="$oracle_exit" attempt="$attempt" command=from-spec
 
   if [ "$oracle_exit" -eq 0 ]; then
@@ -532,6 +600,13 @@ set +e
 # o disco grava falso-fail no ledger e dispara retrabalho/rollback de trabalho
 # bom. ADR-0002: o ledger mede o DISCO, não a memória da última avaliação.
 if [ "$final_status" = "fail" ] && [ "$attempt" -gt 0 ]; then
+  if [ -n "$art_dir" ] && [ -z "$(find "$art_dir" -type f ! -empty -print -quit 2>/dev/null)" ]; then
+    # The artifacts promise is still broken on disk: the recheck below must not
+    # flip a run to pass because the spec oracle looks somewhere else.
+    final_recheck=1
+    echo "declared artifact still empty at close — the run stays fail (the mode's promise was not kept)" >&2
+    oracfit_emit_event oracle_final_recheck exit="$final_recheck" attempt="$attempt" reason=artifacts_empty
+  else
   final_recheck_log="${gauntlet_dir}/oracle-final-recheck.log"
   oracfit_gauntlet_run_oracle_capture "$spec_file" "$ORACFIT_WORKDIR" "$final_recheck_log"
   final_recheck=$?
@@ -541,6 +616,7 @@ if [ "$final_status" = "fail" ] && [ "$attempt" -gt 0 ]; then
     final_status=pass
   fi
   oracfit_emit_event oracle_final_recheck exit="$final_recheck" attempt="$attempt"
+  fi
 fi
 
 # Guard de zonas protegidas — comparação pós-run (snapshot feito antes do

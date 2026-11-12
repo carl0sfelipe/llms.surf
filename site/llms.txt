@@ -47,11 +47,11 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 ## Counts (from this git tree  -  tests/test-site-honesty.sh)
 
 - version: 0.4.1
-- incidents: 123 (excludes incidents/uso/)
+- incidents: 124 (excludes incidents/uso/)
 - models in registry: 30,
 - modes: 21
 - adapters: 8 + 1 stub
-- test suites: 50
+- test suites: 51
 
 ## Surf aliases (the UI names — tree ids stay canonical)
 
@@ -81,13 +81,15 @@ oracfit mode share my_break > my_break.yaml
 oracfit mode add my_break.yaml         # somewhere else, on someone else's machine
 ```
 
-Four facts about a mode file:
+Five facts about a mode file:
 
 - A stage is a model (`model_ref`) or a script (`command`) - never both. A
   mechanical stage dispatches no model at all: the command runs and the
   oracle decides.
 - `on_fail: halt` - a red stage never starts the next one. An unlock that
   fails does not start the run.
+- `artifacts: plan/` - a promise the runtime keeps: the model is told where
+  to write, and a stage that leaves the directory empty fails and retries.
 - `input: prev_stage` - the stage reads the work of the stages before it. The
   answer of every stage that ran and the files it wrote are injected into its
   spec; a mechanical stage gets the same in `ORACFIT_PREV_STAGE_INPUT_FILE`.
@@ -114,7 +116,7 @@ GitHub issue; leaving costs one click.
 - docs/modes-catalog.md  -  the mode YAML grammar, in full
 - examples/  -  four modes to copy: one cheap stage, unlock + run, mechanical, elevate
 - adapters/<name>/  -  runner contract per CLI
-- incidents/  -  the ledger; 123 postmortems in this cut
+- incidents/  -  the ledger; 124 postmortems in this cut
 - LICENSE  -  AGPL-3.0 (core) + MIT (kernel, adapters). See NOTICE.
 - site/index.html?as=agent  -  HTML twin of this file
 - site/blog/  -  writing (source: site/blog/posts/*.md)
