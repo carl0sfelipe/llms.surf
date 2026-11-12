@@ -58,7 +58,7 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 - paddle  -  the normal mode: cheap model sweats, oracle decides
 - tow  -  unlock_plan: the expensive stage tows you to the wave you could not paddle into
 - surfcheck  -  ui_visual_qa: visual judgment on rendered surfaces
-- `oracfit alias` prints the map; the 17 other modes stay in git and in the CLI (`oracfit modes`).
+- `oracfit alias` prints the map; the 18 other modes stay in git and in the CLI (`oracfit modes`).
 
 ## Modes are YAML you can share
 
@@ -67,6 +67,29 @@ The oracle lives in the task spec (raw command, no backticks). Privacy is
 location, not a field  -  a mode is private because it lives in your workdir;
 public is only the YAML you post. Share via the `share your break` issue
 template; install someone else's with `oracfit mode add <file.yaml>`. See what a mode does with `oracfit mode show <id|alias>`.
+
+The loop, end to end:
+
+```bash
+oracfit spec init task.md              # a spec in English, with the oracle in it
+oracfit mode init my_break             # a scaffold; --from tow copies a mode
+oracfit mode validate my_break         # the loader refuses an illegal file
+oracfit mode lint my_break             # does the description match what it does
+oracfit mode show my_break             # the stages, the tiers, the gauntlet
+oracfit run my_break task.md t-my-break
+oracfit mode share my_break > my_break.yaml
+oracfit mode add my_break.yaml         # somewhere else, on someone else's machine
+```
+
+Three facts about a mode file:
+
+- A stage is a model (`model_ref`) or a script (`command`) - never both. A
+  mechanical stage dispatches no model at all: the command runs and the
+  oracle decides.
+- `on_fail: halt` - a red stage never starts the next one. An unlock that
+  fails does not start the run.
+- `model_ref: tier:cheap` expands to an ordered chain of models; a registry
+  id pins one model exactly. The grammar is in docs/modes-catalog.md.
 
 ## Whitelist  -  llms-surf cloud tokens x bestmodel.run
 
@@ -84,6 +107,8 @@ GitHub issue; leaving costs one click.
 
 - SKILL.md  -  operating manual (start here after clone)
 - fluxos/dispatch/SKILL.md  -  how to dispatch work to a model
+- docs/modes-catalog.md  -  the mode YAML grammar, in full
+- examples/  -  four modes to copy: one cheap stage, unlock + run, mechanical, elevate
 - adapters/<name>/  -  runner contract per CLI
 - incidents/  -  the ledger; 122 postmortems in this cut
 - LICENSE  -  AGPL-3.0 (core) + MIT (kernel, adapters). See NOTICE.

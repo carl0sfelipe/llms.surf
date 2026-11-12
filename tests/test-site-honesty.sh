@@ -81,6 +81,11 @@ grep -q "models in registry: $models_disk" "$LLMS" || fail "llms.txt models != t
 grep -q "modes: $modes_disk" "$LLMS" || fail "llms.txt modes != tree"
 grep -q "adapters: $adapters_disk + $stub_disk stub" "$LLMS" || fail "llms.txt adapters != tree"
 grep -q "test suites: $suites_disk" "$LLMS" || fail "llms.txt suites != tree"
+# The alias map covers three modes (paddle, tow, surfcheck); the rest stay in
+# git. The sentence said 17 when the tree had 20 modes - the same decay the
+# badge check exists for, in prose.
+other_modes=$(( modes_disk - 3 ))
+grep -q "the $other_modes other modes" "$LLMS" || fail "llms.txt 'other modes' != tree ($other_modes)"
 if grep -qiE 'hosted inference is not live|hosted swell' "$LLMS"; then
   fail "llms.txt advertises hosted swell — there is no product yet"
 fi

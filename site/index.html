@@ -65,12 +65,14 @@
       <a href="#quickstart">paddle out</a>
       <a href="#loop">oracle loop</a>
       <a href="#wipeouts">wipeouts</a>
+      <a href="#custom-modes">custom modes</a>
       <a href="#adapters">adapters</a>
       <a href="#tokens">tokens</a>
     </nav>
     <nav class="nav-links for-agent" aria-label="Agent surface">
       <a href="#agent-install">install</a>
       <a href="#agent-contract">contract</a>
+      <a href="#agent-modes">modes</a>
       <a href="#agent-files">files</a>
       <a href="llms.txt">llms.txt</a>
     </nav>
@@ -197,6 +199,28 @@
         <p>The dispatcher sits between your agent CLI and the models. One adapter, one YAML. Eight adapters plus a stub ship in this cut.</p>
       </div>
       <div class="chips js-chips"></div>
+    </div>
+  </section>
+
+  <div class="swell-div" aria-hidden="true"></div>
+
+  <section class="section reveal" id="custom-modes">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// custom modes — your pipeline is one YAML file</span>
+        <h2>write it, share it, run it anywhere</h2>
+        <p>A mode is a YAML file: the stages, the model each stage uses, the oracle that decides, the failure rule. The oracle itself lives in the task spec — the mode only says how the work is organised.</p>
+      </div>
+      <div class="term cm-term" aria-label="Create a custom mode, run it, share it, install it elsewhere">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot a"></span><span class="dot g"></span>
+          <span class="term-title">the custom-mode loop</span>
+          <button class="copy-btn js-copy-cm" type="button">copy</button>
+        </div>
+        <pre class="term-body qs js-cm"></pre>
+      </div>
+      <div class="cm-facts" id="cm-facts"></div>
+      <p class="caption">The grammar is in <a href="https://github.com/carl0sfelipe/llms.surf/blob/main/docs/modes-catalog.md">docs/modes-catalog.md</a>; four ready-made modes to copy are in <a href="https://github.com/carl0sfelipe/llms.surf/tree/main/examples">examples/</a> — one cheap stage, an unlock plus a run, a stage that runs a script with no model at all, and a cheap elevate.</p>
     </div>
   </section>
 
@@ -333,11 +357,26 @@
       <div class="chips js-chips"></div>
     </section>
 
+    <section id="agent-modes">
+      <h2>// custom modes — one YAML file</h2>
+      <ul class="agent-list">
+        <li><code>oracfit spec init task.md</code> — a spec in English, with the oracle in it</li>
+        <li><code>oracfit mode init &lt;id&gt;</code> — a scaffold; <code>--from tow</code> copies a mode (surf aliases work)</li>
+        <li><code>oracfit mode validate &lt;id&gt;</code> and <code>oracfit mode lint &lt;id&gt;</code> — the loader refuses an illegal file</li>
+        <li><code>oracfit mode show &lt;id|alias&gt;</code> — the stages, the tiers, the gauntlet, the failure rule</li>
+        <li><code>oracfit mode share &lt;id&gt;</code> — the YAML to post; <code>oracfit mode add &lt;file.yaml&gt;</code> installs it</li>
+        <li>A stage is a model (<code>model_ref</code>) or a script (<code>command</code>) — never both</li>
+        <li><code>on_fail: halt</code> — a red stage never starts the next one</li>
+      </ul>
+    </section>
+
     <section id="agent-files">
       <h2>// read next</h2>
       <ul class="agent-list">
         <li><a href="https://github.com/carl0sfelipe/llms.surf/blob/main/SKILL.md">SKILL.md</a> — operating manual after clone</li>
         <li><a href="https://github.com/carl0sfelipe/llms.surf/blob/main/fluxos/dispatch/SKILL.md">fluxos/dispatch/SKILL.md</a> — how to dispatch</li>
+        <li><a href="https://github.com/carl0sfelipe/llms.surf/blob/main/docs/modes-catalog.md">docs/modes-catalog.md</a> — the mode YAML grammar</li>
+        <li><a href="https://github.com/carl0sfelipe/llms.surf/tree/main/examples">examples/</a> — four modes to copy</li>
         <li><a href="incidents.html">incidents/</a> — the ledger</li>
         <li><a href="blog/">blog/</a> — writing</li>
         <li><a href="readme.html">readme.html</a> — human README, same facts</li>
