@@ -47,11 +47,11 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 ## Counts (from this git tree  -  tests/test-site-honesty.sh)
 
 - version: 0.4.1
-- incidents: 121 (excludes incidents/uso/)
+- incidents: 122 (excludes incidents/uso/)
 - models in registry: 30,
 - modes: 21
 - adapters: 8 + 1 stub
-- test suites: 47
+- test suites: 49
 
 ## Surf aliases (the UI names — tree ids stay canonical)
 
@@ -66,7 +66,7 @@ A custom mode is a subset of the shipped loader grammar: zero new schema.
 The oracle lives in the task spec (raw command, no backticks). Privacy is
 location, not a field  -  a mode is private because it lives in your workdir;
 public is only the YAML you post. Share via the `share your break` issue
-template; install someone else's with `oracfit mode add <file.yaml>`.
+template; install someone else's with `oracfit mode add <file.yaml>`. See what a mode does with `oracfit mode show <id|alias>`.
 
 ## Whitelist  -  llms-surf cloud tokens x bestmodel.run
 
@@ -85,7 +85,7 @@ GitHub issue; leaving costs one click.
 - SKILL.md  -  operating manual (start here after clone)
 - fluxos/dispatch/SKILL.md  -  how to dispatch work to a model
 - adapters/<name>/  -  runner contract per CLI
-- incidents/  -  the ledger; 121 postmortems in this cut
+- incidents/  -  the ledger; 122 postmortems in this cut
 - LICENSE  -  AGPL-3.0 (core) + MIT (kernel, adapters). See NOTICE.
 - site/index.html?as=agent  -  HTML twin of this file
 - site/blog/  -  writing (source: site/blog/posts/*.md)

@@ -54,75 +54,130 @@ _TIER_FALLBACKS = {
 
 
 def _load_yaml(text):
-    """Minimal YAML parser — enough for our three fixtures."""
-    lines = text.split("\n")
-    result = {}
-    stack = [result]
-    indent_stack = [0]
-    list_idx_stack = []
-    current_list = None
+    """Minimal YAML parser, used when PyYAML is not installed.
 
-    i = 0
-    while i < len(lines):
-        raw = lines[i]
+    It must agree with PyYAML on the mode files: the loader is the single
+    reader of a mode, and two readers that disagree are the defect that broke
+    the inline-comment ref (incident 2026-11-12-model-ref-com-comentario-inline).
+    This parser handles the subset the mode files use: nested mappings, lists
+    of mappings, plain scalars, quoted strings, folded blocks ('>') and inline
+    comments.
+    """
+    raw_lines = text.split("\n")
+    entries = []  # (indent, content) for every meaningful line
+    for raw in raw_lines:
         if not raw.strip() or raw.strip().startswith("#"):
-            i += 1
             continue
         stripped = raw.lstrip()
-        indent = len(raw) - len(stripped)
+        entries.append((len(raw) - len(stripped), stripped))
+    pos = 0
 
-        while indent_stack and indent < indent_stack[-1]:
-            stack.pop()
-            indent_stack.pop()
-            if list_idx_stack:
-                list_idx_stack.pop()
-            current_list = None
+    def parse_node(indent):
+        """Parse the block that starts at the current line, if it is deeper."""
+        nonlocal pos
+        if pos >= len(entries):
+            return None
+        cur_indent, content = entries[pos]
+        if cur_indent < indent:
+            return None
+        if content.startswith("- "):
+            return parse_list(cur_indent)
+        return parse_map(cur_indent)
 
-        if stripped.startswith("- "):
-            item_text = stripped[2:]
-            parent = stack[-1]
-            if current_list is None:
-                if not isinstance(parent, list):
-                    parent.clear()
-                current_list = parent
-            if ":" in item_text:
-                key, val = _split_keyval(item_text)
-                entry = {key: _parse_val(val)}
-                current_list.append(entry)
-                stack.append(entry)
-                indent_stack.append(indent + 2)
-                list_idx_stack.append(len(current_list) - 1)
-            else:
-                current_list.append(_parse_val(item_text))
-            i += 1
-            continue
-
-        if ":" in stripped:
-            key, val = _split_keyval(stripped)
-            target = stack[-1]
-            if isinstance(target, list) and len(target) > 0:
-                if list_idx_stack:
-                    target = target[list_idx_stack[-1]]
-            target[key] = _parse_val(val)
-            if val == "" or val.startswith(">"):
-                folded_lines = []
-                i += 1
-                while i < len(lines):
-                    next_raw = lines[i]
-                    next_stripped = next_raw.lstrip()
-                    next_indent = len(next_raw) - len(next_stripped)
-                    if next_indent > indent and next_stripped and not next_stripped.startswith("#"):
-                        folded_lines.append(next_stripped)
-                        i += 1
-                    else:
-                        break
-                target[key] = " ".join(folded_lines)
+    def parse_map(indent):
+        nonlocal pos
+        out = {}
+        while pos < len(entries):
+            cur_indent, content = entries[pos]
+            if cur_indent != indent or content.startswith("- "):
+                break
+            if ":" not in content:
+                pos += 1
                 continue
-            i += 1
-            continue
-        i += 1
+            key, val = _split_keyval(content)
+            pos += 1
+            if val.startswith(">") or val.startswith("|"):
+                out[key] = parse_block_scalar(val, indent)
+            elif val == "":
+                nested = parse_node(indent + 1)
+                out[key] = nested if nested is not None else ""
+            else:
+                out[key] = _parse_val(val)
+        return out
 
-    return result
+    def parse_list(indent):
+        nonlocal pos
+        out = []
+        while pos < len(entries):
+            cur_indent, content = entries[pos]
+            if cur_indent != indent or not content.startswith("- "):
+                break
+            item_text = _strip_inline_comment(content[2:].strip())
+            pos += 1
+            if ":" in item_text and not item_text.startswith(("'", '"')):
+                key, val = _split_keyval(item_text)
+                entry = {}
+                if val.startswith(">") or val.startswith("|"):
+                    entry[key] = parse_block_scalar(val, indent)
+                elif val == "":
+                    nested = parse_node(indent + 3)
+                    entry[key] = nested if nested is not None else ""
+                else:
+                    entry[key] = _parse_val(val)
+                # The remaining keys of this list item sit deeper than the dash.
+                while pos < len(entries):
+                    next_indent, next_content = entries[pos]
+                    if next_indent <= indent or next_content.startswith("- "):
+                        break
+                    if ":" not in next_content:
+                        pos += 1
+                        continue
+                    k2, v2 = _split_keyval(next_content)
+                    pos += 1
+                    if v2.startswith(">") or v2.startswith("|"):
+                        entry[k2] = parse_block_scalar(v2, next_indent)
+                    elif v2 == "":
+                        nested = parse_node(next_indent + 1)
+                        entry[k2] = nested if nested is not None else ""
+                    else:
+                        entry[k2] = _parse_val(v2)
+                out.append(entry)
+            else:
+                out.append(_parse_val(item_text))
+        return out
+
+    def parse_block_scalar(marker, indent):
+        """Collect the folded ('>') or literal ('|') lines under a key.
+
+        YAML folds a line break into a space only between two lines at the
+        block's own indentation. A more indented line keeps its break (and its
+        extra spaces), and the line after it starts on a new line too — a shell
+        command folded into one line is a different command.
+        """
+        nonlocal pos
+        text = ""
+        base = None
+        prev_indent = None
+        while pos < len(entries):
+            cur_indent, content = entries[pos]
+            if cur_indent <= indent:
+                break
+            if base is None:
+                base = cur_indent
+                text = content
+            elif marker.startswith("|"):
+                text += "\n" + " " * (cur_indent - base) + content
+            elif prev_indent > base or cur_indent > base:
+                text += "\n" + " " * max(0, cur_indent - base) + content
+            else:
+                text += " " + content
+            prev_indent = cur_indent
+            pos += 1
+        return text + "\n" if text else ""
+
+    if not entries:
+        return {}
+    return parse_node(entries[0][0]) or {}
 
 
 def _strip_inline_comment(val):
@@ -157,7 +212,21 @@ def _split_keyval(line):
     return key, val
 
 
+def _unquote(val):
+    """Drop the quotes of a quoted scalar, keeping what is inside them."""
+    if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+        inner = val[1:-1]
+        if val[0] == '"':
+            return inner.replace('\\"', '"').replace("\\n", "\n").replace("\\\\", "\\")
+        return inner.replace("''", "'")
+    return val
+
+
 def _parse_val(val):
+    # A quoted scalar stays a string: 'version: "1"' is the string "1", not the
+    # number 1. PyYAML keeps that distinction and so must this parser.
+    if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+        return _unquote(val)
     if val == "":
         return ""
     if val.lower() in ("true", "yes"):
@@ -268,6 +337,18 @@ def validate(path):
             if not (isinstance(oracle, bool) and oracle is True) and not (isinstance(oracle, str) and oracle):
                 print(f"FAIL {p}: oracle must be bool true or non-empty string, got {type(oracle).__name__}: {oracle}", file=sys.stderr)
                 sys.exit(2)
+
+        # A stage is either a model call or a mechanical command, never both.
+        # When both were declared the runtime called the model and dropped the
+        # command without a word, so the mode did something the author did not
+        # ask for. Refuse it here, where the author is still editing.
+        if stage.get("model_ref") and stage.get("command"):
+            print(
+                f"FAIL {p}: a stage cannot have both model_ref and command "
+                f"(role={role!r}): pick one",
+                file=sys.stderr,
+            )
+            sys.exit(2)
 
         # S8 owner_question: bool true ou string não-vazia (ex.: once)
         owner_q = stage.get("owner_question")

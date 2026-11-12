@@ -1,6 +1,6 @@
 #!/bin/bash
 # Test: dispatch-mode.sh resolve custom mode from workdir overlay before
-# falling back to ORACFIT_ROOT (AD-16, v1-modes-catalog.md §4).
+# falling back to ORACFIT_ROOT (AD-16, docs/modes-catalog.md §1).
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

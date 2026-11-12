@@ -131,6 +131,81 @@ rm -f .dispatch/stub-proof
 [ "$(status_of t-mech-fail)" != pass ] && ok "a failing command is not a pass" || not "failing command reported as pass"
 grep -q "mechanical stage run: running command" "$W/mech-fail.log" && ok "the failing command did run" || { not "the failing command never ran"; tail -8 "$W/mech-fail.log"; }
 
+echo "== 9. an elevate chain halts on the red stage and never starts the next one"
+# The elevate shape (unlock -> plan -> run) is only worth anything if a red
+# unlock stops the chain: otherwise the money is already spent before anyone
+# looks. The oracle here is a grep for a file nobody writes, so the unlock is
+# red from the first attempt.
+cat >core/modes/elev_two.yaml <<'ELEV'
+id: elev_two
+version: "1"
+name: elev two
+description: two stages, the first one is red
+stages:
+  - role: unlock
+    model_ref: tier:cheap
+    oracle: true
+    max_attempts: 1
+  - role: plan
+    model_ref: tier:cheap
+    input: prev_stage
+gauntlet:
+  enabled: true
+  inject_feedback: true
+  until_approved: true
+  safety_ceiling: 3
+on_fail: halt
+ELEV
+python3 - "$W/spec_task.md" <<'PY'
+import re, sys
+text = open("task.md", encoding="utf-8").read()
+text = re.sub(r"^- command: .*", "- command: grep -q never_written .dispatch/stub-proof", text, flags=re.M)
+text = re.sub(r"^VERIFICATION: .*", "VERIFICATION: grep -q never_written .dispatch/stub-proof", text, flags=re.M)
+open(sys.argv[1], "w", encoding="utf-8").write(text)
+PY
+rm -f .dispatch/stub-proof
+"$L" run elev_two "$W/spec_task.md" t-elev >"$W/elev.log" 2>&1
+[ "$(status_of t-elev)" != pass ] && ok "a red unlock is not a pass" || not "red unlock reported as pass"
+grep -q "role=unlock" "$W/elev.log" && ok "the unlock stage ran" || { not "the unlock stage never ran"; tail -8 "$W/elev.log"; }
+grep -q "role=plan" "$W/elev.log" && not "the plan stage ran after a red unlock" || ok "the plan stage never started"
+
+echo "== 10. a mechanical stage retries its command until it works"
+cat >core/modes/mech_retry.yaml <<'RETRY'
+id: mech_retry
+version: "1"
+name: mech retry
+description: a mechanical stage that fails once and then works
+stages:
+  - role: run
+    command: bash -c 'n=$(cat .dispatch/counter 2>/dev/null || echo 0); n=$((n+1)); echo $n > .dispatch/counter; [ "$n" -ge 2 ]'
+    oracle: true
+    max_attempts: 3
+gauntlet:
+  enabled: true
+on_fail: halt
+RETRY
+python3 - "$W/spec_retry.md" <<'PY'
+import re, sys
+text = open("task.md", encoding="utf-8").read()
+text = re.sub(r"^- command: .*", "- command: grep -q 2 .dispatch/counter", text, flags=re.M)
+text = re.sub(r"^VERIFICATION: .*", "VERIFICATION: grep -q 2 .dispatch/counter", text, flags=re.M)
+open(sys.argv[1], "w", encoding="utf-8").write(text)
+PY
+rm -rf .dispatch
+"$L" run mech_retry "$W/spec_retry.md" t-retry >"$W/retry.log" 2>&1
+[ "$(status_of t-retry)" = pass ] && ok "the mechanical stage passed on the second attempt" || { not "the mechanical stage did not retry"; tail -8 "$W/retry.log"; }
+grep -q "STAGE COMMAND FAILED" "$W/retry.log" && ok "the first attempt failure is on the record" || not "the first attempt failure is invisible"
+
+echo "== 11. mode show tells the shape of a mode without opening the YAML"
+"$L" mode show tow >"$W/show-tow.txt" 2>&1 && ok "show tow" || { not "show tow"; cat "$W/show-tow.txt"; }
+grep -q "mode: unlock_plan" "$W/show-tow.txt" && ok "show resolves the alias to the id" || not "show did not resolve the alias"
+grep -q "unlock .*tier:expensive" "$W/show-tow.txt" && ok "show names the tier of each stage" || not "show does not name the tiers"
+grep -q "plan .*tier:mid" "$W/show-tow.txt" && ok "show lists every stage" || not "show does not list every stage"
+"$L" mode show mech_one >"$W/show-mine.txt" 2>&1 && grep -q "mode: mech_one" "$W/show-mine.txt" \
+  && ok "show works on a custom mode" || { not "show does not work on a custom mode"; cat "$W/show-mine.txt"; }
+grep -q "command:" "$W/show-mine.txt" && ok "show says a mechanical stage runs a command" || not "show does not mark the mechanical stage"
+"$L" mode show no_such_mode >/dev/null 2>&1; [ $? -eq 3 ] && ok "show refuses an unknown mode" || not "show accepted an unknown mode"
+
 echo ""
 echo "mode tooling: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
