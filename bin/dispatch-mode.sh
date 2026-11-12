@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
+source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 
 CREDIT="Oracfit — Carlos Felipe"
 MAX_ATTEMPTS_DEFAULT=3
@@ -255,6 +256,32 @@ for stage in stages:
         break
 ')"
 stage_role="${stage_role:-run}"
+# The throttle the mode declares: two calls of the same model, or two
+# attempts of the same stage, are at least rate_limit_s seconds apart. Read
+# from the stage that carries the model_ref - the stage this runtime
+# dispatches. The index comes with it: it is the key of the stage in the
+# ledger of the throttle.
+rate_limit_s="$(printf '%s' "$mode_stage_json" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    print("0 0")
+    raise SystemExit(0)
+stages = data.get("stages") or []
+for index, stage in enumerate(stages):
+    if not isinstance(stage, dict):
+        continue
+    ref = stage.get("model_ref")
+    if ref:
+        value = stage.get("rate_limit_s")
+        print("%d %d" % (index, int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else 0))
+        break
+else:
+    print("0 0")
+')"
+rate_limit_stage_index="${rate_limit_s%% *}"
+rate_limit_s="${rate_limit_s##* }"
 # E5-M3: o default antigo (deepseek-v4-flash-free) tinha hint morto e ficou
 # sendo servido em silêncio — a classe exata do incidente E5. Default agora é
 # a rota free do catálogo carimbado (resolve loud se o catálogo estiver ausente).
@@ -284,6 +311,13 @@ PYREG
     fi
   fi
 
+fi
+# The keys the throttle is measured against: the stage this runtime dispatches
+# and, when there is one, the model it calls. The model key is what keeps two
+# calls to the same model apart even when they belong to different stages.
+rate_limit_keys=("stage:${rate_limit_stage_index}")
+if [ -n "$model_ref" ]; then
+  rate_limit_keys+=("model:${model_ref}")
 fi
 max_attempts="$(grep -E '^\s*max_attempts:' "$mode_yaml" | head -1 | awk '{print $2}' || true)"
 max_attempts="${max_attempts:-$MAX_ATTEMPTS_DEFAULT}"
@@ -418,6 +452,24 @@ while [ "$attempt" -lt "$max_attempts" ]; do
   attempt=$((attempt + 1))
   oracfit_emit_event attempt_started attempt="$attempt" mode="$mode_id"
 
+  # The throttle the mode declares, now kept by the runtime: two calls of the
+  # same model - or two attempts of the same stage - are at least
+  # rate_limit_s seconds apart. The pause is measured from the END of the
+  # previous dispatch, so a slow call does not count as a pause. The wait
+  # yields to a human interrupt (the same file the runner watchdog watches).
+  #
+  # The gate runs BEFORE the inbox is read: an interrupt during the wait
+  # must not eat the human message - the next attempt picks it up.
+  rl_interrupt_file="$(oracfit_interrupt_file "$RUN_ID")"
+  if ! oracfit_rate_limit_gate "$rate_limit_s" "mode $mode_id attempt $attempt" "$rl_interrupt_file" "${rate_limit_keys[@]}"; then
+    # Interrupted during the wait: the attempt ends here, the next one picks
+    # the human message up from the inbox. Same treatment as the runner
+    # exit 5 below.
+    oracfit_emit_event attempt_interrupted attempt="$attempt" reason=rate_limit_wait
+    rm -f "$rl_interrupt_file" 2>/dev/null || true
+    continue
+  fi
+
   run_spec_file="$spec_file"
   # P4: refresh ground-truth from ## Dados verificados every attempt/resume.
   gauntlet_gt="${gauntlet_dir}/ground-truth.md"
@@ -525,6 +577,9 @@ with open(path, "a") as f:
   esac
   "$STAGE_RUNNER" "${runner_args[@]}" | "$SCRIPT_DIR/oracfit-thinking-tee.py"
   runner_rc=${PIPESTATUS[0]}
+  # The call is over: the next attempt of this mode (or the next call of the
+  # same model) measures its pause from this moment.
+  oracfit_rate_limit_record_call "${rate_limit_keys[@]}"
   unset ORACFIT_EVENTS_FILE
   set -e
   [ "$run_spec_file" != "$spec_file" ] && rm -f "$run_spec_file"
