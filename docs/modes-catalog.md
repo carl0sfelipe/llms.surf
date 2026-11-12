@@ -89,6 +89,18 @@ runtime would call the model and drop the command without a word.
 **Roles.** `unlock`, `plan`, `run`, `map`, `reduce`, `export`, `render`,
 `vision_gate`. A `map` stage must declare `rate_limit_s > 0`.
 
+**`input: prev_stage`.** A stage that declares it reads the work of the stages
+before it. For every stage that ran, the runtime renders the answer it produced
+(the runner log) and the files it wrote in its artifacts directory, and injects
+the whole chain into the stage's spec. A mechanical stage (a `command:`) never
+reads the spec, so it receives the same rendering in
+`ORACFIT_PREV_STAGE_INPUT_FILE`, with `ORACFIT_PREV_STAGE_ROLE` and
+`ORACFIT_PREV_STAGE_ARTIFACTS` next to it. The first stage of a mode cannot
+declare it — the loader refuses the file, because there is no stage before it.
+`input` also carries other values with their own meaning (`files_glob` in a
+vision map stage, a directory path read by the stage's `command:`); only the
+literal `prev_stage` chains stages.
+
 **Tiers.** `tier:cheap`, `tier:mid`, `tier:expensive` and `tier:vision` expand
 into an ordered chain of models from the free catalog / registry. The first
 provider with usable credentials wins; the rest are fallbacks. A registry id

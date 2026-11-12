@@ -319,7 +319,7 @@ def validate(path):
 
     bad_roles = []
     has_map = False
-    for stage in stages:
+    for stage_index, stage in enumerate(stages):
         if not isinstance(stage, dict):
             print(f"FAIL {p}: stage entry is not a mapping", file=sys.stderr)
             sys.exit(2)
@@ -346,6 +346,24 @@ def validate(path):
             print(
                 f"FAIL {p}: a stage cannot have both model_ref and command "
                 f"(role={role!r}): pick one",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        # input: prev_stage — the stage reads the work of the stages before it.
+        # The first stage has none, so declaring it there is a dead promise:
+        # refuse the file where the author is still editing.
+        stage_input = stage.get("input")
+        if stage_input is not None and not isinstance(stage_input, str):
+            print(
+                f"FAIL {p}: input must be a string, got {type(stage_input).__name__}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if stage_input == "prev_stage" and stage_index == 0:
+            print(
+                f"FAIL {p}: the first stage cannot declare 'input: prev_stage' "
+                f"(role={role!r}): there is no previous stage to read",
                 file=sys.stderr,
             )
             sys.exit(2)
