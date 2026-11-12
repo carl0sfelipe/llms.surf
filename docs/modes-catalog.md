@@ -71,7 +71,7 @@ stages:
     json_schema: ...       # file with the JSON schema the answer must match
     tools: true            # allow the runner to use tools
     max_attempts: 3        # attempts for this stage
-    rate_limit_s: 0        # pause between attempts
+    rate_limit_s: 0        # seconds of pause between attempts (the runtime waits)
     owner_question: once   # may pause the run to ask the owner one question
     stage_oracle: <cmd>    # deterministic gate after a command stage
     oracle_command: <cmd>  # alias of stage_oracle
@@ -107,6 +107,18 @@ declare it — the loader refuses the file, because there is no stage before it.
 `input` also carries other values with their own meaning (`files_glob` in a
 vision map stage, a directory path read by the stage's `command:`); only the
 literal `prev_stage` chains stages.
+
+**`rate_limit_s:` is a throttle, and the runtime keeps it.** A stage that
+declares `rate_limit_s: 15` gets at least 15 seconds between the dispatches it
+covers: two attempts of that stage, and two calls of the model it declares
+(the pause is measured against the last call of that model in the run, even
+when it happened in another stage). The pause runs from the end of the
+previous dispatch to the start of the next one — a slow call does not count as
+a pause. Both runtimes honor it (single-stage and multi-stage), the wait is
+announced on stderr and in `events.jsonl`, it is bounded (the loader refuses a
+value above 3600, and the runtime clamps one that slipped past), and a human
+interrupt ends it instead of waiting it out. A stage that declares no throttle
+is not slowed down.
 
 **Tiers.** `tier:cheap`, `tier:mid`, `tier:expensive` and `tier:vision` expand
 into an ordered chain of models from the free catalog / registry. The first
@@ -215,6 +227,7 @@ run before anything is spent downstream.
 - `stage_oracle`, `oracle_command`, `preflight` and `preflight_command` must be
   non-empty command strings
 - `freshness_targets` must be a non-empty list of paths
+- `rate_limit_s`, on any stage, must be a number between 0 and 3600
 - `run_attempt_budget` must be a positive integer
 
 The canonical check is mechanical: `oracfit mode validate <id>` — exit 0 means

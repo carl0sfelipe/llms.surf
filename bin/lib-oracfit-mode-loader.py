@@ -30,6 +30,11 @@ ALLOWED_GAUNTLET = {
 # v3: roles do content_factory end-to-end (run → export → render → vision_gate)
 ROLES = {"unlock", "plan", "run", "map", "reduce", "export", "render", "vision_gate"}
 
+# The ceiling of a single throttle wait, in seconds. The runtime caps the
+# wait at the same number (ORACFIT_RATE_LIMIT_MAX_S in
+# bin/lib-oracfit-rate-limit.sh) - rule 12: no command without a ceiling.
+RATE_LIMIT_MAX_S = 3600
+
 REGISTRY_PATH = Path(__file__).resolve().parent.parent / "model-registry.json"
 FREE_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "free-catalog.json"
 
@@ -331,6 +336,33 @@ def validate(path):
             rls = stage.get("rate_limit_s")
             if rls is None or not isinstance(rls, (int, float)) or rls <= 0:
                 print(f"FAIL {p}: map stage requires rate_limit_s > 0", file=sys.stderr)
+                sys.exit(2)
+        # rate_limit_s is a promise the runtime now keeps (the throttle between
+        # two calls of the same model). A value the runtime cannot honor is a
+        # promise nobody keeps: refuse it here, where the author is editing.
+        # Checked on EVERY stage, not only the map one - a string, a negative
+        # number or a value above the ceiling used to pass validation and then
+        # meant nothing at run time.
+        rls = stage.get("rate_limit_s")
+        if rls is not None:
+            if isinstance(rls, bool) or not isinstance(rls, (int, float)):
+                print(
+                    f"FAIL {p}: rate_limit_s must be a number, got "
+                    f"{type(rls).__name__}: {rls!r}",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+            if rls < 0:
+                print(
+                    f"FAIL {p}: rate_limit_s must be >= 0, got {rls}",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+            if rls > RATE_LIMIT_MAX_S:
+                print(
+                    f"FAIL {p}: rate_limit_s must be <= {RATE_LIMIT_MAX_S}, got {rls}",
+                    file=sys.stderr,
+                )
                 sys.exit(2)
         oracle = stage.get("oracle")
         if oracle is not None:

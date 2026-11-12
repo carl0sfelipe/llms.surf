@@ -17,6 +17,7 @@ source "$SCRIPT_DIR/lib-oracfit-events.sh"
 source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
+source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 
 source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 
@@ -147,6 +148,10 @@ mkdir -p "$(oracfit_inbox_dir)"
 printf '%s' "$mode_id" >"$(oracfit_inbox_dir)/${RUN_ID}.mode-id"
 printf '%s' "$spec_file" >"$(oracfit_inbox_dir)/${RUN_ID}.spec-file"
 printf '%s' "$task_name" >"$(oracfit_inbox_dir)/${RUN_ID}.task-name"
+# The file the panel touches when the human asks to interrupt. The runners of
+# this runtime do not watch it (this runtime never wired the interrupt), but
+# the rate-limit wait does: a throttle of 15s must not outlive the human.
+rl_interrupt_file="$(oracfit_interrupt_file "$RUN_ID")"
 
 # Epílogo garantido (família do incidente 2026-08-10-dispatch-mode-run-finished-
 # sem-ledger-nem-usage-feedback): se o processo morrer antes do epílogo normal
@@ -236,6 +241,9 @@ while [ "$i" -lt "$stage_count" ]; do
   fi
   oracle=$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('oracle'); print('true' if v is True or v==True else ('false' if not v else str(v)))")
   artifacts=$(printf '%s' "$stages_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['stages'][$i].get('artifacts') or '')")
+  # The throttle the stage declares: two model calls of this stage are at
+  # least rate_limit_s seconds apart (the loader demands it on a map stage).
+  rate_limit_s=$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('rate_limit_s'); print(int(v) if isinstance(v,(int,float)) and not isinstance(v,bool) else 0)")
   max_attempts=$(printf '%s' "$stages_json" | python3 -c "import json,sys; s=json.load(sys.stdin)['stages'][$i]; print(s.get('max_attempts') or 3)")
   stage_oracle_command="$(printf '%s' "$stages_json" | python3 -c "import json,sys; s=json.load(sys.stdin)['stages'][$i]; v=s.get('oracle'); print(s.get('stage_oracle') or s.get('oracle_command') or (v if isinstance(v,str) and v != 'true' else ''))")"
   stage_preflight_command="$(printf '%s' "$stages_json" | python3 -c "import json,sys; s=json.load(sys.stdin)['stages'][$i]; print(s.get('preflight') or s.get('preflight_command') or '')")"
@@ -344,11 +352,35 @@ for target in targets:
     fi
   fi
 
+  # The throttle the stage declares, now kept by the runtime: two attempts of
+  # this stage - or two calls of the same model anywhere in the run - are at
+  # least rate_limit_s seconds apart. The pause is measured from the END of
+  # the previous dispatch, so a slow stage does not count as a pause. The wait
+  # yields to a human interrupt (the file the panel touches).
+  rate_limit_stage_key="stage:$i"
+  rate_limit_model_key=""
+  if [ -n "$model_ref" ]; then
+    rate_limit_model_key="model:$model_ref"
+  fi
+  rate_limit_keys=("$rate_limit_stage_key")
+  if [ -n "$rate_limit_model_key" ]; then
+    rate_limit_keys+=("$rate_limit_model_key")
+  fi
+
   attempt=0
   stage_ok=false
   while ! $stage_preflight_failed && [ "$attempt" -lt "$max_attempts" ]; do
     attempt=$((attempt + 1))
     total_attempt_count=$((total_attempt_count + 1))
+    if ! oracfit_rate_limit_gate "$rate_limit_s" "stage $role attempt $attempt" "$rl_interrupt_file" "${rate_limit_keys[@]}"; then
+      # Interrupted during the wait: the human asked to stop. The attempt ends
+      # here - no call is spent on a model nobody wanted to hear. The next
+      # attempt picks the human message up from the inbox, exactly like the
+      # runner exit 5 path in dispatch-mode.sh.
+      oracfit_emit_event attempt_interrupted stage="$role" attempt="$attempt" reason=rate_limit_wait
+      rm -f "$rl_interrupt_file" 2>/dev/null || true
+      continue
+    fi
     if [ "$role" = "run" ]; then
       if [ -n "$run_attempt_budget" ] \
         && [ "$run_attempt_count" -ge "$run_attempt_budget" ]; then
@@ -488,6 +520,11 @@ for line in open(sys.argv[1]):
       echo "ERROR: could not remove stale visual evidence before stage $role attempt $attempt" >&2
       runner_rc=1
     fi
+    # The call is over: the next attempt of this stage - or the next call of
+    # the same model - measures its pause from this moment. A mechanical stage
+    # stamps the stage key too: the pause between attempts is a promise of the
+    # stage, not a property of the model.
+    oracfit_rate_limit_record_call "${rate_limit_keys[@]}"
     set -e
     [ "$run_spec" != "$spec_file" ] && rm -f "$run_spec"
     unset ORACFIT_SESSION_FILE
