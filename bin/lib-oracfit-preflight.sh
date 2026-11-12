@@ -125,9 +125,9 @@ oracfit_run_oracle_cmd() {
   local spec="${1:?}"
   local workdir="${2:?}"
   local cmd
-  cmd="$(grep -iE '^[-*][[:space:]]*comando:' "$spec" | head -1 | sed -E 's/^[-*][[:space:]]*comando:[[:space:]]*//I')"
+  cmd="$(grep -iE '^[-*][[:space:]]*(comando|command):' "$spec" | head -1 | sed -E 's/^[-*][[:space:]]*(comando|command):[[:space:]]*//I')"
   if [ -z "$cmd" ]; then
-    echo "ERROR: no oracle - comando: line in $spec" >&2
+    echo "ERROR: no oracle '- command:' line in $spec" >&2
     return 3
   fi
   ( cd "$workdir" && eval "$cmd" )

@@ -64,7 +64,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-ORACLE_LINE = re.compile(r'^[-*]\s*comando:\s*(.+)$', re.I | re.M)
+ORACLE_LINE = re.compile(r'^[-*]\s*(?:comando|command):\s*(.+)$', re.I | re.M)
 GREPS = {"grep", "egrep", "fgrep", "ggrep", "rg"}
 SEPARATORS = {"&&", "||", ";", "|", "(", ")", "{", "}", "&", "\n",
               "do", "done", "then", "else", "elif", "fi", "esac"}

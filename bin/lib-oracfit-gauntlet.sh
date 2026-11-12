@@ -230,9 +230,9 @@ oracfit_gauntlet_run_oracle_capture() {
   local workdir="${2:?}"
   local logfile="${3:?}"
   local cmd
-  cmd="$(grep -iE '^[-*][[:space:]]*comando:' "$spec" | head -1 | sed -E 's/^[-*][[:space:]]*comando:[[:space:]]*//I')"
+  cmd="$(grep -iE '^[-*][[:space:]]*(comando|command):' "$spec" | head -1 | sed -E 's/^[-*][[:space:]]*(comando|command):[[:space:]]*//I')"
   if [ -z "$cmd" ]; then
-    echo "ERROR: no oracle - comando: line in $spec" >&2
+    echo "ERROR: no oracle '- command:' line in $spec" >&2
     printf 'ERROR: no oracle comando\n' >"$logfile"
     return 3
   fi
@@ -295,7 +295,7 @@ oracfit_gauntlet_extract_barra() {
 import re, sys
 from pathlib import Path
 text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
-m = re.search(r"(?im)^##\s*Barra\s*\n(.*?)(?=^##\s|\Z)", text, re.S)
+m = re.search(r"(?im)^##\s*Bar(?:ra)?\s*\n(.*?)(?=^##\s|\Z)", text, re.S)
 if not m:
     sys.exit(0)
 body = m.group(1).strip()

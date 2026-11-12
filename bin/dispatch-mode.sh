@@ -206,7 +206,24 @@ if [ -z "${DISPATCH_RUNNER:-}" ]; then
   exit 3
 fi
 
-model_ref="$(grep -E '^\s*model_ref:' "$mode_yaml" | head -1 | sed 's/.*model_ref:[[:space:]]*//' | tr -d '"' || true)"
+# Read the ref through the YAML loader (not grep): an inline comment after the
+# value used to travel inside the ref and the tier resolver then found no model.
+model_ref="$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" dump "$mode_yaml" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    print("")
+    raise SystemExit(0)
+stages = data.get("stages") or []
+for stage in stages:
+    ref = (stage or {}).get("model_ref")
+    if ref:
+        print(ref)
+        break
+else:
+    print(data.get("model_ref") or "")
+')"
 # E5-M3: o default antigo (deepseek-v4-flash-free) tinha hint morto e ficou
 # sendo servido em silêncio — a classe exata do incidente E5. Default agora é
 # a rota free do catálogo carimbado (resolve loud se o catálogo estiver ausente).

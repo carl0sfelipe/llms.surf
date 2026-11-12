@@ -70,7 +70,7 @@ mkdir -p "$LOG_DIR"
 GAUNTLET_ACCUM="$LOG_DIR/${TASK_NAME}.gauntlet-feedback.md"
 : >"$GAUNTLET_ACCUM"
 
-ORACLE_CMD=$(grep -A1 '^\- comando:' "$SPEC_FILE" | head -1 | sed 's/^- comando: *//' | sed 's/^`//' | sed 's/`$//')
+ORACLE_CMD=$(grep -iE '^- (comando|command):' "$SPEC_FILE" | head -1 | sed -E 's/^- (comando|command): *//I' | sed 's/^`//' | sed 's/`$//')
 if [ -z "$ORACLE_CMD" ]; then
   echo "dispatch-escalate: spec sem oráculo (linha '- comando:'). Use check-spec.sh." >&2
   exit 3
