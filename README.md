@@ -143,7 +143,7 @@ bin/llms-surf run normal spec.md my-task # dispatch with oracle + watchdog
 bin/llms-surf gui                        # watch it live, score it after
 ```
 
-Adding your own pipeline is one YAML file (`llms-surf mode init <id>`).
+Adding your own pipeline is one YAML file (`llms-surf mode init <id>`). `llms-surf mode show <id>` prints the shape of a mode, `mode share` gives you the YAML to post and `mode add` installs someone else's.
 Every failure you hit: `bin/incident.sh new` — that's how the 122 in this cut happened.
 
 ---
