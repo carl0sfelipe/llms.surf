@@ -215,6 +215,15 @@ run_attempt_count=0
 total_attempt_count=0
 budget_exhausted=false
 
+# Where the output of each stage is rendered for the stages that follow it
+# (input: prev_stage). It lives outside the artifacts tree on purpose: the
+# artifacts dir of a stage is read by the oracle gates and must hold only that
+# stage's proof.
+stage_input_dir="$ORACFIT_WORKDIR/.dispatch/stage-input/${RUN_ID}"
+mkdir -p "$stage_input_dir"
+stage_roles=()
+stage_dirs=()
+
 i=0
 while [ "$i" -lt "$stage_count" ]; do
   role=$(printf '%s' "$stages_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['stages'][$i].get('role',''))")
@@ -234,6 +243,14 @@ while [ "$i" -lt "$stage_count" ]; do
   # → volta pro stage com role=export. Vazio = não volta (comportamento original).
   stage_loop_target="$(printf '%s' "$stages_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['stages'][$i].get('loop_target') or '')")"
   [ -z "$stage_loop_target" ] && stage_loop_target="$gauntlet_loop_target"
+  # input: prev_stage — the stage asks for the work of the stages before it.
+  # The runtime renders that work (the answer of each stage + the files it
+  # wrote) into the composed spec, and hands the same rendering to a
+  # mechanical stage through the environment, because a mechanical stage runs
+  # a command and never reads the spec. Only the literal value prev_stage
+  # chains; every other value (files_glob, a directory path) keeps its own
+  # meaning.
+  stage_input="$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('input'); print(v if isinstance(v, str) else ('' if v is None else str(v)))")"
   freshness_targets=()
   while IFS= read -r freshness_target; do
     [ -n "$freshness_target" ] && freshness_targets+=("$freshness_target")
@@ -253,6 +270,38 @@ for target in targets:
   # Stub-friendly: export stage context for runner / oracle helpers
   export ORACFIT_STAGE_ROLE="$role"
   export ORACFIT_STAGE_ARTIFACTS="$art_dir"
+  stage_roles[$i]="$role"
+  stage_dirs[$i]="$art_dir"
+
+  # The chain: what the stages before this one produced, in order. Every stage
+  # that ran is recorded (answer + files it wrote) when it finishes, so the
+  # chain is the state of the run, not the order of the yaml.
+  prev_chain_file=""
+  export ORACFIT_PREV_STAGE_INPUT_FILE=""
+  export ORACFIT_PREV_STAGE_ROLE=""
+  export ORACFIT_PREV_STAGE_ARTIFACTS=""
+  if [ "$stage_input" = "prev_stage" ]; then
+    if [ "$i" -eq 0 ]; then
+      echo "ERROR: the first stage declares input: prev_stage but has no previous stage" >&2
+      final_status=fail
+      break
+    fi
+    prev_chain_file="$stage_input_dir/chain-$i.md"
+    : >"$prev_chain_file"
+    j=0
+    while [ "$j" -lt "$i" ]; do
+      prev_out="$stage_input_dir/stage-$j.md"
+      if [ -f "$prev_out" ]; then
+        echo "" >>"$prev_chain_file"
+        cat "$prev_out" >>"$prev_chain_file"
+      fi
+      j=$((j + 1))
+    done
+    export ORACFIT_PREV_STAGE_INPUT_FILE="$prev_chain_file"
+    export ORACFIT_PREV_STAGE_ROLE="${stage_roles[$((i-1))]:-}"
+    export ORACFIT_PREV_STAGE_ARTIFACTS="${stage_dirs[$((i-1))]:-}"
+    echo "stage $role: input: prev_stage -> the work of $i previous stage(s)" >&2
+  fi
   # S8: o stage pode declarar owner_question (bool true ou string, ex.: once)
   owner_question_cfg="$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('owner_question'); print('' if not v else ('true' if v is True else str(v)))")"
 
@@ -315,7 +364,7 @@ for target in targets:
     owner_asked=false
     [ -f "$(oracfit_inbox_dir)/${RUN_ID}.question.md" ] && owner_asked=true
     inbox_jsonl="$(oracfit_inbox_file "$RUN_ID")"
-    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ]; then
+    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ] || [ -n "$prev_chain_file" ]; then
       composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-stage-XXXXXX")"
       {
         cat "$spec_file"
@@ -324,6 +373,12 @@ for target in targets:
         echo "- role: $role"
         echo "- artifacts_dir: \`$art_dir\`"
         echo "- Write stage proof to that directory if you are the stub/builder."
+        if [ -n "$prev_chain_file" ] && [ -s "$prev_chain_file" ]; then
+          echo ""
+          echo "## Previous stage output (input: prev_stage)"
+          echo ""
+          cat "$prev_chain_file"
+        fi
         if [ -n "$owner_question_cfg" ] && ! $owner_asked; then
           cat <<'OQ'
 
@@ -580,6 +635,32 @@ for line in open(sys.argv[1]):
       [ -n "$critic_gap" ] && gap="$critic_gap" && echo "gauntlet stage=$role attempt=$attempt critic_gap=$gap" >&2
     fi
   done
+
+  # Record what this stage produced, so the stages that follow can read it
+  # (input: prev_stage). The answer log is copied next to the run because the
+  # gauntlet directory is keyed by role: two stages of the same role would
+  # overwrite each other's log.
+  stage_answer=""
+  if [ -n "$model_ref" ]; then
+    stage_answer="${gauntlet_dir}/runner-${attempt}.log"
+  else
+    stage_answer="${gauntlet_dir}/mech-${attempt}.log"
+  fi
+  stage_answer_copy="$stage_input_dir/stage-$i.answer.log"
+  if [ -f "$stage_answer" ]; then
+    cp "$stage_answer" "$stage_answer_copy" 2>/dev/null || : >"$stage_answer_copy"
+  else
+    : >"$stage_answer_copy"
+  fi
+  python3 "$SCRIPT_DIR/lib-oracfit-stage-input.py" \
+    --role "$role" \
+    --answer-file "$stage_answer_copy" \
+    --artifacts-dir "$art_dir" \
+    --title "Output of stage $((i+1)) (role: $role)" \
+    >"$stage_input_dir/stage-$i.md" 2>/dev/null \
+    || printf '### Output of stage %s (role: %s)\n\n- (this stage wrote no output)\n' \
+         "$((i+1))" "$role" >"$stage_input_dir/stage-$i.md"
+
   if [ "$role" = "run" ] && [ -n "$run_attempt_budget" ] \
     && [ "$run_attempt_count" -ge "$run_attempt_budget" ] && ! $stage_ok; then
     budget_exhausted=true
