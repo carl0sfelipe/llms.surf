@@ -46,7 +46,8 @@ description: >             # optional. one paragraph, plain language
   What this mode does.
 stages: [...]              # required. at least one stage
 max_attempts: 3            # optional. default attempts per stage
-preflight: <command>       # optional. runs before the first stage
+preflight: <command>       # optional. runs before the first stage (a shell
+                            # command, or a list of preflight check names)
 on_fail: halt              # optional. halt (default) or continue
 gauntlet: {...}            # optional. see §5
 run_attempt_budget: 5      # optional. global cap on role=run attempts
@@ -174,6 +175,7 @@ run before anything is spent downstream.
 - unknown keys are refused (a typo fails `mode validate`, it does not get
   silently ignored)
 - `id`, `version` and at least one stage are required
+- `role` must be one of the eight roles; a `map` stage needs `rate_limit_s > 0`
 - a stage with `command:` may not also carry `model_ref`
 - `stage_oracle`, `oracle_command`, `preflight` and `preflight_command` must be
   non-empty command strings
@@ -184,3 +186,8 @@ The canonical check is mechanical: `oracfit mode validate <id>` — exit 0 means
 the file is loadable and legal, not that the mode is a good idea. For the
 second half (does the description match what the mode actually does), use
 `oracfit mode lint <id>`.
+
+The loader has a second reader for machines without PyYAML. Both readers must
+read the same file the same way, and `tests/test-mode-loader.sh` compares them
+on every mode and example in the tree — two readers that disagree are how a
+mode behaves differently on one laptop than on another.
