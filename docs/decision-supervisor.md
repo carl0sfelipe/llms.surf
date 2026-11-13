@@ -519,7 +519,9 @@ other 964 parsed. Rung **E** fixed the origin and hardened the writer
 `mode` and `exit_code` are never raw caller text, a row that does not
 parse is rejected instead of appended, and
 `bin/oracfit-usage-json.py repair` recovers the rows already written
-without dropping any of them.
+without dropping any of them. The local base was repaired on the same day
+(`repair --in-place`, 46 recovered, 0 quarantined): it now parses **100%**
+— 1048 rows, 0 broken — with the original kept in `usage.jsonl.bak`.
 
 **Fact 3b — the `log_tail` of the telemetry is always empty on Linux.**
 `bin/emit-usage-feedback.sh` reads the mtime of the newest task log with
@@ -901,7 +903,7 @@ for line in open('.dispatch/usage/usage.jsonl'):
         json.loads(line)
     except ValueError:
         bad += 1
-print(bad)                                     # 46 (of 1010, on 2026-11-13)
+print(bad)                                     # 0 after the rung E repair (46 before it, of 1010)
 
 # the repair that recovers those rows (keeps every row; quarantines the rest)
 python3 bin/oracfit-usage-json.py repair .dispatch/usage/usage.jsonl --in-place
