@@ -4,7 +4,9 @@
 # The policy writes the order; this library is who executes it. CONTINUE is a
 # no-op. INJECT_HINT writes the hint on the accumulator the next attempt
 # composes into the spec. RESET snapshots the dirty tree, restores the
-# changed tracked files from HEAD, and writes the scar plus the hint.
+# changed tracked files from the restore origin (HEAD unless
+# ORACFIT_SUPERVISOR_RESTORE_REF names another ref), and writes the scar
+# plus the hint.
 # ESCALATE writes the owner question to the workdir inbox; the runtime is
 # who pauses the run. A refused order does nothing.
 
@@ -41,15 +43,19 @@ _oracfit_supervisor_reset_emit() {
   printf '%s\n' "$5"
 }
 
-# RESET: evidence, target, restore from HEAD, scar. A refusal leaves the tree
-# as it was (the snapshot, if it ran, is additive and is never deleted).
+# RESET: evidence, target, restore from the origin, scar. A refusal leaves
+# the tree as it was (the snapshot, if it ran, is additive and is never
+# deleted). The origin is ORACFIT_SUPERVISOR_RESTORE_REF, or HEAD when
+# that variable is unset or empty — the single-stage default.
 _oracfit_supervisor_reset() {
   local workdir="${1:-}" accum="${2:-}" run_id="${3:-}" attempt="${4:-}" path="${5:-}"
   local success_reason="${6:-reset}"
   local hint="" ref_name="" snap_sha="" snap_rc=0 restored_count=0
-  local wd="" globs="" p rel in_head scar parent=""
+  local wd="" globs="" p rel in_origin scar parent=""
   local restore_out="" restore_rc=0 snap_err="" restore_err=""
+  local origin="${ORACFIT_SUPERVISOR_RESTORE_REF:-HEAD}"
   local -a targets=()
+  [ -n "$origin" ] || origin="HEAD"
 
   [ -n "$success_reason" ] || success_reason="reset"
   ref_name="$(oracfit_wip_ref_name "$run_id" "$attempt")"
@@ -105,14 +111,14 @@ PY
     if _oracfit_wip_protected_glob "$rel" "$globs" >/dev/null; then
       continue
     fi
-    in_head="$(git --git-dir="$wd/.git" --work-tree="$wd" --literal-pathspecs \
-      ls-tree --name-only HEAD -- "$rel" 2>/dev/null)" || in_head=""
-    [ -n "$in_head" ] || continue
+    in_origin="$(git --git-dir="$wd/.git" --work-tree="$wd" --literal-pathspecs \
+      ls-tree --name-only "$origin" -- "$rel" 2>/dev/null)" || in_origin=""
+    [ -n "$in_origin" ] || continue
     targets+=("$rel")
   done < <(
     {
-      git --git-dir="$wd/.git" --work-tree="$wd" --no-optional-locks diff --name-only HEAD --
-      git --git-dir="$wd/.git" --work-tree="$wd" --no-optional-locks diff --name-only --cached HEAD --
+      git --git-dir="$wd/.git" --work-tree="$wd" --no-optional-locks diff --name-only "$origin" --
+      git --git-dir="$wd/.git" --work-tree="$wd" --no-optional-locks diff --name-only --cached "$origin" --
     } 2>/dev/null | LC_ALL=C sort -u
   )
 
@@ -122,7 +128,7 @@ PY
       _oracfit_supervisor_reset_emit refused "restore refused" "$ref_name" "$snap_sha" 0
       return 0
     }
-    restore_out="$(oracfit_wip_restore "$workdir" HEAD "${targets[@]}" 2>"$restore_err")"
+    restore_out="$(oracfit_wip_restore "$workdir" "$origin" "${targets[@]}" 2>"$restore_err")"
     restore_rc=$?
     rm -f "$restore_err"
     if [ "$restore_rc" -ne 0 ]; then

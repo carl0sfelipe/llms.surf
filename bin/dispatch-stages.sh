@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
 source "$SCRIPT_DIR/lib-oracfit-supervisor.sh"
+source "$SCRIPT_DIR/lib-oracfit-checkpoint.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
 
@@ -63,8 +64,25 @@ oracfit_stages_pause_for_owner() {
   exit 7
 }
 
+# Take a tracked-tree checkpoint and record it as the restore origin for
+# stage index dest. A failure leaves that slot empty: RESET is then
+# refused, and the run continues. Additive: nothing is deleted.
+oracfit_stages_take_checkpoint() {
+  local label="${1:-}"
+  local dest="${2:-}"
+  local ref="" sha=""
+  [ -n "$label" ] || return 0
+  [ -n "$dest" ] || dest=0
+  : "${_stages_restore_refs[$dest]:=}"
+  ref="$(oracfit_checkpoint_ref_name "$RUN_ID" "$label")"
+  sha="$(oracfit_checkpoint_commit "$ORACFIT_WORKDIR" "$ref" "llms.surf: checkpoint ${label}")" || return 0
+  _stages_restore_refs[$dest]="$ref"
+  return 0
+}
+
 # Ask the supervisor at a stage attempt boundary and apply the order.
-# RESET is refused: restoring from HEAD would drop earlier stages' work.
+# RESET restores from the current stage's checkpoint (not HEAD), so
+# earlier stages' work stays. Without a checkpoint the order is refused.
 # ESCALATE pauses the run on the owner-question channel (one question
 # per run: a second ESCALATE is refused). A failed ask never changes
 # the run's exit.
@@ -74,6 +92,7 @@ oracfit_stages_supervisor_boundary() {
   local oracle_exit="${3:-}"
   local role="${4:-}"
   local gauntlet_dir="${5:-}"
+  local restore_ref="${6:-}"
   local _sup_hand=""
   local _sup_inbox=""
   local _sup_state=""
@@ -168,8 +187,8 @@ PY
   fi
 
   _sup_qfile="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
-  if [ "$_sup_action" = "RESET" ]; then
-    _sup_reason="RESET would restore from HEAD; a multi-stage run checkpoint is not HEAD"
+  if [ "$_sup_action" = "RESET" ] && [ -z "$restore_ref" ]; then
+    _sup_reason="RESET has no stage checkpoint"
     printf 'supervisor_order action=%s attempt=%s result=%s reason=%s\n' \
       RESET "$attempt" refused "$_sup_reason"
     oracfit_emit_event supervisor_order \
@@ -181,7 +200,11 @@ PY
     oracfit_emit_event supervisor_order \
       attempt="$attempt" action=ESCALATE result=refused reason="$_sup_reason" stage="$role" || true
   else
+    if [ "$_sup_action" = "RESET" ]; then
+      export ORACFIT_SUPERVISOR_RESTORE_REF="$restore_ref"
+    fi
     oracfit_supervisor_apply_order "$ORACFIT_WORKDIR" "$accum" "$RUN_ID" "$attempt" || true
+    unset ORACFIT_SUPERVISOR_RESTORE_REF
     if [ "${ORACFIT_SUPERVISOR_LAST_ACTION:-}" = "ESCALATE" ] \
       && [ "${ORACFIT_SUPERVISOR_LAST_RESULT:-}" = "applied" ]; then
       [ -n "${ORACFIT_SUPERVISOR_LAST_FILE:-}" ] \
@@ -400,6 +423,12 @@ stage_input_dir="$ORACFIT_WORKDIR/.dispatch/stage-input/${RUN_ID}"
 mkdir -p "$stage_input_dir"
 stage_roles=()
 stage_dirs=()
+
+# Restore origin per stage: start is stage 1; the checkpoint at the end of
+# each stage is the origin of the next. Empty slot = RESET is refused.
+_stages_restore_refs=()
+_stages_restore_refs[0]=""
+oracfit_stages_take_checkpoint start 0
 
 i=0
 while [ "$i" -lt "$stage_count" ]; do
@@ -857,11 +886,11 @@ for line in open(sys.argv[1]):
       [ -n "$critic_gap" ] && gap="$critic_gap" && echo "gauntlet stage=$role attempt=$attempt critic_gap=$gap" >&2
       # Attempt boundary: ask the supervisor (when no hand-placed decision
       # file and an endpoint is set), then apply the order for the next
-      # attempt of this stage. RESET is refused (HEAD is not a multi-stage
-      # checkpoint). An applied ESCALATE pauses the run on the
-      # owner-question channel. A failed ask must not change this run's
-      # exit code.
-      oracfit_stages_supervisor_boundary "$accum" "$attempt" "$oracle_exit" "$role" "$gauntlet_dir" || true
+      # attempt of this stage. RESET restores from this stage's checkpoint.
+      # An applied ESCALATE pauses the run on the owner-question channel.
+      # A failed ask must not change this run's exit code.
+      : "${_stages_restore_refs[$i]:=}"
+      oracfit_stages_supervisor_boundary "$accum" "$attempt" "$oracle_exit" "$role" "$gauntlet_dir" "${_stages_restore_refs[$i]}" || true
     fi
   done
 
@@ -889,6 +918,9 @@ for line in open(sys.argv[1]):
     >"$stage_input_dir/stage-$i.md" 2>/dev/null \
     || printf '### Output of stage %s (role: %s)\n\n- (this stage wrote no output)\n' \
          "$((i+1))" "$role" >"$stage_input_dir/stage-$i.md"
+
+  # End-of-stage checkpoint: the restore origin of the next stage.
+  oracfit_stages_take_checkpoint "stage-$((i + 1))" $((i + 1))
 
   if [ "$role" = "run" ] && [ -n "$run_attempt_budget" ] \
     && [ "$run_attempt_count" -ge "$run_attempt_budget" ] && ! $stage_ok; then

@@ -207,8 +207,29 @@ were CONTINUE.
 |---|---|
 | `CONTINUE` | nothing. Result `noop` |
 | `INJECT_HINT` | append the non-empty `order.hint` to the gauntlet accumulator so the next attempt's spec carries it. Without a hint the order is refused |
-| `RESET` | snapshot, scoped restore from HEAD, then the scar plus the hint on the accumulator (see below) |
+| `RESET` | snapshot, scoped restore from the restore origin (HEAD unless the runtime names another ref), then the scar plus the hint on the accumulator (see below) |
 | `ESCALATE` | write the owner question to the inbox and pause the run (see below) |
+
+### Checkpoint
+
+A checkpoint is a commit of the **tracked** working tree, stored on a
+side ref `refs/llms-surf/checkpoint/<run>/<label>`. It is built with a
+scratch index: HEAD does not move, the real index does not move, the
+working tree is not touched. Untracked files are not included. Nothing
+is deleted; the checkpoint is additive, and an existing ref is left as
+it is.
+
+The multi-stage runtime takes a checkpoint at the start of the run
+(label `start`, the restore origin of stage 1) and at the end of each
+stage (label `stage-N`, the restore origin of the next stage).
+
+### Restore origin
+
+RESET restores from a chosen ref, and computes the target against that
+same ref. The ref comes from `ORACFIT_SUPERVISOR_RESTORE_REF`. Without
+that variable the origin is **HEAD** — the single-stage default, so
+that runtime does not change. The multi-stage runtime sets the variable
+to the current stage's checkpoint.
 
 ### RESET
 
@@ -221,14 +242,16 @@ evidence is on a ref.
    or the working tree. If the snapshot cannot be taken, the order is
    refused and nothing happens. The commit sha and the ref name go on
    the summary and the event.
-2. **Target.** The tracked paths the attempt changed against HEAD (the
-   index, the working tree, and deletions). Protected paths are skipped:
-   the same globs the restore already uses (`.oracfit-protected` in the
-   workdir when it exists; otherwise the default list, only when the
-   workdir is this checkout). Paths under `.dispatch/` are skipped.
-3. **Restore.** Those paths are restored from **HEAD** (the last clean
-   checkpoint), not from the snapshot ref. A refused restore restores
-   nothing; the order is refused and the event says nothing was restored.
+2. **Target.** The tracked paths the attempt changed against the restore
+   origin (the index, the working tree, and deletions). Protected paths
+   are skipped: the same globs the restore already uses
+   (`.oracfit-protected` in the workdir when it exists; otherwise the
+   default list, only when the workdir is this checkout). Paths under
+   `.dispatch/` are skipped. A path that does not exist in the origin
+   is skipped.
+3. **Restore.** Those paths are restored from the restore origin, not
+   from the snapshot ref. A refused restore restores nothing; the order
+   is refused and the event says nothing was restored.
 4. **Scar.** The scar line (naming the ref) and the order's `hint` go on
    the accumulator, in the same markdown block the gauntlet uses, so the
    next attempt's spec carries both.
@@ -321,11 +344,12 @@ multi-stage runtime asks and applies all four actions. The hint of an
 `INJECT_HINT` is appended to that stage's accumulator (`feedback.md`)
 and travels in the spec of the next attempt of the stage.
 
-`RESET` is **refused**, with the reason on the event. The refusal does
-not change the run's result. RESET would restore tracked files from
-HEAD. The checkpoint of a multi-stage run is the tree after the last
-stage, not HEAD: the runtime does not commit between stages, so
-restoring from HEAD would destroy the work of earlier stages.
+`RESET` restores from the current stage's checkpoint, not from HEAD.
+The attempt that degraded the tree is undone; the work of earlier
+stages is not. An untracked file is not deleted. A RESET that cannot
+be done (no checkpoint, no hint, restore refused) is **refused**:
+nothing happens, the reason is on the event, and the run continues as
+if the order were CONTINUE. The refusal does not fail the run.
 
 `ESCALATE` pauses the run on the owner-question channel the runtime
 already has (the question in the run inbox, status `owner_question`,

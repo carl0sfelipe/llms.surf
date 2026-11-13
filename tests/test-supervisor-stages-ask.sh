@@ -37,6 +37,7 @@ unset ORACFIT_SUPERVISOR_DECISION
 unset ORACFIT_SUPERVISOR_ENDPOINT
 unset ORACFIT_SUPERVISOR_POLICY
 unset ORACFIT_SUPERVISOR_TIMEOUT
+unset ORACFIT_SUPERVISOR_RESTORE_REF
 
 # A git hook or an outer dispatch may export GIT_DIR; the scratch repos must
 # not inherit them.
@@ -108,6 +109,8 @@ HINT="STAGES_ASK_HINT put the prescription in the next stage attempt spec"
 Q_NOUL="r16-recurring-failure-becomes-a-rule"
 TRACKED_CLEAN="tracked clean"
 TRACKED_DIRTY="tracked dirty"
+STAGE1_CLEAN="stage1 clean"
+STAGE1_DONE="stage1 done"
 PERGUNTA="which watchdog should cover this long-running job?"
 SE1="se keep it outside dispatch -> leave it running and ask after one attempt"
 SE2="se bring it under dispatch -> stop the orphan and relaunch through dispatch.sh"
@@ -160,6 +163,29 @@ printf 'tracked dirty\n' >"$wd/tracked.txt"
 exit 0
 EOF
 chmod +x "$FAKE_RUNNER"
+
+TWO_STAGE_RUNNER="$SCRATCH/two-stage-runner.sh"
+cat >"$TWO_STAGE_RUNNER" <<EOF
+#!/bin/bash
+set -euo pipefail
+wd="\${ORACFIT_WORKDIR:-\$PWD}"
+role="\${ORACFIT_STAGE_ROLE:-}"
+attempt="\${ORACFIT_STAGE_ATTEMPT:-1}"
+if [ -n "\${2:-}" ] && [ -f "\$2" ]; then
+  cp "\$2" "\$wd/received-spec-\${role}-\${attempt}.md"
+fi
+if [ "\$role" = "plan" ]; then
+  printf '%s\n' "$STAGE1_DONE" >"\$wd/stage1.txt"
+  exit 0
+fi
+if [ "\$attempt" -ge 2 ]; then
+  printf 'work done\n' >"\$wd/marker.txt"
+  exit 0
+fi
+printf '%s\n' "$TRACKED_DIRTY" >"\$wd/tracked.txt"
+exit 0
+EOF
+chmod +x "$TWO_STAGE_RUNNER"
 
 write_mode() {
   mkdir -p "$1/core/modes"
@@ -491,21 +517,79 @@ stop_stub
 unset ORACFIT_SUPERVISOR_ENDPOINT
 unset ORACFIT_SUPERVISOR_POLICY
 
-# ── 4. a RESET order is refused in the multi-stage ──────────────────────
+# ── 4. a RESET order restores the stage checkpoint ──────────────────────
 RESET_WD="$SCRATCH/reset"
-reset_rc="$(run_dispatch "$RESET_WD" "$RESET_JSON")"
-RESET_RID="$(run_id_of "$RESET_WD")"
-RESET_REF="refs/llms-surf/wip/${RESET_RID}/iter-1"
-n_reset_applied="$(count_jsonl "$RESET_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=applied)"
+mkdir -p "$RESET_WD/core/modes"
+cat >"$RESET_WD/core/modes/supervisor-stages-ask-fixture.yaml" <<'YAML'
+id: supervisor-stages-ask-fixture
+version: "1"
+stages:
+  - role: plan
+    model_ref: fixture-model
+    max_attempts: 1
+  - role: run
+    model_ref: fixture-model
+    oracle: true
+    max_attempts: 2
+on_fail: halt
+YAML
+cp "$SPEC" "$RESET_WD/spec.md"
+printf '%s\n' "$STAGE1_CLEAN" >"$RESET_WD/stage1.txt"
+printf '%s\n' "$TRACKED_CLEAN" >"$RESET_WD/tracked.txt"
+printf '.dispatch/\n' >"$RESET_WD/.gitignore"
+git -C "$RESET_WD" init -q
+git -C "$RESET_WD" -c user.name=test -c user.email=test@localhost add -A
+git -C "$RESET_WD" -c user.name=test -c user.email=test@localhost commit -q -m init
+unset ORACFIT_SUPERVISOR_DECISION
+export ORACFIT_SUPERVISOR_DECISION="$RESET_JSON"
+reset_rc=0
+DISPATCH_RUNNER="$TWO_STAGE_RUNNER" \
+  DISPATCH_USAGE_FEEDBACK=0 \
+  ORACFIT_USAGE_DIR="$RESET_WD/usage" \
+  ORACFIT_USO_DIR="$RESET_WD/uso" \
+  LOG_DIR="$RESET_WD/.dispatch/logs" \
+  "$STAGES" supervisor-stages-ask-fixture "$RESET_WD/spec.md" "sup-$(basename "$RESET_WD")" \
+  --workdir "$RESET_WD" >"$RESET_WD/dispatch.out" 2>"$RESET_WD/dispatch.err" || reset_rc=$?
+unset ORACFIT_SUPERVISOR_DECISION
+n_reset_applied="$(count_jsonl "$RESET_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=applied action=RESET)"
 n_reset_refused="$(count_jsonl "$RESET_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=refused action=RESET)"
 if [ "$reset_rc" -eq "$base_rc" ] \
-  && [ "$(cat "$RESET_WD/tracked.txt" 2>/dev/null)" = "$TRACKED_DIRTY" ] \
-  && [ "$n_reset_applied" -eq 0 ] \
-  && [ "$n_reset_refused" -ge 1 ] \
-  && ! git -C "$RESET_WD" rev-parse -q --verify "$RESET_REF" >/dev/null; then
-  ok "a RESET order is refused in the multi-stage"
+  && [ "$(cat "$RESET_WD/tracked.txt" 2>/dev/null)" = "$TRACKED_CLEAN" ] \
+  && [ "$(cat "$RESET_WD/stage1.txt" 2>/dev/null)" = "$STAGE1_DONE" ] \
+  && [ "$n_reset_applied" -ge 1 ] \
+  && [ "$n_reset_refused" -eq 0 ]; then
+  ok "a RESET order restores the stage checkpoint"
 else
-  not "a RESET order is refused in the multi-stage (rc=$reset_rc base=$base_rc tracked=$(cat "$RESET_WD/tracked.txt" 2>/dev/null) applied=$n_reset_applied refused=$n_reset_refused err=$(head -c 400 "$RESET_WD/dispatch.err"))"
+  not "a RESET order restores the stage checkpoint (rc=$reset_rc base=$base_rc tracked=$(cat "$RESET_WD/tracked.txt" 2>/dev/null) stage1=$(cat "$RESET_WD/stage1.txt" 2>/dev/null) applied=$n_reset_applied refused=$n_reset_refused err=$(head -c 400 "$RESET_WD/dispatch.err"))"
+fi
+
+# ── 4b. a RESET without a checkpoint is refused ─────────────────────────
+NOCKPT_WD="$SCRATCH/no-checkpoint"
+mkdir -p "$NOCKPT_WD"
+write_mode "$NOCKPT_WD"
+cp "$SPEC" "$NOCKPT_WD/spec.md"
+printf '%s\n' "$TRACKED_CLEAN" >"$NOCKPT_WD/tracked.txt"
+printf '.dispatch/\n' >"$NOCKPT_WD/.gitignore"
+unset ORACFIT_SUPERVISOR_DECISION
+export ORACFIT_SUPERVISOR_DECISION="$RESET_JSON"
+nockpt_rc=0
+DISPATCH_RUNNER="$FAKE_RUNNER" \
+  DISPATCH_USAGE_FEEDBACK=0 \
+  ORACFIT_USAGE_DIR="$NOCKPT_WD/usage" \
+  ORACFIT_USO_DIR="$NOCKPT_WD/uso" \
+  LOG_DIR="$NOCKPT_WD/.dispatch/logs" \
+  "$STAGES" supervisor-stages-ask-fixture "$NOCKPT_WD/spec.md" "sup-$(basename "$NOCKPT_WD")" \
+  --workdir "$NOCKPT_WD" >"$NOCKPT_WD/dispatch.out" 2>"$NOCKPT_WD/dispatch.err" || nockpt_rc=$?
+unset ORACFIT_SUPERVISOR_DECISION
+n_nockpt_applied="$(count_jsonl "$NOCKPT_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=applied action=RESET)"
+n_nockpt_refused="$(count_jsonl "$NOCKPT_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=refused action=RESET)"
+if [ "$nockpt_rc" -eq "$base_rc" ] \
+  && [ "$(cat "$NOCKPT_WD/tracked.txt" 2>/dev/null)" = "$TRACKED_DIRTY" ] \
+  && [ "$n_nockpt_applied" -eq 0 ] \
+  && [ "$n_nockpt_refused" -ge 1 ]; then
+  ok "a RESET without a checkpoint is refused"
+else
+  not "a RESET without a checkpoint is refused (rc=$nockpt_rc base=$base_rc tracked=$(cat "$NOCKPT_WD/tracked.txt" 2>/dev/null) applied=$n_nockpt_applied refused=$n_nockpt_refused err=$(head -c 400 "$NOCKPT_WD/dispatch.err"))"
 fi
 
 # ── 5. an ESCALATE order pauses the multi-stage run ─────────────────────
