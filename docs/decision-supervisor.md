@@ -872,6 +872,7 @@ everything.
 | **K** | the local dev assistant registered as a first-class runner, its trajectory feeding the ring | the flywheel closes |
 | **12** | the telemetry defect (Fact 3b): the `log_tail` of the usage row was **always** empty on Linux, because the two `stat` forms were chained inside a value capture and the failing form's output poisoned the value — `specs/sup-12-telemetria-log-tail.md` (delivered: the working form is detected **once**, with its own output discarded; filling the tail then exposed a second latent defect — GNU `tr` wrote the `↵` marker as a single byte, and the row stopped parsing) | the telemetry finally carries what happened in the round |
 | **13** | the runtime **executes** the order: at the attempt boundary — after the gauntlet feedback, before the next attempt composes the spec — the single-stage runtime reads the decision record and applies it — `specs/sup-13-runtime-executa-a-ordem.md` (delivered: `bin/lib-oracfit-supervisor.sh`; **INJECT_HINT** is executed, **CONTINUE** is a no-op, and **RESET** and **ESCALATE** are *refused* — nothing is executed by half) | the supervisor stops only writing orders and starts acting |
+| **14** | the **RESET** becomes executable: the dirty tree is snapshotted into a commit under `refs/llms-surf/wip/<run>/iter-N` *before* anything moves, the changed tracked files are restored from **HEAD** (never from the snapshot — that would undo the undo), protected globs are skipped, untracked files are never deleted, and the scar plus the hint travel to the next attempt's spec — `specs/sup-14-reset-executavel.md` | a derailed attempt is undone without losing the evidence of what it did |
 
 A through E are independent of every open decision above: they are about
 the evidence and the mechanism, not about the models. F onward needs the
@@ -886,7 +887,7 @@ find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 65
+ls tests/test-*.sh | wc -l                    # 66
 python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
 # class-R rules out of the rules map (the legend line does not count: the
@@ -1031,3 +1032,4 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `specs/sup-12-telemetria-log-tail.md` | dispatchable spec, rung 12 (the `log_tail` defect) |
 | `bin/lib-oracfit-supervisor.sh` | the runtime side of the order: applies it at the attempt boundary (rung 13) |
 | `specs/sup-13-runtime-executa-a-ordem.md` | dispatchable spec, rung 13 |
+| `specs/sup-14-reset-executavel.md` | dispatchable spec, rung 14 (the executable RESET) |
