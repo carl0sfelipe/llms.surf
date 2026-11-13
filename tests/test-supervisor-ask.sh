@@ -261,6 +261,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port-file", required=True)
     parser.add_argument("--record", required=True)
+    parser.add_argument("--ids-file", required=True)
     args = parser.parse_args()
 
     class Handler(BaseHTTPRequestHandler):
@@ -296,6 +297,11 @@ def main() -> None:
                 encoding="utf-8",
             )
             questions = parsed.get("questions") if isinstance(parsed, dict) else {}
+            received_ids = list(questions) if isinstance(questions, dict) else []
+            Path(args.ids_file).write_text(
+                json.dumps(received_ids, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
             payload = {
                 "answers": answers_for(questions),
                 "usage": {"input_tokens": 412, "output_tokens": 0},
@@ -338,10 +344,11 @@ wait_port_file() {
 
 start_stub() {
   stop_stub
-  rm -f "$SCRATCH/stub.port" "$SCRATCH/stub.request.json"
+  rm -f "$SCRATCH/stub.port" "$SCRATCH/stub.request.json" "$SCRATCH/stub.ids.json"
   python3 "$SCRATCH/stub.py" \
     --port-file "$SCRATCH/stub.port" \
     --record "$SCRATCH/stub.request.json" \
+    --ids-file "$SCRATCH/stub.ids.json" \
     >"$SCRATCH/stub.log" 2>&1 &
   STUB_PID=$!
   if ! wait_port_file "$SCRATCH/stub.port"; then
@@ -357,23 +364,38 @@ endpoint_url() {
   printf 'http://127.0.0.1:%s/v1/systemone' "$port"
 }
 
-python3 - "$SCRATCH/calibrated-policy.json" "$Q_NOUL" "$HINT" <<'PY'
+python3 - "$SCRATCH/calibrated-policy.json" "$SCRATCH/uncalibrated-mapped-policy.json" \
+  "$SCRATCH/empty-rules-policy.json" "$Q_NOUL" "$HINT" <<'PY'
 import json, sys
-path, qid, hint = sys.argv[1], sys.argv[2], sys.argv[3]
-doc = {
+calibrated, uncalibrated, empty, qid, hint = sys.argv[1:6]
+mapped = {
     "version": 1,
-    "calibration": {
-        "ring": "test-ring",
-        "line": "copied calibration line from ring test-ring",
-    },
     "thresholds": {"act_above": 0.8},
     "rules": {
         qid: {"action": "INJECT_HINT", "hint": hint},
     },
 }
-with open(path, "w", encoding="utf-8") as fh:
-    json.dump(doc, fh, indent=2, ensure_ascii=False)
-    fh.write("\n")
+cal = dict(mapped)
+cal["calibration"] = {
+    "ring": "test-ring",
+    "line": "copied calibration line from ring test-ring",
+}
+uncal = dict(mapped)
+uncal["calibration"] = {"ring": "", "line": ""}
+nobody = {
+    "version": 1,
+    "calibration": {"ring": "", "line": ""},
+    "thresholds": {"act_above": 0.8},
+    "rules": {},
+}
+for path, doc in (
+    (calibrated, cal),
+    (uncalibrated, uncal),
+    (empty, nobody),
+):
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(doc, fh, indent=2, ensure_ascii=False)
+        fh.write("\n")
 PY
 
 # ── 1. without an endpoint the runtime asks nothing ─────────────────────
@@ -399,6 +421,7 @@ if ! start_stub; then
   not "the runtime asks the supervisor endpoint"
   not "the answers become an order"
   not "the decision record lands in the inbox"
+  not "the runtime asks only the mapped questions"
 else
   ASK="$SCRATCH/ask"
   export ORACFIT_SUPERVISOR_ENDPOINT="$(endpoint_url)"
@@ -447,12 +470,30 @@ PY
   else
     not "the decision record lands in the inbox (path=$ASK_DECISION exists=$([ -f "$ASK_DECISION" ] && echo yes || echo no))"
   fi
+
+  if [ -f "$SCRATCH/stub.ids.json" ] && python3 - "$SCRATCH/stub.ids.json" "$Q_NOUL" \
+    "$REAL_ROOT/core/supervisor/questions.json" <<'PY'
+import json, sys
+ids = json.load(open(sys.argv[1], encoding="utf-8"))
+qid = sys.argv[2]
+questions = json.load(open(sys.argv[3], encoding="utf-8")).get("questions") or []
+all_ids = [q.get("id") for q in questions if isinstance(q, dict) and q.get("id")]
+assert ids == [qid], ids
+assert qid in all_ids
+assert len(all_ids) > 1
+assert len(ids) < len(all_ids)
+PY
+  then
+    ok "the runtime asks only the mapped questions"
+  else
+    not "the runtime asks only the mapped questions (ids=$([ -f "$SCRATCH/stub.ids.json" ] && cat "$SCRATCH/stub.ids.json" || echo missing))"
+  fi
 fi
 
 # ── 4. an uncalibrated policy decides CONTINUE ──────────────────────────
 UNC="$SCRATCH/uncalibrated"
 export ORACFIT_SUPERVISOR_ENDPOINT="$(endpoint_url)"
-unset ORACFIT_SUPERVISOR_POLICY
+export ORACFIT_SUPERVISOR_POLICY="$SCRATCH/uncalibrated-mapped-policy.json"
 unc_rc="$(run_dispatch "$UNC")"
 UNC_ACCUM="$(accum_body "$UNC")"
 if [ "$unc_rc" -eq "$base_rc" ] \
@@ -463,13 +504,33 @@ else
   not "an uncalibrated policy decides CONTINUE (rc=$unc_rc base=$base_rc accum=$(printf '%s' "$UNC_ACCUM" | head -c 200) err=$(head -c 300 "$UNC/dispatch.err"))"
 fi
 
+# ── a policy with no mapped question asks nobody ────────────────────────
+rm -f "$SCRATCH/stub.request.json" "$SCRATCH/stub.ids.json"
+NOBODY="$SCRATCH/nobody"
+export ORACFIT_SUPERVISOR_ENDPOINT="$(endpoint_url)"
+export ORACFIT_SUPERVISOR_POLICY="$SCRATCH/empty-rules-policy.json"
+nobody_rc="$(run_dispatch "$NOBODY")"
+NOBODY_RID="$(run_id_of "$NOBODY")"
+NOBODY_INBOX="$(inbox_of "$NOBODY")"
+NOBODY_ACCUM="$(accum_body "$NOBODY")"
+if [ "$nobody_rc" -eq "$base_rc" ] \
+  && [ ! -f "$SCRATCH/stub.request.json" ] \
+  && [ ! -f "$SCRATCH/stub.ids.json" ] \
+  && [ ! -f "$NOBODY_INBOX/${NOBODY_RID}.answers.json" ] \
+  && [ ! -f "$NOBODY_INBOX/${NOBODY_RID}.json" ] \
+  && [ "$(printf '%s' "$NOBODY_ACCUM")" = "$(printf '%s' "$BASE_ACCUM")" ]; then
+  ok "a policy with no mapped question asks nobody"
+else
+  not "a policy with no mapped question asks nobody (rc=$nobody_rc base=$base_rc request=$([ -f "$SCRATCH/stub.request.json" ] && echo yes || echo no) ids=$([ -f "$SCRATCH/stub.ids.json" ] && echo yes || echo no) decision=$([ -f "$NOBODY_INBOX/${NOBODY_RID}.json" ] && echo yes || echo no) err=$(head -c 300 "$NOBODY/dispatch.err"))"
+fi
+
 stop_stub
 
 # ── 5–6. a failing endpoint does not fail the run ───────────────────────
 closed_port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')"
 DEAD="$SCRATCH/dead"
 export ORACFIT_SUPERVISOR_ENDPOINT="http://127.0.0.1:${closed_port}/v1/systemone"
-unset ORACFIT_SUPERVISOR_POLICY
+export ORACFIT_SUPERVISOR_POLICY="$SCRATCH/uncalibrated-mapped-policy.json"
 dead_rc="$(run_dispatch "$DEAD" 1)"
 DEAD_EVENTS="$DEAD/.dispatch/logs/events.jsonl"
 DEAD_LEDGER="$DEAD/.dispatch/ledger/mode.jsonl"

@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
 source "$SCRIPT_DIR/lib-oracfit-supervisor.sh"
+source "$SCRIPT_DIR/lib-oracfit-supervisor-ask.sh"
 source "$SCRIPT_DIR/lib-oracfit-checkpoint.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
@@ -97,9 +98,6 @@ oracfit_stages_supervisor_boundary() {
   local _sup_inbox=""
   local _sup_state=""
   local _sup_out=""
-  local _sup_timeout=""
-  local _sup_ask_rc=0
-  local _sup_ask_err=""
   local _sup_reason=""
   local _sup_action=""
   local _sup_qfile=""
@@ -110,7 +108,6 @@ oracfit_stages_supervisor_boundary() {
     _sup_inbox="$(oracfit_inbox_dir)"
     _sup_state="${_sup_inbox}/${RUN_ID}.state.json"
     _sup_out="${_sup_inbox}/${RUN_ID}.json"
-    _sup_timeout="${ORACFIT_SUPERVISOR_TIMEOUT:-20}"
     mkdir -p "$_sup_inbox" 2>/dev/null || true
     if python3 - "$_sup_state" "$RUN_ID" "$role" "$attempt" "$oracle_exit" "$accum" "$mode_id" "$task_name" <<'PY'
 import json
@@ -141,30 +138,9 @@ with open(out, "w", encoding="utf-8") as fh:
     fh.write("\n")
 PY
     then
-      _sup_ask_rc=0
-      _sup_ask_err="${gauntlet_dir}/supervisor-ask.err"
-      if [ -n "${ORACFIT_SUPERVISOR_POLICY:-}" ]; then
-        "$SCRIPT_DIR/oracfit-supervisor-ask.sh" \
-          --endpoint "${ORACFIT_SUPERVISOR_ENDPOINT}" \
-          --state "$_sup_state" \
-          --out "$_sup_out" \
-          --policy "${ORACFIT_SUPERVISOR_POLICY}" \
-          --timeout "$_sup_timeout" \
-          >/dev/null 2>"$_sup_ask_err" || _sup_ask_rc=$?
-      else
-        "$SCRIPT_DIR/oracfit-supervisor-ask.sh" \
-          --endpoint "${ORACFIT_SUPERVISOR_ENDPOINT}" \
-          --state "$_sup_state" \
-          --out "$_sup_out" \
-          --timeout "$_sup_timeout" \
-          >/dev/null 2>"$_sup_ask_err" || _sup_ask_rc=$?
-      fi
-      if [ "$_sup_ask_rc" -eq 0 ] && [ -f "$_sup_out" ]; then
+      oracfit_supervisor_ask_order "$ORACFIT_WORKDIR" "$RUN_ID" "$attempt" "$_sup_state" >/dev/null || true
+      if [ -f "$_sup_out" ]; then
         export ORACFIT_SUPERVISOR_DECISION="$_sup_out"
-      else
-        _sup_reason="$(tr '\r\n\t' '   ' < "$_sup_ask_err" 2>/dev/null | cut -c1-200)"
-        [ -n "$_sup_reason" ] || _sup_reason="ask failed"
-        oracfit_emit_event supervisor_ask result=failed reason="$_sup_reason" attempt="$attempt" stage="$role" || true
       fi
     else
       oracfit_emit_event supervisor_ask result=failed reason="could not write round state" attempt="$attempt" stage="$role" || true

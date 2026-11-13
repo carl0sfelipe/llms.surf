@@ -15,7 +15,7 @@ POLICY_PY="$SCRIPT_DIR/oracfit-policy.py"
 PROG="oracfit-supervisor-ask"
 
 usage() {
-  echo "usage: $PROG --endpoint <url> --state <file> --out <record> [--questions <set>] [--policy <file>] [--timeout <seconds>]" >&2
+  echo "usage: $PROG --endpoint <url> --state <file> --out <record> [--questions <set>] [--policy <file>] [--timeout <seconds>] [--ids <a,b,c>]" >&2
   exit 1
 }
 
@@ -30,6 +30,7 @@ out=""
 questions="$DEFAULT_QUESTIONS"
 policy="$DEFAULT_POLICY"
 timeout="$DEFAULT_TIMEOUT"
+ids=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -63,6 +64,11 @@ while [ $# -gt 0 ]; do
       timeout="$2"
       shift 2
       ;;
+    --ids)
+      [ $# -ge 2 ] || die "--ids needs a value"
+      ids="$2"
+      shift 2
+      ;;
     --help|-h)
       usage
       ;;
@@ -89,14 +95,27 @@ out_base="$(basename "$out")"
 answers_out="${out_dir}/${out_base%.*}.answers.json"
 mkdir -p "$out_dir" || die "cannot create output directory"
 
-if ! python3 "$CLIENT_PY" ask \
-  --endpoint "$endpoint" \
-  --questions "$exported" \
-  --state "$state" \
-  --timeout "$timeout" \
-  --out "$answers_out"
-then
-  die "ask failed"
+if [ -n "$ids" ]; then
+  if ! python3 "$CLIENT_PY" ask \
+    --endpoint "$endpoint" \
+    --questions "$exported" \
+    --state "$state" \
+    --timeout "$timeout" \
+    --ids "$ids" \
+    --out "$answers_out"
+  then
+    die "ask failed"
+  fi
+else
+  if ! python3 "$CLIENT_PY" ask \
+    --endpoint "$endpoint" \
+    --questions "$exported" \
+    --state "$state" \
+    --timeout "$timeout" \
+    --out "$answers_out"
+  then
+    die "ask failed"
+  fi
 fi
 
 out_existed=0

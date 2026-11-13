@@ -632,7 +632,7 @@ fi
 closed_port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')"
 DEAD="$SCRATCH/dead"
 export ORACFIT_SUPERVISOR_ENDPOINT="http://127.0.0.1:${closed_port}/v1/systemone"
-unset ORACFIT_SUPERVISOR_POLICY
+export ORACFIT_SUPERVISOR_POLICY="$SCRATCH/calibrated-policy.json"
 dead_rc="$(run_dispatch "$DEAD" "" 1)"
 DEAD_EVENTS="$DEAD/.dispatch/logs/events.jsonl"
 DEAD_LEDGER="$DEAD/.dispatch/ledger/mode.jsonl"

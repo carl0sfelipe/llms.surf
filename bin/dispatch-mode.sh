@@ -11,6 +11,7 @@ source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
 source "$SCRIPT_DIR/lib-oracfit-gotcha.sh"
 source "$SCRIPT_DIR/lib-oracfit-supervisor.sh"
+source "$SCRIPT_DIR/lib-oracfit-supervisor-ask.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
 
@@ -785,7 +786,6 @@ print(fired, det)
       _sup_inbox="$(oracfit_inbox_dir)"
       _sup_state="${_sup_inbox}/${RUN_ID}.state.json"
       _sup_out="${_sup_inbox}/${RUN_ID}.json"
-      _sup_timeout="${ORACFIT_SUPERVISOR_TIMEOUT:-20}"
       mkdir -p "$_sup_inbox" 2>/dev/null || true
       if python3 - "$_sup_state" "$RUN_ID" "$mode_id" "$task_name" "$attempt" "$oracle_exit" "$gauntlet_accum" <<'PY'
 import json
@@ -815,30 +815,9 @@ with open(out, "w", encoding="utf-8") as fh:
     fh.write("\n")
 PY
       then
-        _sup_ask_rc=0
-        _sup_ask_err="${gauntlet_dir}/supervisor-ask.err"
-        if [ -n "${ORACFIT_SUPERVISOR_POLICY:-}" ]; then
-          "$SCRIPT_DIR/oracfit-supervisor-ask.sh" \
-            --endpoint "${ORACFIT_SUPERVISOR_ENDPOINT}" \
-            --state "$_sup_state" \
-            --out "$_sup_out" \
-            --policy "${ORACFIT_SUPERVISOR_POLICY}" \
-            --timeout "$_sup_timeout" \
-            >/dev/null 2>"$_sup_ask_err" || _sup_ask_rc=$?
-        else
-          "$SCRIPT_DIR/oracfit-supervisor-ask.sh" \
-            --endpoint "${ORACFIT_SUPERVISOR_ENDPOINT}" \
-            --state "$_sup_state" \
-            --out "$_sup_out" \
-            --timeout "$_sup_timeout" \
-            >/dev/null 2>"$_sup_ask_err" || _sup_ask_rc=$?
-        fi
-        if [ "$_sup_ask_rc" -eq 0 ] && [ -f "$_sup_out" ]; then
+        oracfit_supervisor_ask_order "$ORACFIT_WORKDIR" "$RUN_ID" "$attempt" "$_sup_state" >/dev/null || true
+        if [ -f "$_sup_out" ]; then
           export ORACFIT_SUPERVISOR_DECISION="$_sup_out"
-        else
-          _sup_reason="$(tr '\r\n\t' '   ' < "$_sup_ask_err" 2>/dev/null | cut -c1-200)"
-          [ -n "$_sup_reason" ] || _sup_reason="ask failed"
-          oracfit_emit_event supervisor_ask result=failed reason="$_sup_reason" attempt="$attempt" || true
         fi
       else
         oracfit_emit_event supervisor_ask result=failed reason="could not write round state" attempt="$attempt" || true
@@ -850,7 +829,7 @@ PY
     else
       unset ORACFIT_SUPERVISOR_DECISION
     fi
-    unset _sup_hand _sup_inbox _sup_state _sup_out _sup_timeout _sup_ask_rc _sup_ask_err _sup_reason
+    unset _sup_hand _sup_inbox _sup_state _sup_out
     if [ "${ORACFIT_SUPERVISOR_LAST_ACTION:-}" = "ESCALATE" ] \
       && [ "${ORACFIT_SUPERVISOR_LAST_RESULT:-}" = "applied" ]; then
       final_status=owner_question

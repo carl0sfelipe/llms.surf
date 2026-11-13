@@ -298,15 +298,29 @@ question without a fork, and does **not** mark the paused run as
 
 The runtime asks; the policy engine translates. Nothing else decides.
 
+Both runtimes write the round's state (the fields differ per runtime)
+and call one function: `oracfit_supervisor_ask_order` in
+`bin/lib-oracfit-supervisor-ask.sh`. That function is who calls the
+chain. The runtimes do not contain a copy of the ask. The function
+reads the mapped question ids from the policy `rules` object and calls
+`bin/oracfit-supervisor-ask.sh` with those ids. It does not write the
+workdir, touch the ledger, apply an order, or decide.
+
 At the attempt boundary — after the gauntlet feedback, before the order
-is applied — the single-stage runtime (`bin/dispatch-mode.sh`) runs
-`bin/oracfit-supervisor-ask.sh` when two things are true: there is no
-hand-placed decision file in `ORACFIT_SUPERVISOR_DECISION`, and the
-owner's endpoint is set in `ORACFIT_SUPERVISOR_ENDPOINT`. The endpoint
-is the owner's (D1). There is no default host, port, or URL. Without an
-endpoint the runtime asks nothing and the round follows the mechanical
-path, as it does today. A hand-placed decision file wins: the runtime
-does not ask.
+is applied — the runtime consults the supervisor when two things are
+true: there is no hand-placed decision file in
+`ORACFIT_SUPERVISOR_DECISION`, and the owner's endpoint is set in
+`ORACFIT_SUPERVISOR_ENDPOINT`. The endpoint is the owner's (D1). There
+is no default host, port, or URL. Without an endpoint the function
+prints `no endpoint`, asks nothing, and emits no event. A hand-placed
+decision file wins: the runtime does not ask.
+
+**Only the questions the policy maps are asked.** The ids come from the
+keys of `rules`. A policy with no `rules`, or with an empty `rules`
+object, asks nobody: no network call, no decision record. The shipped
+source policy has empty `rules`, so the supervisor sleeps until the
+owner maps a question. An id that is not in the question set is refused
+by the client before any network call.
 
 The command exports the question set, POSTs it through the System-One
 client, and runs this engine on the answers. Policy comes from
@@ -317,18 +331,20 @@ seconds. The record it writes is **this engine's record**: `decision`,
 
 If any step fails (the endpoint is down, the call exceeds the time
 ceiling, the answers are invalid, the policy is invalid) the decision
-file is not written, the runtime emits a `supervisor_ask` event with the
-result and the reason, and the run continues as if there were no order.
-A failed ask never fails the run.
+file is not written, the function emits a `supervisor_ask` event with
+the result and the reason, and returns 0. The run continues as if there
+were no order. A failed ask never fails the run.
 
 ## The two runtimes
 
-Both runtimes ask through the same chain (`bin/oracfit-supervisor-ask.sh`,
-rung 16) and apply through the same library
-(`bin/lib-oracfit-supervisor.sh`, rung 13). The endpoint is the owner's
-(D1): there is no default. Without an endpoint, neither runtime asks.
-A hand-placed decision file in `ORACFIT_SUPERVISOR_DECISION` wins and
-nothing is asked. A failed ask never fails the run.
+Both runtimes ask through the same function
+(`bin/lib-oracfit-supervisor-ask.sh`), which calls the same chain
+(`bin/oracfit-supervisor-ask.sh`, rung 16), and apply through the same
+library (`bin/lib-oracfit-supervisor.sh`, rung 13). The endpoint is the
+owner's (D1): there is no default. Without an endpoint, neither runtime
+asks. A policy that maps no question asks nobody. A hand-placed
+decision file in `ORACFIT_SUPERVISOR_DECISION` wins and nothing is
+asked. A failed ask never fails the run.
 
 ### Single-stage (`bin/dispatch-mode.sh`)
 
