@@ -1,0 +1,2 @@
+{"v":1,"ts":"2026-11-13T00:00:00+00:00","run_id":"gotcha-fire","type":"tool_call","tool":"bash","preview":"GOTCHA_FIRE_MARKER identical failing tool_call"}
+{"v":1,"ts":"2026-11-13T00:00:01+00:00","run_id":"gotcha-fire","type":"oracle_result","exit":"1"}

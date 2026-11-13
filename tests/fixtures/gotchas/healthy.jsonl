@@ -1,0 +1,4 @@
+{"v":1,"ts":"2026-11-13T00:00:00+00:00","run_id":"gotcha-healthy","type":"run_started","task":"healthy-fixture"}
+{"v":1,"ts":"2026-11-13T00:00:01+00:00","run_id":"gotcha-healthy","type":"tool_call","tool":"read","preview":"Exit code: 0"}
+{"v":1,"ts":"2026-11-13T00:00:02+00:00","run_id":"gotcha-healthy","type":"oracle_result","exit":"0"}
+{"v":1,"ts":"2026-11-13T00:00:03+00:00","run_id":"gotcha-healthy","type":"run_finished","status":"pass"}
