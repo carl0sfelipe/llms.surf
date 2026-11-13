@@ -880,6 +880,7 @@ everything.
 | **19** | the **ESCALATE reaches the owner in the multi-stage**: the stage's own pause close becomes one function, used by both the stage artifact and an applied ESCALATE — same inbox file, same status `owner_question`, same exit **7**, one question per run — `specs/sup-19-o-escalate-no-multi-stage.md` (delivered: `bin/dispatch-stages.sh`; `RESET` stays refused there) | when the supervisor judges that nobody in the system knows the answer, the main path can ask the owner instead of burning attempts |
 | **20** | the **RESET in the multi-stage restores from the stage checkpoint**: the runtime takes a checkpoint at the run start and at the end of each stage (a side ref, a scratch index, tracked files only, HEAD and the real index untouched), and the reset restores from that checkpoint instead of HEAD — `specs/sup-20-o-reset-no-multi-stage.md` (delivered: `bin/lib-oracfit-checkpoint.sh` and a restore origin in `bin/lib-oracfit-supervisor.sh`; unset, the origin is still HEAD, so the single-stage is unchanged) | a derailed stage is undone without undoing the stages that came before it |
 | **21** | the **ask lives in one place and asks only what the policy maps**: the ask block that the single-stage (rung 16) and the multi-stage (rung 18) each carried becomes one function — `bin/lib-oracfit-supervisor-ask.sh` — and the question goes out with **only the ids the policy's `rules` map**, so a policy with no rules asks nobody and no network call is made — `specs/sup-21-a-pergunta-mora-num-lugar-so.md` (delivered: the shared function plus an `--ids` pass-through in the ask chain; the shipped policy has empty `rules`, so the default behaviour is unchanged — nobody is asked) | the supervisor asks one or two questions instead of the whole set of 27, and the two runtimes cannot drift apart again |
+| **22** | the **rehearsal**: the owner's mapping of questions to actions stops being a blind edit — a command shows, with no endpoint and no network, what the supervisor will ask and what it will do (the calibration, the threshold, how many of the 27 questions are mapped, and for each one the typed question, the criteria, the evidence, the cost, the action, and the hint or the owner-question forks), and refuses what is wrong (an id outside the question set, an invalid action, a hint-less INJECT_HINT or RESET, an ESCALATE without its fork) — `specs/sup-22-o-ensaio-da-politica.md` (delivered: a `validate` subcommand in the policy engine, which owns the grammar, and `bin/oracfit-supervisor-plan.py`, which calls it and only reports; the engine also exposes the calibration verdict, so the rehearsal never carries its own copy of the rule — an uncalibrated policy is a warning, not a refusal) | the owner can map the questions and see the whole plan before D1 turns the supervisor on |
 
 A through E are independent of every open decision above: they are about
 the evidence and the mechanism, not about the models. F onward needs the
@@ -894,7 +895,7 @@ find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 70
+ls tests/test-*.sh | wc -l                    # 71
 python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
 # class-R rules out of the rules map (the legend line does not count: the
@@ -1056,3 +1057,7 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `specs/sup-20-o-reset-no-multi-stage.md` | dispatchable spec, rung 20 (the RESET in the multi-stage) |
 | `bin/lib-oracfit-supervisor-ask.sh` | the shared ask: both runtimes write the round's state and call this (rung 21) |
 | `specs/sup-21-a-pergunta-mora-num-lugar-so.md` | dispatchable spec, rung 21 (the ask lives in one place and asks only the mapped questions) |
+| `bin/oracfit-supervisor-plan.py` | the rehearsal: the policy as a readable plan, with no endpoint and no network (rung 22) |
+| `tests/test-supervisor-plan.sh` | the suite of the rehearsal: what it shows, what it refuses, what it does not do (rung 22) |
+| `specs/sup-22-o-ensaio-da-politica.md` | dispatchable spec, rung 22 (the rehearsal of the policy) |
+| `specs/ref-r22-o-veredito-da-calibracao.md` | refinement spec: the engine exposes the calibration verdict; the rehearsal only reports it (rung 22) |

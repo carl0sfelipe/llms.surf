@@ -5,6 +5,8 @@ Reads a System-One answers record and a policy file, then writes a decision
 record: CONTINUE, INJECT_HINT, RESET, or ESCALATE. It does not inject a hint,
 restore a tree, snapshot, pause a run, or call git. The policy writes the
 order; the runtime is who executes it.
+
+The validate subcommand checks a policy without answers and without deciding.
 """
 from __future__ import annotations
 
@@ -144,6 +146,10 @@ def validate_rule(qid: str, raw: Any) -> tuple[dict[str, Any] | None, list[str]]
     return rule, []
 
 
+def is_calibrated(calibration: dict[str, str]) -> bool:
+    return bool(calibration.get("ring", "").strip() and calibration.get("line", "").strip())
+
+
 def validate_policy(doc: Any) -> tuple[dict[str, Any] | None, list[str]]:
     if not isinstance(doc, dict):
         return None, ["policy must be an object"]
@@ -198,16 +204,14 @@ def validate_policy(doc: Any) -> tuple[dict[str, Any] | None, list[str]]:
     if errors:
         return None, errors
     assert act_above is not None
+    calibration = {"ring": ring, "line": line}
     return {
         "version": version,
-        "calibration": {"ring": ring, "line": line},
+        "calibration": calibration,
+        "calibrated": is_calibrated(calibration),
         "thresholds": {"act_above": act_above},
         "rules": rules,
     }, []
-
-
-def is_calibrated(calibration: dict[str, str]) -> bool:
-    return bool(calibration.get("ring", "").strip() and calibration.get("line", "").strip())
 
 
 def decide(answers: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
@@ -294,6 +298,26 @@ def cmd_decide(
     return 0
 
 
+def cmd_validate(policy_path: str, out_path: str | None) -> int:
+    policy_doc, err = load_json_file(Path(policy_path))
+    if err:
+        return fail(err)
+    policy, errors = validate_policy(policy_doc)
+    if errors:
+        for message in errors:
+            print(f"{PROG}: {message}", file=sys.stderr)
+        return 1
+    text = dump_record(policy)
+    if out_path is not None:
+        dest = Path(out_path)
+        try:
+            dest.write_text(text, encoding="utf-8")
+        except OSError as exc:
+            return fail(f"cannot write {dest}: {exc}")
+    sys.stdout.write(text)
+    return 0
+
+
 def build_parser() -> PolicyParser:
     parser = PolicyParser(
         prog=PROG,
@@ -316,6 +340,16 @@ def build_parser() -> PolicyParser:
         default=None,
         help="write the decision record (also printed on stdout)",
     )
+    validate_p = sub.add_parser(
+        "validate",
+        help="validate a policy without answers and without deciding",
+    )
+    validate_p.add_argument("--policy", required=True, help="policy JSON")
+    validate_p.add_argument(
+        "--out",
+        default=None,
+        help="write the normalized policy (also printed on stdout)",
+    )
     return parser
 
 
@@ -328,6 +362,8 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     if args.cmd == "decide":
         return cmd_decide(args.answers, args.policy, args.state, args.out)
+    if args.cmd == "validate":
+        return cmd_validate(args.policy, args.out)
     parser.print_usage(sys.stderr)
     return 3
 

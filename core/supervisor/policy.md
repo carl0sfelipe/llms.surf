@@ -24,6 +24,75 @@ caller can pass the round's state without the engine inventing anything
 about it. The engine never writes the workdir. The only file it writes is
 `--out`, and only when the caller passes `--out`.
 
+## Validate
+
+```
+python3 bin/oracfit-policy.py validate \
+  --policy <file.json> \
+  [--out <file.json>]
+```
+
+Exit: 0 valid · 1 invalid · 3 usage error.
+
+`validate` is the same check `decide` already runs, exposed without
+answers. It does **not** decide, does **not** read an answers file, and
+does **not** write the workdir. On success it prints the normalized
+policy (version, calibration, the `calibrated` verdict, threshold, and
+the validated `rules`) as JSON, and writes the same text to `--out`
+when that flag is given. On failure it prints each error on stderr, one
+per line, exits **1**, and does not write `--out`.
+
+The engine exposes the calibration verdict on that output: a top-level
+boolean `calibrated`, computed by the same function `decide` uses.
+True when both the ring and the line are filled; false otherwise.
+
+An uncalibrated policy (empty ring or line) is **valid**. Calibration
+is evidence for `decide`, not a grammar error.
+
+## Plan
+
+```
+python3 bin/oracfit-supervisor-plan.py \
+  [--policy <file.json>] \
+  [--questions <file.json>] \
+  [--out <file.txt>]
+```
+
+Exit: 0 the plan is correct · 1 refused · 3 usage error.
+
+The plan is a rehearsal of the mapping: it shows what the supervisor
+will ask and what it will do, with no endpoint, no network, and no
+model. Defaults are the shipped policy and the shipped question set in
+this checkout. It calls `oracfit-policy.py validate` and reads that
+output; it does not reimplement the policy grammar. The plan reports
+the engine's `calibrated` verdict instead of recalculating the rule
+(the rule lives in the engine).
+
+It shows:
+
+- the policy path, the question set path, the calibration (the ring) or
+  a warning that **every case will CONTINUE** until there is
+  calibration, the threshold, and how many questions are mapped (of
+  the set's total);
+- for each mapped question: the id, the type, the typed question text,
+  the criteria, the evidence, the cost, the action, and the `hint`
+  (`INJECT_HINT` / `RESET`) or the `pergunta` and the `se ... -> ...`
+  forks (`ESCALATE`).
+
+A policy with no mapped rules is not an error: the plan says nobody is
+asked.
+
+It **refuses** (exit 1, cause on stderr, no `--out`) a mapped id that
+is not in the question set, an invalid action, `INJECT_HINT` or `RESET`
+without a hint, `ESCALATE` without a `pergunta` or with fewer than two
+forks, and an invalid policy. An uncalibrated policy is a **warning**,
+not a refusal.
+
+The plan does **not** ask, does **not** decide, does **not** connect to
+a network, does **not** call a model, and does **not** write the
+workdir. The only file it writes is `--out`, and only when the caller
+passes `--out`.
+
 ## Policy file
 
 Shipped at `core/supervisor/policy.json`. Shape:

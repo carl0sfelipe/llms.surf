@@ -93,6 +93,24 @@ owner's judgment, one entry per question id of
 and at least two `se ... -> ...` consequences. The engine refuses an
 invalid policy and never writes the workdir.
 
+See the mapping as a plan **before** you turn it on. No endpoint, no
+network, no model:
+
+```
+python3 bin/oracfit-supervisor-plan.py \
+  --policy core/supervisor/policy.json
+```
+
+The command shows the calibration (the ring) or the warning that every
+case will CONTINUE until there is calibration, the threshold, how many
+questions are mapped, and for each mapped question the typed text, the
+criteria, the evidence, the cost, the action, and the hint or the owner
+question with its `se ... -> ...` forks. It refuses a mapped id that is
+not in the question set, an invalid action, `INJECT_HINT` or `RESET`
+without a hint, `ESCALATE` without a `pergunta` or with fewer than two
+forks, and an invalid policy. An uncalibrated policy is a warning, not
+a refusal. The plan does not ask and does not connect to anything.
+
 The runtime picks the policy with `ORACFIT_SUPERVISOR_POLICY` (default:
 `core/supervisor/policy.json`).
 
