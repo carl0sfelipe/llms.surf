@@ -413,6 +413,23 @@ write_decision "$ESC_JSON" <<JSON
 }
 JSON
 
+NOFORK_JSON="$SCRATCH/escalate-no-fork.json"
+write_decision "$NOFORK_JSON" <<JSON
+{
+  "decision": "ESCALATE",
+  "reason": "fixture escalate without fork",
+  "order": {
+    "action": "ESCALATE",
+    "question_id": "r42-long-job-outside-dispatch-is-orphan",
+    "value": 0.9,
+    "pergunta": "$PERGUNTA",
+    "se": [
+      "$SE1"
+    ]
+  }
+}
+JSON
+
 # ── 1. without an endpoint the multi-stage asks nothing ─────────────────
 BASE="$SCRATCH/base"
 unset ORACFIT_SUPERVISOR_ENDPOINT
@@ -491,21 +508,40 @@ else
   not "a RESET order is refused in the multi-stage (rc=$reset_rc base=$base_rc tracked=$(cat "$RESET_WD/tracked.txt" 2>/dev/null) applied=$n_reset_applied refused=$n_reset_refused err=$(head -c 400 "$RESET_WD/dispatch.err"))"
 fi
 
-# ── 5. an ESCALATE order is refused in the multi-stage ──────────────────
+# ── 5. an ESCALATE order pauses the multi-stage run ─────────────────────
 ESC_WD="$SCRATCH/escalate"
 esc_rc="$(run_dispatch "$ESC_WD" "$ESC_JSON")"
 ESC_RID="$(run_id_of "$ESC_WD")"
 ESC_Q="$ESC_WD/.dispatch/logs/inbox/${ESC_RID}.question.md"
-n_esc_applied="$(count_jsonl "$ESC_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=applied)"
-n_esc_refused="$(count_jsonl "$ESC_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=refused action=ESCALATE)"
-if [ "$esc_rc" -eq "$base_rc" ] && [ "$esc_rc" -ne 7 ] \
-  && [ ! -f "$ESC_Q" ] \
-  && ! grep -q "status: owner_question" "$ESC_WD/dispatch.out" \
-  && [ "$n_esc_applied" -eq 0 ] \
-  && [ "$n_esc_refused" -ge 1 ]; then
-  ok "an ESCALATE order is refused in the multi-stage"
+ESC_LEDGER="$ESC_WD/.dispatch/ledger/mode.jsonl"
+n_ledger_oq="$(count_jsonl "$ESC_LEDGER" status=owner_question oracle_exit=7)"
+if [ "$esc_rc" -eq 7 ] \
+  && grep -q "status: owner_question" "$ESC_WD/dispatch.out" \
+  && [ "$n_ledger_oq" -ge 1 ] \
+  && [ -f "$ESC_Q" ] \
+  && grep -q "^pergunta:" "$ESC_Q" \
+  && [ "$(grep -cE '^se .+ -> ' "$ESC_Q")" -ge 2 ] \
+  && [ "$(cat "$ESC_WD/attempt-count" 2>/dev/null)" = "1" ]; then
+  ok "an ESCALATE order pauses the multi-stage run"
 else
-  not "an ESCALATE order is refused in the multi-stage (rc=$esc_rc base=$base_rc q=$([ -f "$ESC_Q" ] && echo yes || echo no) applied=$n_esc_applied refused=$n_esc_refused out=$(head -c 200 "$ESC_WD/dispatch.out") err=$(head -c 400 "$ESC_WD/dispatch.err"))"
+  not "an ESCALATE order pauses the multi-stage run (rc=$esc_rc status=$(grep -E '^status:' "$ESC_WD/dispatch.out" | head -1) ledger=$n_ledger_oq q=$([ -f "$ESC_Q" ] && echo yes || echo no) attempts=$(cat "$ESC_WD/attempt-count" 2>/dev/null) err=$(head -c 400 "$ESC_WD/dispatch.err"))"
+fi
+
+# ── 5b. an ESCALATE without the fork does not pause ─────────────────────
+NOFORK_WD="$SCRATCH/no-fork"
+nofork_rc="$(run_dispatch "$NOFORK_WD" "$NOFORK_JSON")"
+NOFORK_RID="$(run_id_of "$NOFORK_WD")"
+NOFORK_Q="$NOFORK_WD/.dispatch/logs/inbox/${NOFORK_RID}.question.md"
+n_nofork_applied="$(count_jsonl "$NOFORK_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=applied)"
+n_nofork_refused="$(count_jsonl "$NOFORK_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=refused action=ESCALATE)"
+if [ "$nofork_rc" -eq "$base_rc" ] \
+  && [ "$nofork_rc" -ne 7 ] \
+  && [ ! -f "$NOFORK_Q" ] \
+  && [ "$n_nofork_applied" -eq 0 ] \
+  && [ "$n_nofork_refused" -ge 1 ]; then
+  ok "an ESCALATE without the fork does not pause the multi-stage run"
+else
+  not "an ESCALATE without the fork does not pause the multi-stage run (rc=$nofork_rc base=$base_rc q=$([ -f "$NOFORK_Q" ] && echo yes || echo no) applied=$n_nofork_applied refused=$n_nofork_refused err=$(head -c 400 "$NOFORK_WD/dispatch.err"))"
 fi
 
 # ── 6–7. a failing endpoint does not fail the multi-stage run ───────────

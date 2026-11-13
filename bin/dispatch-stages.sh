@@ -28,10 +28,46 @@ oracfit_stages_read_efetivo() {
   oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}"
 }
 
-# Ask the supervisor at a stage attempt boundary and apply CONTINUE /
-# INJECT_HINT. RESET and ESCALATE are refused here: restoring from HEAD
-# would drop earlier stages' work, and pausing the run belongs to the
-# owner-question channel. A failed ask never changes the run's exit.
+# Close a paused run on the owner-question channel. Both the stage
+# artifact path (after copying the file into the inbox) and an applied
+# ESCALATE (the library already wrote the inbox file) call this.
+oracfit_stages_pause_for_owner() {
+  local question_file="${1:-}"
+  local role="${2:-}"
+  local attempt="${3:-}"
+  local t_oq dur_oq
+
+  [ -n "$question_file" ] || question_file="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
+  oracfit_emit_event owner_question stage="$role" attempt="$attempt" file="$question_file"
+  t_oq=$(python3 -c 'import time; print(time.time())')
+  dur_oq=$(python3 -c "print(round(float('$t_oq')-float('$t0'), 3))")
+  oracfit_emit_event run_finished status=owner_question stages="$stage_count" duration_s="$dur_oq"
+  oracfit_stages_read_efetivo
+  oracfit_emit_metric_and_ledger \
+    mode_id="$mode_id" \
+    stage=multi \
+    oracle_exit=7 \
+    attempt="$total_attempt_count" \
+    model_id=multi \
+    flash_work_s="$dur_oq" \
+    frontier_wait_s=0 \
+    estimated_cost=0 \
+    task="$task_name" \
+    status=owner_question \
+    "${ORACFIT_FREE_FIELDS[@]}" || true
+  epilogue_done=1
+  echo "run_id: $RUN_ID"
+  echo "status: owner_question"
+  echo "question: $question_file"
+  echo "resume: oracfit resume $RUN_ID \"<your answer>\""
+  exit 7
+}
+
+# Ask the supervisor at a stage attempt boundary and apply the order.
+# RESET is refused: restoring from HEAD would drop earlier stages' work.
+# ESCALATE pauses the run on the owner-question channel (one question
+# per run: a second ESCALATE is refused). A failed ask never changes
+# the run's exit.
 oracfit_stages_supervisor_boundary() {
   local accum="${1:-}"
   local attempt="${2:-}"
@@ -47,6 +83,7 @@ oracfit_stages_supervisor_boundary() {
   local _sup_ask_err=""
   local _sup_reason=""
   local _sup_action=""
+  local _sup_qfile=""
 
   if [ -n "${ORACFIT_SUPERVISOR_DECISION:-}" ] && [ -f "${ORACFIT_SUPERVISOR_DECISION}" ]; then
     _sup_hand="$ORACFIT_SUPERVISOR_DECISION"
@@ -130,20 +167,27 @@ PY
 )" || _sup_action=""
   fi
 
+  _sup_qfile="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
   if [ "$_sup_action" = "RESET" ]; then
     _sup_reason="RESET would restore from HEAD; a multi-stage run checkpoint is not HEAD"
     printf 'supervisor_order action=%s attempt=%s result=%s reason=%s\n' \
       RESET "$attempt" refused "$_sup_reason"
     oracfit_emit_event supervisor_order \
       attempt="$attempt" action=RESET result=refused reason="$_sup_reason" stage="$role" || true
-  elif [ "$_sup_action" = "ESCALATE" ]; then
-    _sup_reason="ESCALATE would pause the run; multi-stage pause is the owner-question channel"
+  elif [ "$_sup_action" = "ESCALATE" ] && [ -f "$_sup_qfile" ]; then
+    _sup_reason="the run already asked the owner; one question per run"
     printf 'supervisor_order action=%s attempt=%s result=%s reason=%s\n' \
       ESCALATE "$attempt" refused "$_sup_reason"
     oracfit_emit_event supervisor_order \
       attempt="$attempt" action=ESCALATE result=refused reason="$_sup_reason" stage="$role" || true
   else
     oracfit_supervisor_apply_order "$ORACFIT_WORKDIR" "$accum" "$RUN_ID" "$attempt" || true
+    if [ "${ORACFIT_SUPERVISOR_LAST_ACTION:-}" = "ESCALATE" ] \
+      && [ "${ORACFIT_SUPERVISOR_LAST_RESULT:-}" = "applied" ]; then
+      [ -n "${ORACFIT_SUPERVISOR_LAST_FILE:-}" ] \
+        && _sup_qfile="$ORACFIT_SUPERVISOR_LAST_FILE"
+      oracfit_stages_pause_for_owner "$_sup_qfile" "$role" "$attempt"
+    fi
   fi
 
   if [ -n "$_sup_hand" ]; then
@@ -691,29 +735,7 @@ for line in open(sys.argv[1]):
       _oq_forks="$(grep -cE '^se .+ -> ' "$art_dir/owner-question.md" || true)"
       if grep -q '^pergunta: .' "$art_dir/owner-question.md" && [ "${_oq_forks:-0}" -ge 2 ]; then
         cp "$art_dir/owner-question.md" "$(oracfit_inbox_dir)/${RUN_ID}.question.md"
-        oracfit_emit_event owner_question stage="$role" attempt="$attempt" file="${RUN_ID}.question.md"
-        t_oq=$(python3 -c 'import time; print(time.time())')
-        dur_oq=$(python3 -c "print(round(float('$t_oq')-float('$t0'), 3))")
-        oracfit_emit_event run_finished status=owner_question stages="$stage_count" duration_s="$dur_oq"
-        oracfit_stages_read_efetivo
-        oracfit_emit_metric_and_ledger \
-          mode_id="$mode_id" \
-          stage=multi \
-          oracle_exit=7 \
-          attempt="$total_attempt_count" \
-          model_id=multi \
-          flash_work_s="$dur_oq" \
-          frontier_wait_s=0 \
-          estimated_cost=0 \
-          task="$task_name" \
-          status=owner_question \
-          "${ORACFIT_FREE_FIELDS[@]}" || true
-        epilogue_done=1
-        echo "run_id: $RUN_ID"
-        echo "status: owner_question (pausado — pergunta do dono no inbox)"
-        echo "pergunta: $(oracfit_inbox_dir)/${RUN_ID}.question.md"
-        echo "responda: oracfit resume $RUN_ID \"<sua resposta>\""
-        exit 7
+        oracfit_stages_pause_for_owner "$(oracfit_inbox_dir)/${RUN_ID}.question.md" "$role" "$attempt"
       else
         echo "owner-question.md malformado (sem linha 'pergunta:' ou garfo < 2 linhas 'se ... -> ...') — ignorado; o oráculo governa" >&2
       fi
@@ -834,9 +856,9 @@ for line in open(sys.argv[1]):
       critic_gap="$(oracfit_gauntlet_run_critic "$mode_yaml" "$model_ref" "$oracle_log" "$accum" "$attempt" "$barra_file" || true)"
       [ -n "$critic_gap" ] && gap="$critic_gap" && echo "gauntlet stage=$role attempt=$attempt critic_gap=$gap" >&2
       # Attempt boundary: ask the supervisor (when no hand-placed decision
-      # file and an endpoint is set), then apply CONTINUE / INJECT_HINT
-      # for the next attempt of this stage. RESET and ESCALATE are
-      # refused: the tree is shared across stages, and the pause is the
+      # file and an endpoint is set), then apply the order for the next
+      # attempt of this stage. RESET is refused (HEAD is not a multi-stage
+      # checkpoint). An applied ESCALATE pauses the run on the
       # owner-question channel. A failed ask must not change this run's
       # exit code.
       oracfit_stages_supervisor_boundary "$accum" "$attempt" "$oracle_exit" "$role" "$gauntlet_dir" || true

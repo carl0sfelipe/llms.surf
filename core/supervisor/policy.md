@@ -317,23 +317,21 @@ the run with status `owner_question` and exit 7.
 ### Multi-stage (`bin/dispatch-stages.sh`)
 
 At the stage's attempt boundary, after the gauntlet feedback, the
-multi-stage runtime asks and applies `CONTINUE` and `INJECT_HINT`. The
-hint of an `INJECT_HINT` is appended to that stage's accumulator
-(`feedback.md`) and travels in the spec of the next attempt of the
-stage.
+multi-stage runtime asks and applies all four actions. The hint of an
+`INJECT_HINT` is appended to that stage's accumulator (`feedback.md`)
+and travels in the spec of the next attempt of the stage.
 
-The other two actions are **refused**, with the reason on the event.
-The refusal does not change the run's result.
+`RESET` is **refused**, with the reason on the event. The refusal does
+not change the run's result. RESET would restore tracked files from
+HEAD. The checkpoint of a multi-stage run is the tree after the last
+stage, not HEAD: the runtime does not commit between stages, so
+restoring from HEAD would destroy the work of earlier stages.
 
-- `RESET` is refused because it would restore tracked files from HEAD.
-  The checkpoint of a multi-stage run is the tree after the last stage,
-  not HEAD: the runtime does not commit between stages, so restoring
-  from HEAD would destroy the work of earlier stages. RESET waits for
-  a rung that defines the multi-stage checkpoint.
-- `ESCALATE` is refused because it would pause the whole run. In the
-  multi-stage runtime the pause is the owner-question channel the
-  runtime already has (the stage artifact `owner-question.md`, status
-  `owner_question`, exit 7). This rung does not touch that channel.
+`ESCALATE` pauses the run on the owner-question channel the runtime
+already has (the question in the run inbox, status `owner_question`,
+exit 7) — the same status and the same exit code as the single-stage
+runtime. One question per run: if the inbox already has the question,
+a second ESCALATE is refused, with the reason on the event.
 
 ## Pocket rule
 
