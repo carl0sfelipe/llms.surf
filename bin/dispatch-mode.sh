@@ -122,6 +122,10 @@ ROOT="$(oracfit_resolve_root)" || exit 1
 oracfit_run_lock_acquire
 lock_rc=$?
 [ "$lock_rc" -eq 0 ] || exit "$lock_rc"
+# Replaced after preflight passes by the EXIT/TERM/INT traps that also run the
+# emergency epilogue. Until then, only the lock has to be released: a run that
+# dies at preflight never started, so it must not write a ledger row or a
+# run_finished event (tests/test-tuned-measure.sh T2).
 trap 'oracfit_run_lock_release' EXIT
 
 # Resume (v1, 2026-08-01): oracfit resume <run_id> "<msg>" chama a gente com
@@ -369,6 +373,47 @@ mkdir -p "$(dirname "$DISPATCH_EFETIVO_FILE")"
 rm -f "$DISPATCH_EFETIVO_FILE"
 t_run0=$(python3 -c 'import time; print(time.time())')
 
+# Guaranteed epilogue, ported from oracfit_stages_emergency_epilogue (incident
+# 2026-08-10-dispatch-mode-run-finished-sem-ledger-nem-usage-feedback): if this
+# process dies before the normal close (set -e, SIGTERM/SIGINT, killed from
+# outside), still emit run_finished + a ledger row (best effort) and the final
+# run_id/status lines. The happy path sets epilogue_done=1 so this trap is a
+# no-op. Defensive: every call has || true, so set -e cannot kill the trap.
+epilogue_done=0
+oracfit_mode_emergency_epilogue() {
+  [ "${epilogue_done:-0}" = "1" ] && return 0
+  epilogue_done=1
+  local t_abn dur_abn
+  dur_abn=0
+  if [ -n "${t_run0:-}" ]; then
+    t_abn="$(python3 -c 'import time; print(time.time())' 2>/dev/null || true)"
+    if [ -n "$t_abn" ]; then
+      dur_abn="$(python3 -c "print(round(float('$t_abn')-float('$t_run0'), 3))" 2>/dev/null || echo 0)"
+    fi
+  fi
+  oracfit_emit_event run_finished status=fail reason=abnormal_exit \
+    attempt="${attempt:-0}" duration_s="$dur_abn" 2>/dev/null || true
+  ORACFIT_FREE_FIELDS=()
+  oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}" 2>/dev/null || true
+  oracfit_emit_metric_and_ledger \
+    mode_id="${mode_id:-}" \
+    stage=run \
+    oracle_exit="${oracle_exit:-1}" \
+    attempt="${attempt:-0}" \
+    model_id="${model_ref:-}" \
+    flash_work_s="${flash_work_s:-0}" \
+    frontier_wait_s="${frontier_wait_s:-0}" \
+    estimated_cost="${estimated_cost:-0}" \
+    task="${task_name:-}" \
+    status=fail \
+    "${ORACFIT_FREE_FIELDS[@]}" 2>/dev/null || true
+  echo "run_id: ${RUN_ID:-}"
+  echo "status: fail"
+  return 0
+}
+# Traps that call this function are armed only after preflight passes.
+# Installing them here would write a ledger row for a run that never started.
+
 # The artifacts dir of this stage (only when the mode declares one). The
 # runner writes there, the gate below reads it, and the model is told where
 # it is — a declared artifacts dir is a promise the runtime keeps.
@@ -408,6 +453,14 @@ set -e
 if [ "$pf_rc" -ne 0 ]; then
   exit "$pf_rc"
 fi
+
+# Preflight passed: the run has started. From here an abnormal death must
+# close evidence (run_finished + ledger) the same way dispatch-stages.sh
+# does after its own preflight (traps at lines 194-196, after preflight
+# at line 126). The lock-only EXIT trap above stays armed until this point.
+trap 'oracfit_mode_emergency_epilogue; oracfit_run_lock_release' EXIT
+trap 'oracfit_mode_emergency_epilogue; oracfit_run_lock_release; exit 143' TERM
+trap 'oracfit_mode_emergency_epilogue; oracfit_run_lock_release; exit 130' INT
 
 oracfit_emit_event run_started mode="$mode_id" stage=run task="$task_name" model_id="$model_ref"
 oracfit_emit_event stage_changed stage=run
@@ -790,6 +843,9 @@ oracfit_emit_metric_and_ledger \
   status="$final_status" \
   "${ORACFIT_FREE_FIELDS[@]}"
 
+# Normal close is complete for events: the EXIT/TERM/INT trap becomes a no-op
+# so it cannot emit a second run_finished.
+epilogue_done=1
 oracfit_emit_event run_finished status="$final_status" attempt="$attempt" oracle_exit="$oracle_exit"
 
 # Achado 2026-08-01 (docs-findings/audit-funcionalidades-meio-plugadas.md):
