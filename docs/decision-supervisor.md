@@ -853,7 +853,7 @@ everything.
 | **E** | the malformed `usage.jsonl` rows are fixed and the writer is hardened: the stray brace at the origin, an `extra` that is always an object, a row that does not parse is rejected instead of appended, and a repair for the base already written — `specs/sup-06-usage-jsonl-legivel.md` | the telemetry base is machine-readable again |
 | **F** | the semantic matcher: a CPU cross-encoder reduces the gotcha bank to top-k candidates — advisory, it never decides and never triggers | a scar that has no deterministic trigger is still found |
 | **G** | the question set: the 27 class-`R` rules written as typed questions with their evidence and cost — `specs/sup-07-perguntas-tipadas.md` (delivered: `core/supervisor/questions.json`, 26 asked, 1 withheld) | the supervisor has something to ask |
-| **H** | the supervisor adapter: a client of `POST /v1/systemone` (llama.cpp on CPU today, Eikos on a GPU later), with abstention and a calibration log wired to `owner_score_pred` | the decision layer exists at all |
+| **H** | the supervisor adapter: a client of `POST /v1/systemone` (llama.cpp on CPU today, Eikos on a GPU later), with abstention and a calibration log wired to `owner_score_pred` — `specs/sup-09-cliente-systemone.md` (delivered: `bin/oracfit-systemone.py`, which asks and brings the raw answers; the decision stays in rung I) | the decision layer exists at all |
 | **I** | the policy decision: CONTINUE / INJECT_HINT / RESET / ESCALATE, with RESET meaning a snapshot or WIP commit and ESCALATE meaning the existing `owner_question` path (exit 7, with its `pergunta:` + fork contract) | the supervisor acts, at the attempt boundary, under a calibrated threshold |
 | **J** | the post-loop distiller: a finished run compiles into a new triad — the WIP↔HEAD diff as the *symptom*, the trigger still written by hand — and its canary joins the suite | the bank grows from the corpus instead of by hand |
 | **K** | the local dev assistant registered as a first-class runner, its trajectory feeding the ring | the flywheel closes |
@@ -871,7 +871,7 @@ find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 60
+ls tests/test-*.sh | wc -l                    # 61
 python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
 # class-R rules out of the rules map (the legend line does not count: the
@@ -1003,3 +1003,6 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `bin/oracfit-questions.py` | the validator, the index and the System-One export of the question set (rung G) |
 | `core/supervisor/README.md` | the contract of the question set (rung G) |
 | `specs/sup-07-perguntas-tipadas.md` | dispatchable spec, rung G |
+| `bin/oracfit-systemone.py` | the client of `POST /v1/systemone` (rung H) |
+| `docs/SYSTEMONE.md` | the contract of the client (rung H) |
+| `specs/sup-09-cliente-systemone.md` | dispatchable spec, rung H |
