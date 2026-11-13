@@ -86,7 +86,7 @@
       "evidence": ["tool_call", "git_diff", "bin/oracfit-behavior-scan.py"],
       "cost": {"model_calls": 1, "state": "short"},
       "asked": true,
-      "incidents": ["incidents/2026-07-25-captura-de-resultado-mentiu-3x.md", "incidents/2026-07-27-registry-marcou-provider-como-morto-e-ni.md"], "english-ok": "on-disk incident filename"
+      "incidents": ["incidents/2026-07-27-registry-marcou-provider-como-morto-e-ni.md"], "english-ok": "on-disk incident filename"
     },
     {
       "id": "r26-absence-only-when-proven",
