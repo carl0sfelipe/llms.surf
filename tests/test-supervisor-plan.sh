@@ -26,7 +26,9 @@ rc_of() {
 Q_CHOICE="r01-orchestrator-writes-bulk"
 Q_ESC="r42-long-job-outside-dispatch-is-orphan"
 Q_UNKNOWN="r99-not-in-the-set"
+Q_WITHHELD="r10-fork-needs-real-session-id"
 Q_TEXT="Is the work in front of this run a judgment call, or a deterministic transform that should not go to a model?"
+WITHHELD_REASON="The rules map cites no postmortem for this rule, and no file in incidents/ shows an invented fork session id."
 HINT="put the prescription in the next attempt spec"
 PERGUNTA="which watchdog should cover this long-running job?"
 SE1="se keep it outside dispatch -> leave it running and ask after one attempt"
@@ -69,6 +71,17 @@ write_questions() {
       "evidence": ["log_size", "events.jsonl", "stderr"],
       "cost": {"model_calls": 1, "state": "full"},
       "asked": true
+    },
+    {
+      "id": "$Q_WITHHELD",
+      "rule": 10,
+      "type": "noul",
+      "instructions": "Does this fork request carry a session id that session-health actually issued?",
+      "evidence": ["spec"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": false,
+      "incidents": [],
+      "withheld_reason": "$WITHHELD_REASON"
     }
   ]
 }
@@ -301,6 +314,30 @@ then
   ok "the engine reports the calibration state"
 else
   not "the engine reports the calibration state (rc_uncal=$rc_uncal rc_cal=$rc_cal err=$(head -c 200 "$WORKDIR/engine-uncalibrated.err"; echo; head -c 200 "$WORKDIR/engine-calibrated.err"))"
+fi
+
+echo "== 8. the plan refuses a withheld question"
+write_json "$WORKDIR/withheld-id.json" <<JSON
+{
+  "version": 1,
+  "calibration": {
+    "ring": "test-ring",
+    "line": "copied calibration line from ring test-ring"
+  },
+  "thresholds": {"act_above": 0.8},
+  "rules": {
+    "$Q_WITHHELD": {"action": "INJECT_HINT", "hint": "$HINT"}
+  }
+}
+JSON
+rc="$(rc_of python3 "$PLAN" --policy "$WORKDIR/withheld-id.json" --questions "$WORKDIR/questions.json")"
+if [ "$rc" -eq 1 ] \
+  && grep -q "$Q_WITHHELD" "$WORKDIR/last.err" \
+  && grep -q "$WITHHELD_REASON" "$WORKDIR/last.err"
+then
+  ok "the plan refuses a withheld question"
+else
+  not "the plan refuses a withheld question (rc=$rc err=$(head -c 240 "$WORKDIR/last.err"))"
 fi
 
 echo

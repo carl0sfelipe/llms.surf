@@ -218,6 +218,18 @@ def cmd_plan(policy_str: str, questions_str: str, out_path: str | None) -> int:
         for qid in unknown:
             print(f"{PROG}: unknown question id: {qid}", file=sys.stderr)
         return 1
+    withheld = [str(qid) for qid in rules if by_id[str(qid)].get("asked") is False]
+    if withheld:
+        for qid in withheld:
+            reason = by_id[qid].get("withheld_reason")
+            if nonempty_str(reason):
+                print(
+                    f"{PROG}: withheld question id: {qid}: {reason}",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"{PROG}: withheld question id: {qid}", file=sys.stderr)
+        return 1
     text = render_plan(policy_str, questions_str, policy, questions, by_id)
     if out_path is not None:
         dest = Path(out_path)

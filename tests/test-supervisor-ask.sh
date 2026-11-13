@@ -106,6 +106,7 @@ for line in fh:
 
 HINT="ASK_CHAIN_HINT put the prescription in the next attempt spec"
 Q_NOUL="r16-recurring-failure-becomes-a-rule"
+Q_WITHHELD="r10-fork-needs-real-session-id"
 
 SPEC="$SCRATCH/spec.md"
 # english-ok-begin: the spec headings the gauntlet gate still parses are Portuguese.
@@ -365,9 +366,10 @@ endpoint_url() {
 }
 
 python3 - "$SCRATCH/calibrated-policy.json" "$SCRATCH/uncalibrated-mapped-policy.json" \
-  "$SCRATCH/empty-rules-policy.json" "$Q_NOUL" "$HINT" <<'PY'
+  "$SCRATCH/empty-rules-policy.json" "$SCRATCH/withheld-policy.json" \
+  "$Q_NOUL" "$HINT" "$Q_WITHHELD" <<'PY'
 import json, sys
-calibrated, uncalibrated, empty, qid, hint = sys.argv[1:6]
+calibrated, uncalibrated, empty, withheld, qid, hint, q_withheld = sys.argv[1:8]
 mapped = {
     "version": 1,
     "thresholds": {"act_above": 0.8},
@@ -388,10 +390,22 @@ nobody = {
     "thresholds": {"act_above": 0.8},
     "rules": {},
 }
+withheld_doc = {
+    "version": 1,
+    "calibration": {
+        "ring": "test-ring",
+        "line": "copied calibration line from ring test-ring",
+    },
+    "thresholds": {"act_above": 0.8},
+    "rules": {
+        q_withheld: {"action": "INJECT_HINT", "hint": hint},
+    },
+}
 for path, doc in (
     (calibrated, cal),
     (uncalibrated, uncal),
     (empty, nobody),
+    (withheld, withheld_doc),
 ):
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, indent=2, ensure_ascii=False)
@@ -522,6 +536,23 @@ if [ "$nobody_rc" -eq "$base_rc" ] \
   ok "a policy with no mapped question asks nobody"
 else
   not "a policy with no mapped question asks nobody (rc=$nobody_rc base=$base_rc request=$([ -f "$SCRATCH/stub.request.json" ] && echo yes || echo no) ids=$([ -f "$SCRATCH/stub.ids.json" ] && echo yes || echo no) decision=$([ -f "$NOBODY_INBOX/${NOBODY_RID}.json" ] && echo yes || echo no) err=$(head -c 300 "$NOBODY/dispatch.err"))"
+fi
+
+# ── the withheld question never reaches the wire ────────────────────────
+rm -f "$SCRATCH/stub.request.json" "$SCRATCH/stub.ids.json"
+WITHHELD="$SCRATCH/withheld"
+export ORACFIT_SUPERVISOR_ENDPOINT="$(endpoint_url)"
+export ORACFIT_SUPERVISOR_POLICY="$SCRATCH/withheld-policy.json"
+withheld_rc="$(run_dispatch "$WITHHELD")"
+WITHHELD_EVENTS="$WITHHELD/.dispatch/logs/events.jsonl"
+n_withheld_ask="$(count_jsonl "$WITHHELD_EVENTS" type=supervisor_ask result=failed)"
+if [ "$withheld_rc" -eq "$base_rc" ] \
+  && [ ! -f "$SCRATCH/stub.request.json" ] \
+  && [ ! -f "$SCRATCH/stub.ids.json" ] \
+  && [ "$n_withheld_ask" -ge 1 ]; then
+  ok "the withheld question never reaches the wire"
+else
+  not "the withheld question never reaches the wire (rc=$withheld_rc base=$base_rc request=$([ -f "$SCRATCH/stub.request.json" ] && echo yes || echo no) ids=$([ -f "$SCRATCH/stub.ids.json" ] && echo yes || echo no) ask=$n_withheld_ask err=$(head -c 300 "$WITHHELD/dispatch.err"))"
 fi
 
 stop_stub

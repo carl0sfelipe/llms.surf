@@ -86,7 +86,7 @@ tmp="$(mktemp -d "${TMPDIR:-/tmp}/oracfit-supervisor-ask.XXXXXX")" || die "canno
 trap 'rm -rf "$tmp"' EXIT
 
 exported="$tmp/questions.json"
-if ! python3 "$QUESTIONS_PY" export --set "$questions" >"$exported"; then
+if ! python3 "$QUESTIONS_PY" export --set "$questions" --asked-only >"$exported"; then
   die "failed to export questions"
 fi
 

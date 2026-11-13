@@ -83,10 +83,11 @@ A policy with no mapped rules is not an error: the plan says nobody is
 asked.
 
 It **refuses** (exit 1, cause on stderr, no `--out`) a mapped id that
-is not in the question set, an invalid action, `INJECT_HINT` or `RESET`
-without a hint, `ESCALATE` without a `pergunta` or with fewer than two
-forks, and an invalid policy. An uncalibrated policy is a **warning**,
-not a refusal.
+is not in the question set, a mapped withheld question (with the
+`withheld_reason` the question itself gives), an invalid action,
+`INJECT_HINT` or `RESET` without a hint, `ESCALATE` without a
+`pergunta` or with fewer than two forks, and an invalid policy. An
+uncalibrated policy is a **warning**, not a refusal.
 
 The plan does **not** ask, does **not** decide, does **not** connect to
 a network, does **not** call a model, and does **not** write the
@@ -391,12 +392,18 @@ source policy has empty `rules`, so the supervisor sleeps until the
 owner maps a question. An id that is not in the question set is refused
 by the client before any network call.
 
-The command exports the question set, POSTs it through the System-One
-client, and runs this engine on the answers. Policy comes from
-`ORACFIT_SUPERVISOR_POLICY` or the shipped file in this checkout. The
-HTTP call's time ceiling comes from `ORACFIT_SUPERVISOR_TIMEOUT` or 20
-seconds. The record it writes is **this engine's record**: `decision`,
-`reason`, `order`. No extra key.
+A withheld question never leaves the machine. The chain exports only
+asked questions (`--asked-only`). Mapping a withheld id fails before
+the network: the client refuses an id that is not in the exported file,
+the run continues as if there were no order, and the reason is on the
+`supervisor_ask` event.
+
+The command exports the question set with `--asked-only`, POSTs it
+through the System-One client, and runs this engine on the answers.
+Policy comes from `ORACFIT_SUPERVISOR_POLICY` or the shipped file in
+this checkout. The HTTP call's time ceiling comes from
+`ORACFIT_SUPERVISOR_TIMEOUT` or 20 seconds. The record it writes is
+**this engine's record**: `decision`, `reason`, `order`. No extra key.
 
 If any step fails (the endpoint is down, the call exceeds the time
 ceiling, the answers are invalid, the policy is invalid) the decision
