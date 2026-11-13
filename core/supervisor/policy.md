@@ -243,6 +243,33 @@ ESCALATE does **not** invent the question, does **not** accept a
 question without a fork, and does **not** mark the paused run as
 `pass`. A refused order never fails the run.
 
+## The chain
+
+The runtime asks; the policy engine translates. Nothing else decides.
+
+At the attempt boundary — after the gauntlet feedback, before the order
+is applied — the single-stage runtime (`bin/dispatch-mode.sh`) runs
+`bin/oracfit-supervisor-ask.sh` when two things are true: there is no
+hand-placed decision file in `ORACFIT_SUPERVISOR_DECISION`, and the
+owner's endpoint is set in `ORACFIT_SUPERVISOR_ENDPOINT`. The endpoint
+is the owner's (D1). There is no default host, port, or URL. Without an
+endpoint the runtime asks nothing and the round follows the mechanical
+path, as it does today. A hand-placed decision file wins: the runtime
+does not ask.
+
+The command exports the question set, POSTs it through the System-One
+client, and runs this engine on the answers. Policy comes from
+`ORACFIT_SUPERVISOR_POLICY` or the shipped file in this checkout. The
+HTTP call's time ceiling comes from `ORACFIT_SUPERVISOR_TIMEOUT` or 20
+seconds. The record it writes is **this engine's record**: `decision`,
+`reason`, `order`. No extra key.
+
+If any step fails (the endpoint is down, the call exceeds the time
+ceiling, the answers are invalid, the policy is invalid) the decision
+file is not written, the runtime emits a `supervisor_ask` event with the
+result and the reason, and the run continues as if there were no order.
+A failed ask never fails the run.
+
 ## Pocket rule
 
 **The policy writes the order; the runtime is who executes it.**

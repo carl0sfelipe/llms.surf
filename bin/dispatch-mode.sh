@@ -772,11 +772,85 @@ print(fired, det)
     unset _gotcha_ids _gotcha_fired _gotcha_det _gotcha_events _gotcha_fires _gotcha_counts
   fi
 
-  # Attempt boundary: apply the supervisor order for the next attempt.
-  # A refusal must not change this run's exit code. An applied ESCALATE
-  # spends this attempt and pauses the run for the owner.
+  # Attempt boundary: ask the supervisor (when no hand-placed decision
+  # file and an endpoint is set), then apply the order for the next
+  # attempt. A failed ask must not change this run's exit code. An
+  # applied ESCALATE spends this attempt and pauses the run for the
+  # owner.
   if [ "$attempt" -lt "$max_attempts" ]; then
+    _sup_hand=""
+    if [ -n "${ORACFIT_SUPERVISOR_DECISION:-}" ] && [ -f "${ORACFIT_SUPERVISOR_DECISION}" ]; then
+      _sup_hand="$ORACFIT_SUPERVISOR_DECISION"
+    elif [ -n "${ORACFIT_SUPERVISOR_ENDPOINT:-}" ]; then
+      _sup_inbox="$(oracfit_inbox_dir)"
+      _sup_state="${_sup_inbox}/${RUN_ID}.state.json"
+      _sup_out="${_sup_inbox}/${RUN_ID}.json"
+      _sup_timeout="${ORACFIT_SUPERVISOR_TIMEOUT:-20}"
+      mkdir -p "$_sup_inbox" 2>/dev/null || true
+      if python3 - "$_sup_state" "$RUN_ID" "$mode_id" "$task_name" "$attempt" "$oracle_exit" "$gauntlet_accum" <<'PY'
+import json
+import os
+import sys
+
+out, run_id, mode_id, task_name, attempt, oracle_exit, accum = sys.argv[1:8]
+text = ""
+try:
+    with open(accum, encoding="utf-8") as fh:
+        text = fh.read()
+except OSError:
+    pass
+parent = os.path.dirname(out)
+if parent:
+    os.makedirs(parent, exist_ok=True)
+doc = {
+    "run_id": run_id,
+    "mode_id": mode_id,
+    "task_name": task_name,
+    "attempt": int(attempt),
+    "oracle_exit": int(oracle_exit),
+    "gauntlet_accum": text,
+}
+with open(out, "w", encoding="utf-8") as fh:
+    json.dump(doc, fh, ensure_ascii=False, indent=2)
+    fh.write("\n")
+PY
+      then
+        _sup_ask_rc=0
+        _sup_ask_err="${gauntlet_dir}/supervisor-ask.err"
+        if [ -n "${ORACFIT_SUPERVISOR_POLICY:-}" ]; then
+          "$SCRIPT_DIR/oracfit-supervisor-ask.sh" \
+            --endpoint "${ORACFIT_SUPERVISOR_ENDPOINT}" \
+            --state "$_sup_state" \
+            --out "$_sup_out" \
+            --policy "${ORACFIT_SUPERVISOR_POLICY}" \
+            --timeout "$_sup_timeout" \
+            >/dev/null 2>"$_sup_ask_err" || _sup_ask_rc=$?
+        else
+          "$SCRIPT_DIR/oracfit-supervisor-ask.sh" \
+            --endpoint "${ORACFIT_SUPERVISOR_ENDPOINT}" \
+            --state "$_sup_state" \
+            --out "$_sup_out" \
+            --timeout "$_sup_timeout" \
+            >/dev/null 2>"$_sup_ask_err" || _sup_ask_rc=$?
+        fi
+        if [ "$_sup_ask_rc" -eq 0 ] && [ -f "$_sup_out" ]; then
+          export ORACFIT_SUPERVISOR_DECISION="$_sup_out"
+        else
+          _sup_reason="$(tr '\r\n\t' '   ' < "$_sup_ask_err" 2>/dev/null | cut -c1-200)"
+          [ -n "$_sup_reason" ] || _sup_reason="ask failed"
+          oracfit_emit_event supervisor_ask result=failed reason="$_sup_reason" attempt="$attempt" || true
+        fi
+      else
+        oracfit_emit_event supervisor_ask result=failed reason="could not write round state" attempt="$attempt" || true
+      fi
+    fi
     oracfit_supervisor_apply_order "$ORACFIT_WORKDIR" "$gauntlet_accum" "$RUN_ID" "$attempt" || true
+    if [ -n "$_sup_hand" ]; then
+      export ORACFIT_SUPERVISOR_DECISION="$_sup_hand"
+    else
+      unset ORACFIT_SUPERVISOR_DECISION
+    fi
+    unset _sup_hand _sup_inbox _sup_state _sup_out _sup_timeout _sup_ask_rc _sup_ask_err _sup_reason
     if [ "${ORACFIT_SUPERVISOR_LAST_ACTION:-}" = "ESCALATE" ] \
       && [ "${ORACFIT_SUPERVISOR_LAST_RESULT:-}" = "applied" ]; then
       final_status=owner_question
