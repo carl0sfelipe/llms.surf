@@ -11,7 +11,7 @@ Apenas agregados de execução:
 ## O que NÃO é coletado
 
 - Código fonte, secrets, variáveis de ambiente, caminhos absolutos
-- Corpo completo do spec, raw `log_tail` ou payloads intermediários
+- Full spec body, the full log file (only a 40-line `log_tail`), or intermediate payloads
 
 ## Arquivo de uso
 
@@ -30,6 +30,24 @@ esse diretório. Cada linha é um objeto JSON com os campos `ts`, `source`,
 
 Registros em markdown também podem aparecer em `incidents/uso/` (diretório
 `ORACFIT_USO_DIR` se definida).
+
+### `logs` and `log_tail`
+
+`logs` lists every task log under `LOG_DIR`: each entry is `path|size;`.
+The writer matches `<task>-*.log` and `dispatch-<task>.log`. A log whose
+mtime cannot be read stays in this index, with its size; it is never
+chosen as the newest log.
+
+`log_tail` is the tail (the last 40 lines) of the newest task log. The
+usage report's `latest_log` row in the context table points at that same
+file (not `—`).
+
+mtime is read with the `stat` form detected once on the machine:
+`stat -c %Y` when that form works on a known file, otherwise `stat -f %m`.
+The two forms must not be chained inside a value capture: on GNU
+coreutils the BSD form (`stat -f`) prints filesystem status to stdout, the
+captured value is no longer an integer, the `-ge` comparison fails, and
+no log is ever chosen.
 
 ### Slot `extra`
 

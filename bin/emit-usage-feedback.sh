@@ -108,16 +108,39 @@ if [ -n "$SPEC" ] && [ -f "$SPEC" ]; then
   SPEC_HEAD=$(head -40 "$SPEC" 2>/dev/null | sed 's/`/\\`/g')
 fi
 
-# Logs da task: paths, tamanhos, cauda do mais recente
+# Logs of the task: paths, sizes, tail of the newest. Pick the working
+# `stat` form once. The two forms must not be chained inside a capture:
+# on GNU coreutils `stat -f` prints filesystem status to stdout, the
+# captured value is no longer an integer, and `-ge` never picks a log.
+# Detection discards its own output and does not abort the writer.
+STAT_MTIME_KIND=bsd
+if stat -c %Y "$0" >/dev/null 2>&1; then
+  STAT_MTIME_KIND=gnu
+fi
+
 LOG_INDEX=""
 LATEST_LOG=""
 LATEST_MTIME=0
 for f in "$LOG_DIR"/${TASK}-*.log "$LOG_DIR"/dispatch-${TASK}.log; do
-  [ -f "$f" ] || continue
-  sz=$(wc -c < "$f" | tr -d ' ')
-  mt=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo 0)
+  [ -e "$f" ] || continue
+  sz=$(wc -c < "$f" 2>/dev/null | tr -d ' ') || true
+  sz=${sz:-0}
+  mt=0
+  mt_ok=0
+  mt_raw=""
+  if [ "$STAT_MTIME_KIND" = gnu ]; then
+    mt_raw=$(stat -c %Y "$f" 2>/dev/null) && mt_ok=1
+  else
+    mt_raw=$(stat -f %m "$f" 2>/dev/null) && mt_ok=1
+  fi
+  if [ "$mt_ok" -eq 1 ]; then
+    case "$mt_raw" in
+      ''|*[!0-9]*) mt=0; mt_ok=0 ;;
+      *) mt=$mt_raw ;;
+    esac
+  fi
   LOG_INDEX="${LOG_INDEX}${f}|${sz};"
-  if [ "$mt" -ge "$LATEST_MTIME" ]; then
+  if [ "$mt_ok" -eq 1 ] && [ "$mt" -ge "$LATEST_MTIME" ]; then
     LATEST_MTIME=$mt
     LATEST_LOG=$f
   fi
@@ -125,7 +148,13 @@ done
 
 LOG_TAIL=""
 if [ -n "$LATEST_LOG" ]; then
-  LOG_TAIL=$(tail -40 "$LATEST_LOG" 2>/dev/null | sed 's/"/\\"/g' | tr '\n' '↵' | head -c 4000)
+  # GNU tr only replaces with a single byte, so `tr '\n' '↵'` would
+  # write 0xe2 and the usage row would stop parsing. Expand the ↵
+  # (U+21B5) in bash, then cap at 4000 bytes — same quote / newline
+  # treatment, valid UTF-8.
+  LOG_TAIL=$(tail -40 "$LATEST_LOG" 2>/dev/null | sed 's/"/\\"/g')
+  LOG_TAIL=${LOG_TAIL//$'\n'/↵}
+  LOG_TAIL=$(printf '%s' "$LOG_TAIL" | head -c 4000)
 fi
 
 # Env DISPATCH_* (sem secrets óbvios)
