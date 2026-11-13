@@ -524,14 +524,27 @@ without dropping any of them. The local base was repaired on the same day
 (`repair --in-place`, 46 recovered, 0 quarantined): it now parses **100%**
 — 1048 rows, 0 broken — with the original kept in `usage.jsonl.bak`.
 
-**Fact 3b — the `log_tail` of the telemetry is always empty on Linux.**
-`bin/emit-usage-feedback.sh` reads the mtime of the newest task log with
-`stat -f %m "$f"`. On GNU coreutils `stat -f` means *filesystem status*: it
-prints a multi-line blob and exits 0, so the `|| stat -c %Y` fallback never
-runs and the comparison fails with `integer expected` — the newest log is
-never picked and `log_tail` is written empty. Measured, not inferred: a
-usage row written with a 4 KB task log present carries `"log_tail":""`.
-The log *index* (path and size) is unaffected.
+**Fact 3b — the `log_tail` of the telemetry was always empty on Linux.**
+`bin/emit-usage-feedback.sh` read the mtime of the newest task log with
+`stat -f %m "$f"`, chained to `stat -c %Y "$f"` by `||`. On GNU coreutils
+`stat -f` means *filesystem status*: it prints a multi-line blob to stdout
+and **exits 1** (measured on this machine, 2026-11-13 — the earlier
+version of this note said it exits 0, which is wrong). The fallback
+therefore *does* run, but the blob of the first form is already inside the
+captured value: the value is the blob **plus** the integer, the comparison
+`-ge` fails with `integer expected`, the newest log is never picked and
+`log_tail` is written empty. Measured, not inferred: a usage row written
+with a 4 KB task log present carried `"log_tail":""`. The log *index*
+(path and size) was unaffected.
+
+Fixed by rung **12** (`specs/sup-12-telemetria-log-tail.md`): the `stat`
+form is detected **once**, before the loop, with its own output discarded;
+the capture holds only the integer; a log whose mtime cannot be read stays
+in the index with its size and is never chosen as the newest. Filling the
+tail exposed a second latent defect — GNU `tr` replaces a newline with a
+single byte, so the `↵` marker was written as a lone `0xe2` and the row
+stopped parsing; the marker is now expanded in the shell, keeping the row
+valid UTF-8 JSON.
 
 There is a fourth, smaller fact: the multi-stage runtime and the
 single-stage runtime are not symmetric. `bin/dispatch-stages.sh` has an
@@ -871,7 +884,7 @@ find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 63
+ls tests/test-*.sh | wc -l                    # 64
 python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
 # class-R rules out of the rules map (the legend line does not count: the
@@ -1013,3 +1026,4 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `core/supervisor/policy.json` | the shipped policy — uncalibrated, so it always continues (rung I) |
 | `core/supervisor/policy.md` | the contract of the policy (rung I) |
 | `specs/sup-11-politica-do-supervisor.md` | dispatchable spec, rung I |
+| `specs/sup-12-telemetria-log-tail.md` | dispatchable spec, rung 12 (the `log_tail` defect) |
