@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
 source "$SCRIPT_DIR/lib-oracfit-gotcha.sh"
+source "$SCRIPT_DIR/lib-oracfit-supervisor.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
 
@@ -571,7 +572,7 @@ while [ "$prompt_template_missing" = false ] && [ "$attempt" -lt "$max_attempts"
   gauntlet_gt="${gauntlet_dir}/ground-truth.md"
   oracfit_gauntlet_extract_ground_truth "$spec_file" >"$gauntlet_gt" 2>/dev/null || : >"$gauntlet_gt"
   # Gauntlet + ground-truth: compose BEFORE HITL inbox.
-  if $gauntlet_on && { [ -s "$gauntlet_accum" ] || [ -s "$gauntlet_gt" ] || [ -s "$gauntlet_gotcha" ]; }; then
+  if $gauntlet_on && { [ -s "$gauntlet_accum" ] || [ -s "$gauntlet_gt" ] || [ -s "$gauntlet_gotcha" ]; } || [ -s "$gauntlet_accum" ]; then
     # BSD/macOS mktemp: XXXXXX tem que terminar o template — sufixo .md fazia
     # mkstemp criar arquivo literal na 1a chamada e falhar "File exists" nas seguintes
     # (descoberto 2026-08-10 no relancamento do piloto content_factory).
@@ -768,6 +769,12 @@ print(fired, det)
     fi
     oracfit_emit_event gotcha_match attempt="$attempt" oracle_exit="$oracle_exit" fired="${_gotcha_fired:-0}" deterministic="${_gotcha_det:-0}" ids="${_gotcha_ids}"
     unset _gotcha_ids _gotcha_fired _gotcha_det _gotcha_events _gotcha_fires _gotcha_counts
+  fi
+
+  # Attempt boundary: apply the supervisor order for the next attempt.
+  # A refusal must not change this run's exit code.
+  if [ "$attempt" -lt "$max_attempts" ]; then
+    oracfit_supervisor_apply_order "$ORACFIT_WORKDIR" "$gauntlet_accum" "$RUN_ID" "$attempt" || true
   fi
 done
 
