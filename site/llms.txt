@@ -51,7 +51,7 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 - models in registry: 31,
 - modes: 21
 - adapters: 8 + 1 stub
-- test suites: 71
+- test suites: 72
 
 ## Surf aliases (the UI names — tree ids stay canonical)
 
@@ -81,7 +81,7 @@ oracfit mode share my_break > my_break.yaml
 oracfit mode add my_break.yaml         # somewhere else, on someone else's machine
 ```
 
-Seven facts about a mode file:
+Eight facts about a mode file:
 
 - A stage is a model (`model_ref`) or a script (`command`) - never both. A
   mechanical stage dispatches no model at all: the command runs and the
@@ -101,6 +101,10 @@ Seven facts about a mode file:
 - `prompt_template: vision_product_fields` - the file is read and its content
   is the prompt of that stage. Declared and missing fails the stage
   (`PROMPT TEMPLATE NOT FOUND`). Both runtimes honor it.
+- `json_schema: product_from_photo` - the file is read and handed to the
+  model as the shape of the answer. Declared and missing fails the stage
+  (`JSON SCHEMA NOT FOUND`). The runtime does not validate the model's
+  answer against the schema. Both runtimes honor it.
 - `model_ref: tier:cheap` expands to an ordered chain of models; a registry
   id pins one model exactly. The grammar is in docs/modes-catalog.md.
 

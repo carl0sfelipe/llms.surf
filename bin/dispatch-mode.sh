@@ -14,6 +14,7 @@ source "$SCRIPT_DIR/lib-oracfit-supervisor.sh"
 source "$SCRIPT_DIR/lib-oracfit-supervisor-ask.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
+source "$SCRIPT_DIR/lib-oracfit-json-schema.sh"
 
 CREDIT="Oracfit — Carlos Felipe"
 MAX_ATTEMPTS_DEFAULT=3
@@ -284,6 +285,26 @@ for stage in stages:
 ')"
 prompt_template_path=""
 prompt_template_missing=false
+# json_schema of the stage this runtime dispatches (the first stage
+# that carries a model_ref). Same reader as prompt_template.
+json_schema="$(printf '%s' "$mode_stage_json" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    print("")
+    raise SystemExit(0)
+stages = data.get("stages") or []
+for stage in stages:
+    if not isinstance(stage, dict):
+        continue
+    if stage.get("model_ref"):
+        value = stage.get("json_schema")
+        print(value if isinstance(value, str) else "")
+        break
+')"
+json_schema_path=""
+json_schema_missing=false
 # The throttle the mode declares: two calls of the same model, or two
 # attempts of the same stage, are at least rate_limit_s seconds apart. Read
 # from the stage that carries the model_ref - the stage this runtime
@@ -489,6 +510,15 @@ if [ -n "$prompt_template" ]; then
       >"${gauntlet_dir}/oracle-attempt-1.log"
   fi
 fi
+if [ -n "$json_schema" ]; then
+  if ! json_schema_path="$(oracfit_json_schema_resolve "$json_schema")"; then
+    json_schema_path=""
+    json_schema_missing=true
+    echo "JSON SCHEMA NOT FOUND: $json_schema" >&2
+    printf '%s\n' "JSON SCHEMA NOT FOUND: $json_schema" \
+      >"${gauntlet_dir}/oracle-attempt-1.log"
+  fi
+fi
 # Real executor cost, one JSON line per attempt (claude-code runner; other runners ignore it).
 # Summed into the ledger below — docs/delegation-check.md §4.
 export ORACFIT_COST_FILE="${gauntlet_dir}/executor-cost.jsonl"
@@ -537,7 +567,7 @@ resume_session_id=""
 if [ -n "$resume_run_id" ]; then
   resume_session_id="$(cat "$(oracfit_session_file "$RUN_ID")" 2>/dev/null || true)"
 fi
-while [ "$prompt_template_missing" = false ] && [ "$attempt" -lt "$max_attempts" ]; do
+while [ "$prompt_template_missing" = false ] && [ "$json_schema_missing" = false ] && [ "$attempt" -lt "$max_attempts" ]; do
   attempt=$((attempt + 1))
   oracfit_emit_event attempt_started attempt="$attempt" mode="$mode_id"
 
@@ -569,6 +599,17 @@ while [ "$prompt_template_missing" = false ] && [ "$attempt" -lt "$max_attempts"
       oracfit_prompt_template_emit "$prompt_template" "$prompt_template_path"
     } >"$pt_composed"
     run_spec_file="$pt_composed"
+  fi
+  # json_schema next: after the prompt template (when it exists), before
+  # ground truth, gauntlet feedback and the human message.
+  if [ -n "$json_schema_path" ]; then
+    js_composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-schema-XXXXXX")"
+    {
+      cat "$run_spec_file"
+      oracfit_json_schema_emit "$json_schema" "$json_schema_path"
+    } >"$js_composed"
+    [ "$run_spec_file" != "$spec_file" ] && rm -f "$run_spec_file"
+    run_spec_file="$js_composed"
   fi
   # P4: refresh ground-truth from ## Dados verificados every attempt/resume.
   gauntlet_gt="${gauntlet_dir}/ground-truth.md"

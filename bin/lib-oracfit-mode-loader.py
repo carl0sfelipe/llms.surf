@@ -415,6 +415,22 @@ def validate(path):
                 )
                 sys.exit(2)
 
+        # json_schema is a promise the runtime now keeps (the file is
+        # read and handed to the model as the shape of the answer). The
+        # loader does not know the user's workdir, so it cannot demand
+        # the file exists; it only refuses a value the runtime could not
+        # honor — an empty or non-string name. It does not validate the
+        # model's answer against the schema.
+        if "json_schema" in stage:
+            json_schema = stage["json_schema"]
+            if not isinstance(json_schema, str) or not json_schema.strip():
+                print(
+                    f"FAIL {p}: json_schema must be a non-empty string, got "
+                    f"{type(json_schema).__name__}: {json_schema!r}",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+
         # S8 owner_question: bool true ou string não-vazia (ex.: once)
         owner_q = stage.get("owner_question")
         if owner_q is not None:

@@ -22,6 +22,7 @@ source "$SCRIPT_DIR/lib-oracfit-supervisor-ask.sh"
 source "$SCRIPT_DIR/lib-oracfit-checkpoint.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
+source "$SCRIPT_DIR/lib-oracfit-json-schema.sh"
 
 source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 
@@ -441,6 +442,11 @@ while [ "$i" -lt "$stage_count" ]; do
   # promise is broken and the stage fails before any model is called.
   prompt_template="$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('prompt_template'); print(v if isinstance(v, str) else '')")"
   prompt_template_path=""
+  # json_schema: the file that is this stage's answer shape. Resolved against
+  # the workdir (and, for a bare name, ORACFIT_ROOT). Missing file = the
+  # promise is broken and the stage fails before any model is called.
+  json_schema="$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('json_schema'); print(v if isinstance(v, str) else '')")"
+  json_schema_path=""
   freshness_targets=()
   while IFS= read -r freshness_target; do
     [ -n "$freshness_target" ] && freshness_targets+=("$freshness_target")
@@ -523,6 +529,16 @@ for target in targets:
       oracle_exit=1
     fi
   fi
+  if [ -n "$json_schema" ]; then
+    if ! json_schema_path="$(oracfit_json_schema_resolve "$json_schema")"; then
+      json_schema_path=""
+      echo "JSON SCHEMA NOT FOUND: $json_schema" >&2
+      printf '%s\n' "JSON SCHEMA NOT FOUND: $json_schema" \
+        >"${gauntlet_dir}/oracle-attempt-1.log"
+      stage_preflight_failed=true
+      oracle_exit=1
+    fi
+  fi
   if [ "$role" = "run" ] && [ -n "$run_attempt_budget" ] \
     && [ "$run_attempt_count" -ge "$run_attempt_budget" ]; then
     budget_exhausted=true
@@ -588,12 +604,15 @@ for target in targets:
     owner_asked=false
     [ -f "$(oracfit_inbox_dir)/${RUN_ID}.question.md" ] && owner_asked=true
     inbox_jsonl="$(oracfit_inbox_file "$RUN_ID")"
-    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ] || [ -n "$prev_chain_file" ] || [ -n "$artifacts" ] || [ -n "$prompt_template_path" ]; then
+    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ] || [ -n "$prev_chain_file" ] || [ -n "$artifacts" ] || [ -n "$prompt_template_path" ] || [ -n "$json_schema_path" ]; then
       composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-stage-XXXXXX")"
       {
         cat "$spec_file"
         if [ -n "$prompt_template_path" ]; then
           oracfit_prompt_template_emit "$prompt_template" "$prompt_template_path"
+        fi
+        if [ -n "$json_schema_path" ]; then
+          oracfit_json_schema_emit "$json_schema" "$json_schema_path"
         fi
         echo ""
         echo "## Stage context (Oracfit multi-stage)"
