@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
+source "$SCRIPT_DIR/lib-oracfit-gotcha.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
 
@@ -472,8 +473,10 @@ flash_work_s=0
 # Gauntlet accum: oracle failures → next builder prompt (fresh session still).
 gauntlet_dir="$(oracfit_inbox_dir)/${RUN_ID}.gauntlet"
 gauntlet_accum="${gauntlet_dir}/feedback.md"
+gauntlet_gotcha="${gauntlet_dir}/gotcha.md"
 mkdir -p "$gauntlet_dir"
 : >"$gauntlet_accum"
+: >"$gauntlet_gotcha"
 if [ -n "$prompt_template" ]; then
   if ! prompt_template_path="$(oracfit_prompt_template_resolve "$prompt_template")"; then
     prompt_template_path=""
@@ -568,12 +571,12 @@ while [ "$prompt_template_missing" = false ] && [ "$attempt" -lt "$max_attempts"
   gauntlet_gt="${gauntlet_dir}/ground-truth.md"
   oracfit_gauntlet_extract_ground_truth "$spec_file" >"$gauntlet_gt" 2>/dev/null || : >"$gauntlet_gt"
   # Gauntlet + ground-truth: compose BEFORE HITL inbox.
-  if $gauntlet_on && { [ -s "$gauntlet_accum" ] || [ -s "$gauntlet_gt" ]; }; then
+  if $gauntlet_on && { [ -s "$gauntlet_accum" ] || [ -s "$gauntlet_gt" ] || [ -s "$gauntlet_gotcha" ]; }; then
     # BSD/macOS mktemp: XXXXXX tem que terminar o template — sufixo .md fazia
     # mkstemp criar arquivo literal na 1a chamada e falhar "File exists" nas seguintes
     # (descoberto 2026-08-10 no relancamento do piloto content_factory).
     gauntlet_composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-gauntlet-XXXXXX")"
-    oracfit_gauntlet_compose_spec "$run_spec_file" "$gauntlet_accum" "$gauntlet_composed" "$gauntlet_gt"
+    oracfit_gauntlet_compose_spec "$run_spec_file" "$gauntlet_accum" "$gauntlet_composed" "$gauntlet_gt" "$gauntlet_gotcha"
     [ "$run_spec_file" != "$spec_file" ] && rm -f "$run_spec_file"
     run_spec_file="$gauntlet_composed"
     oracfit_emit_event gauntlet_compose attempt="$attempt" has_feedback="$([ -s "$gauntlet_accum" ] && echo true || echo false)" has_ground_truth="$([ -s "$gauntlet_gt" ] && echo true || echo false)"
@@ -733,6 +736,38 @@ with open(path, "a") as f:
     biggest_gap="$(oracfit_gauntlet_append_feedback "$gauntlet_accum" "$attempt" "$oracle_exit" "$oracle_log")"
     oracfit_emit_event gauntlet_feedback attempt="$attempt" oracle_exit="$oracle_exit" biggest_gap="$(printf '%s' "$biggest_gap" | tr '\n' ' ' | cut -c1-200)"
     echo "gauntlet: attempt $attempt failed — gap: $biggest_gap" >&2
+    # Deterministic gotcha match: best-effort. A failed evaluation must not
+    # change the run's exit code or the oracle text.
+    _gotcha_ids=""
+    _gotcha_fired=0
+    _gotcha_det=0
+    _gotcha_events="$(oracfit_events_path)"
+    _gotcha_ids="$(oracfit_gotcha_match_inject "$ORACFIT_WORKDIR" "$gauntlet_dir" "$_gotcha_events" "$oracle_exit" "$attempt" "$gauntlet_gotcha" || true)"
+    _gotcha_fires="${gauntlet_dir}/fires-attempt-${attempt}.jsonl"
+    if [ -f "$_gotcha_fires" ]; then
+      _gotcha_counts="$(python3 -c '
+import json, sys
+fired = det = 0
+try:
+    for line in open(sys.argv[1], encoding="utf-8"):
+        line = line.strip()
+        if not line:
+            continue
+        fired += 1
+        try:
+            if json.loads(line).get("class") == "deterministic":
+                det += 1
+        except ValueError:
+            pass
+except OSError:
+    pass
+print(fired, det)
+' "$_gotcha_fires" 2>/dev/null || echo "0 0")"
+      _gotcha_fired="${_gotcha_counts%% *}"
+      _gotcha_det="${_gotcha_counts##* }"
+    fi
+    oracfit_emit_event gotcha_match attempt="$attempt" oracle_exit="$oracle_exit" fired="${_gotcha_fired:-0}" deterministic="${_gotcha_det:-0}" ids="${_gotcha_ids}"
+    unset _gotcha_ids _gotcha_fired _gotcha_det _gotcha_events _gotcha_fires _gotcha_counts
   fi
 done
 

@@ -18,12 +18,12 @@ One JSON file per gotcha, at `core/gotchas/<id>.json`.
     "clauses": [
       { "kind": "oracle_exit", "value": 1 },
       { "kind": "behavior_flag", "value": "B2" },
-      { "kind": "stderr_pattern", "pattern": "<fonte de regex>", "path_glob": "<glob>" }
+      { "kind": "stderr_pattern", "pattern": "<regex source>", "path_glob": "<glob>" }
     ]
   },
   "canary": {
-    "fire_fixture": "tests/fixtures/gotchas/<id>.fire.jsonl",
-    "quiet_fixture": "tests/fixtures/gotchas/healthy.jsonl"
+    "fire_fixture": "tests/fixtures/gotchas/<id>.fire.json",
+    "quiet_fixture": "tests/fixtures/gotchas/healthy.json"
   },
   "status": "active"
 }
@@ -39,7 +39,9 @@ the path as given to the compiler.
 text preserved) and **leaves the trigger empty**: `trigger.class` is `""`,
 `trigger.clauses` is `[]`, `status` is `draft`. It points `canary` at
 `tests/fixtures/gotchas/<id>.fire.jsonl` and at the shared quiet fixture
-`tests/fixtures/gotchas/healthy.jsonl` without creating either file.
+`tests/fixtures/gotchas/healthy.jsonl` without creating either file. A
+triad whose trigger includes `oracle_exit` or `behavior_flag` must point
+the fire canary at a signals bundle (`.json`) before it can be `active`.
 
 Inventing the predicate in the compiler is the defect this format exists to
 prevent. After compile, a human writes `trigger.clauses`, sets
@@ -71,22 +73,58 @@ Every clause must hold (logical AND). Each clause has a `kind`:
 | `text_pattern` | `pattern`, `path_glob` | the same, over workdir file contents |
 | `events_pattern` | `pattern`, `path_glob` | the regex is searched in the text of each line of `.jsonl` event files that match `path_glob` |
 
-Globs match a path relative to the workdir root, with the same fnmatch bash
-`case` uses (`*` crosses `/`).
+Globs match a path relative to the base directory of that kind, and also
+the file name, with the same fnmatch bash `case` uses (`*` crosses `/`).
 
-On a file target (`match`, and the canary check inside `validate`), only
-regex kinds can be satisfied. `oracle_exit` and `behavior_flag` cannot be
-read from a file and are treated as not satisfied.
+## Signals bundle
+
+`evaluate` (and a `.json` canary) read a JSON object. Signals are taken
+from the top level, or from a nested `signals` object when that key holds
+an object (other top-level keys are metadata and are ignored).
+
+| field | meaning |
+|---|---|
+| `oracle_exit` | integer, the round's oracle exit code |
+| `behavior_flags` | list of flag ids from `bin/oracfit-behavior-scan.py` |
+| `stderr_dir` | directory of oracle logs |
+| `text_root` | workdir root (base of `text_pattern`) |
+| `events_dir` | directory of event files |
+
+A relative directory is resolved against the current working directory; an
+absolute path is used as-is. A missing base directory is not an error: the
+clause that needed it stays unsatisfied. Unreadable files are skipped.
+
+`match` still evaluates a **file**. On a file target, only regex kinds can
+be satisfied; `oracle_exit` and `behavior_flag` cannot be read from a file
+and are treated as not satisfied.
 
 ## Canary contract
 
-Both files are required and both must exist.
+Both files are required and both must exist. Two fixture forms:
+
+- a path that **ends in `.json`** is a **signals bundle**: the trigger is
+  evaluated with the same evaluator `evaluate` uses
+- any other path (for example `.jsonl`) is an events/text file: only regex
+  clauses can be satisfied, over that file's contents (`match` semantics)
+
+`validate` applies that rule to the fire canary and to the quiet canary.
+
+A triad whose trigger has an `oracle_exit` or `behavior_flag` clause can
+only become `active` when the fire canary is a signals bundle (`.json`);
+otherwise `validate` reports `canary fixture is not a signals bundle:
+<path>`.
 
 - `canary.fire_fixture` — proof the trigger still fires: the trigger **must**
   match this fixture.
 - `canary.quiet_fixture` — proof it does not fire on a healthy run: the
-  trigger **must not** match this fixture. Shared path:
-  `tests/fixtures/gotchas/healthy.jsonl`.
+  trigger **must not** match this fixture.
+
+Shared quiet fixtures:
+
+- `tests/fixtures/gotchas/healthy.json` — a healthy round (oracle exit 0,
+  no flags), for triads with a scalar clause
+- `tests/fixtures/gotchas/healthy.jsonl` — a healthy events file, for
+  regex-only triads
 
 A canary is evidence. Do not synthesize a fire fixture for a real incident.
 The compiler only writes the path.
@@ -102,8 +140,20 @@ The compiler only writes the path.
 python3 bin/oracfit-gotcha.py compile <incident.md> [--out file]
 python3 bin/oracfit-gotcha.py validate [file...]
 python3 bin/oracfit-gotcha.py match <target>
+python3 bin/oracfit-gotcha.py evaluate --signals <file> [--bank <dir>]
 ```
 
 `validate` with no arguments checks every `core/gotchas/*.json`. Exit 0 when
 every file is ok, 1 when any failed, 2 on usage error. `match` prints each
 matching `id`, or `no match`; it exits 1 only on usage error.
+
+`evaluate` prints one JSON object per triad whose trigger closed, fields
+`id`, `class`, `title`, `prescription`, sorted by id. When nothing closes
+it prints nothing and exits 0. `--bank` defaults to `core/gotchas`. Exit 2
+on a usage error (missing `--signals`, signals file missing or invalid,
+`--bank` not a directory).
+
+At the attempt boundary the single-stage runtime evaluates the round and
+appends each **deterministic** triad that closed to the next attempt's
+composed spec, through the gauntlet channel. A `diffuse` triad is listed
+by `evaluate` and is not injected.

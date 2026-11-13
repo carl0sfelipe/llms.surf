@@ -628,13 +628,15 @@ oracfit_gauntlet_append_feedback() {
   printf '%s\n' "$biggest_gap"
 }
 
-# Compose base spec + optional ground-truth + feedback accum → out_spec.
-# Args: base_spec accum out_spec [ground_truth_file]
+# Compose base spec + optional ground-truth + feedback accum + gotcha prescriptions → out_spec.
+# Args: base_spec accum out_spec [ground_truth_file [gotcha_file]]
+# Callers with two to four arguments keep the composed spec they already produce.
 oracfit_gauntlet_compose_spec() {
   local base_spec="${1:?}"
   local accum="${2:?}"
   local out_spec="${3:?}"
   local gt_file="${4:-}"
+  local gotcha_file="${5:-}"
   {
     cat "$base_spec"
     if [ -n "$gt_file" ] && [ -s "$gt_file" ]; then
@@ -649,6 +651,11 @@ oracfit_gauntlet_compose_spec() {
       echo ""
       echo "<!-- oracfit-gauntlet: injected feedback; do not remove -->"
       cat "$accum"
+    fi
+    if [ -n "$gotcha_file" ] && [ -s "$gotcha_file" ]; then
+      echo ""
+      echo "<!-- oracfit-gotcha: deterministic prescriptions; do not remove -->"
+      cat "$gotcha_file"
     fi
   } >"$out_spec"
 }

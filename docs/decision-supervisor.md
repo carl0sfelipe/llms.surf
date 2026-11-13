@@ -830,7 +830,7 @@ everything.
 | **A** | `specs/sup-01-evidencia-quando-o-run-morre.md` — the single-stage runtime closes its own evidence on an abnormal exit (epilogue parity with `dispatch-stages.sh`) | the supervisor has a complete trajectory to read |
 | **B** | `specs/sup-02-argumentos-das-tool-calls.md` — the cursor adapter's `tool_call` events carry the tool arguments | the supervisor sees *what* was called, not only *which* tool — and a deterministic trigger over a repeated call needs the arguments to be a trigger at all |
 | **C** | the gotcha triad: a schema, a compiler from an incident file to a triad (trigger / symptom / prescription), a validator, and a canary that proves each trigger still fires — `specs/sup-03-gotcha-compilado.md` | the bank the supervisor matches against exists, and its triggers are falsifiable |
-| **D** | the deterministic matcher: a trigger that fires injects its triad's prescription into the spec the agent reads, through the existing gauntlet feedback channel | the first real intervention, with no model in the loop at all |
+| **D** | the deterministic matcher: a trigger that fires injects its triad's prescription into the spec the agent reads, through the existing gauntlet feedback channel — `specs/sup-05-matcher-determinista.md` | the first real intervention, with no model in the loop at all |
 | **D2** | the safe reset: the WIP snapshot via git plumbing (`refs/llms-surf/wip/<run>/iter-N`), the scoped restore that honors `core/protected-paths-default.txt`, and the scar line in the next attempt's spec — `specs/sup-04-reset-sem-destruir-evidencia.md` | RESET becomes a policy option that does not destroy the evidence |
 | **E** | the malformed `usage.jsonl` rows are fixed and the writer is hardened | the telemetry base is machine-readable again |
 | **F** | the semantic matcher: a CPU cross-encoder reduces the gotcha bank to top-k candidates — advisory, it never decides and never triggers | a scar that has no deterministic trigger is still found |
@@ -968,7 +968,10 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `fluxos/_comum/mapa-regras.md` | the 27 class-`R` rules = the question set (rung G) |
 | `incidents/` | the prose corpus the triads are compiled from (rung C) |
 | `core/gotchas/` | the triad bank (rung C) — created by the spec below |
+| `bin/oracfit-gotcha.py` | the triad compiler and validator (rung C) plus `evaluate`, the matcher over a signals bundle (rung D) |
+| `bin/lib-oracfit-gotcha.sh` | the Tier-0 scan, the signals bundle and the prescription injection at the attempt boundary (rung D) |
 | `specs/sup-01-evidencia-quando-o-run-morre.md` | dispatchable spec, rung A |
 | `specs/sup-02-argumentos-das-tool-calls.md` | dispatchable spec, rung B |
 | `specs/sup-03-gotcha-compilado.md` | dispatchable spec, rung C |
 | `specs/sup-04-reset-sem-destruir-evidencia.md` | dispatchable spec, rung D2 |
+| `specs/sup-05-matcher-determinista.md` | dispatchable spec, rung D |

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""oracfit-gotcha.py — compile an incident into a gotcha triad, validate it, match it.
+"""oracfit-gotcha.py — compile an incident into a gotcha triad, validate it, match it,
+evaluate it against a signals bundle.
 
 A gotcha is a falsifiable triad: trigger / symptom / prescription. The compiler copies
 symptom and prescription from the incident and leaves the trigger empty; the predicate is
 written by hand. validate proves the trigger still fires on its canary and stays quiet on
 the shared healthy fixture. match lists triads whose conjunction fires on a target file.
-
-This rung does not inject a gotcha into any runtime.
+evaluate lists triads whose conjunction fires on a round's signals bundle (oracle exit,
+behavior flags, and the directories the regex kinds walk).
 """
 from __future__ import annotations
 
@@ -24,7 +25,14 @@ SECTION_LIMIT = 1200
 TRIGGER_CLASSES = frozenset({"deterministic", "diffuse"})
 BEHAVIOR_FLAGS = frozenset({"B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"})
 REGEX_KINDS = frozenset({"stderr_pattern", "text_pattern", "events_pattern"})
-KNOWN_KINDS = frozenset({"oracle_exit", "behavior_flag"}) | REGEX_KINDS
+SCALAR_KINDS = frozenset({"oracle_exit", "behavior_flag"})
+KNOWN_KINDS = SCALAR_KINDS | REGEX_KINDS
+REGEX_KIND_DIRS = {
+    "stderr_pattern": "stderr_dir",
+    "text_pattern": "text_root",
+    "events_pattern": "events_dir",
+}
+SIGNALS_BUNDLE_SUFFIX = ".json"
 REQUIRED_FIELDS = ("id", "title", "symptom", "prescription")
 # english-ok-begin: incident headings the compiler copies; aliases match by prefix.
 SYMPTOM_PREFIXES = ("Sintoma", "O que quebrou / ficou frágil")
@@ -94,10 +102,10 @@ def compile_incident(incident_path: str, text: str) -> dict[str, Any]:
 
 
 def clause_matches_text(clause: dict[str, Any], text: str) -> bool:
-    """Evaluate one clause against a blob of text. Shared by validate and match.
+    """Evaluate one regex clause against a blob of text.
 
-    Regex kinds search `text`. `events_pattern` searches each line. `oracle_exit`
-    and `behavior_flag` cannot be read from a file and are not satisfied.
+    Shared by validate, match and evaluate. `events_pattern` searches each line;
+    `stderr_pattern` and `text_pattern` search the whole blob.
     """
     kind = clause.get("kind")
     pattern = clause.get("pattern")
@@ -125,27 +133,146 @@ def path_glob_matches(path: str, pattern: str) -> bool:
     return any(fnmatch.fnmatch(candidate, pattern) for candidate in candidates)
 
 
-def trigger_matches_file(trigger: dict[str, Any], path: str) -> bool:
-    """Conjunction of clauses over one file. Non-regex kinds are not satisfied."""
+def as_int(value: Any) -> int | None:
+    if is_int(value):
+        return value
+    return None
+
+
+def is_signals_bundle_path(path: str) -> bool:
+    return path.endswith(SIGNALS_BUNDLE_SUFFIX)
+
+
+def signals_from_obj(obj: dict[str, Any]) -> dict[str, Any]:
+    """Read signals from the top of a JSON object, or from a nested `signals` object."""
+    inner = obj.get("signals")
+    src = inner if isinstance(inner, dict) else obj
+    return {
+        "oracle_exit": src.get("oracle_exit"),
+        "behavior_flags": src.get("behavior_flags"),
+        "stderr_dir": src.get("stderr_dir"),
+        "text_root": src.get("text_root"),
+        "events_dir": src.get("events_dir"),
+    }
+
+
+def resolve_existing_dir(value: Any) -> Path | None:
+    """Relative dirs resolve against cwd. Missing or non-dir is not an error: None."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    path = Path(value)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    try:
+        if path.is_dir():
+            return path
+    except OSError:
+        return None
+    return None
+
+
+def list_readable_files(base: Path) -> list[tuple[str, str]]:
+    """(path relative to base, text) for readable files under base. Unreadable files skipped."""
+    found: list[tuple[str, str]] = []
+    try:
+        walker = os.walk(base, onerror=lambda _err: None)
+    except OSError:
+        return found
+    for dirpath, _dirnames, filenames in walker:
+        for name in filenames:
+            abs_path = Path(dirpath) / name
+            try:
+                rel = abs_path.relative_to(base).as_posix()
+            except ValueError:
+                rel = name
+            try:
+                text = abs_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            found.append((rel, text))
+    return found
+
+
+def regex_files_for_kind(kind: str, signals: dict[str, Any]) -> list[tuple[str, str]]:
+    overlay = signals.get("_files")
+    if isinstance(overlay, list):
+        return overlay
+    dir_key = REGEX_KIND_DIRS.get(kind)
+    if not dir_key:
+        return []
+    base = resolve_existing_dir(signals.get(dir_key))
+    if base is None:
+        return []
+    return list_readable_files(base)
+
+
+def regex_clause_holds(clause: dict[str, Any], files: list[tuple[str, str]]) -> bool:
+    """One regex clause against a list of (path, text). Glob + regex, shared by all commands."""
+    glob = clause.get("path_glob")
+    if not isinstance(glob, str) or not glob:
+        return False
+    for path, text in files:
+        if path_glob_matches(path, glob) and clause_matches_text(clause, text):
+            return True
+    return False
+
+
+def clause_holds(clause: dict[str, Any], signals: dict[str, Any]) -> bool:
+    """One clause against a signals bundle. Shared by validate, match and evaluate."""
+    if not isinstance(clause, dict):
+        return False
+    kind = clause.get("kind")
+    if kind == "oracle_exit":
+        got = as_int(signals.get("oracle_exit"))
+        return got is not None and got == clause.get("value")
+    if kind == "behavior_flag":
+        flags = signals.get("behavior_flags")
+        if not isinstance(flags, list):
+            return False
+        return clause.get("value") in flags
+    if kind in REGEX_KINDS:
+        return regex_clause_holds(clause, regex_files_for_kind(kind, signals))
+    return False
+
+
+def trigger_matches_signals(trigger: dict[str, Any], signals: dict[str, Any]) -> bool:
+    """Conjunction of every clause over a signals bundle."""
     clauses = trigger.get("clauses")
     if not isinstance(clauses, list) or not clauses:
         return False
+    for clause in clauses:
+        if not clause_holds(clause, signals):
+            return False
+    return True
+
+
+def trigger_matches_file(trigger: dict[str, Any], path: str) -> bool:
+    """Conjunction of clauses over one file. Non-regex kinds are not satisfied."""
     try:
         text = Path(path).read_text(encoding="utf-8")
     except OSError:
         return False
+    return trigger_matches_signals(trigger, {"_files": [(path, text)]})
+
+
+def trigger_has_scalar_clause(trigger: dict[str, Any]) -> bool:
+    clauses = trigger.get("clauses")
+    if not isinstance(clauses, list):
+        return False
     for clause in clauses:
-        if not isinstance(clause, dict):
+        if isinstance(clause, dict) and clause.get("kind") in SCALAR_KINDS:
+            return True
+    return False
+
+
+def trigger_matches_canary(trigger: dict[str, Any], path: str) -> bool:
+    """Fire/quiet fixture: `.json` is a signals bundle; anything else is a file."""
+    if is_signals_bundle_path(path):
+        data, load_error = load_json(path)
+        if load_error or not isinstance(data, dict):
             return False
-        kind = clause.get("kind")
-        if kind not in REGEX_KINDS:
-            return False
-        glob = clause.get("path_glob")
-        if not isinstance(glob, str) or not glob or not path_glob_matches(path, glob):
-            return False
-        if not clause_matches_text(clause, text):
-            return False
-    return True
+        return trigger_matches_signals(trigger, signals_from_obj(data))
+    return trigger_matches_file(trigger, path)
 
 
 def is_int(value: Any) -> bool:
@@ -218,9 +345,11 @@ def validate_gotcha(path: str, data: Any) -> list[str]:
         errors.append(f"canary fixture not found: {fire}")
     if not quiet_ok:
         errors.append(f"canary fixture not found: {quiet}")
-    if fire_ok and not trigger_matches_file(trigger, str(fire)):
+    if trigger_has_scalar_clause(trigger) and nonempty_str(fire) and not is_signals_bundle_path(str(fire)):
+        errors.append(f"canary fixture is not a signals bundle: {fire}")
+    if fire_ok and not trigger_matches_canary(trigger, str(fire)):
         errors.append("canary does not fire")
-    if quiet_ok and trigger_matches_file(trigger, str(quiet)):
+    if quiet_ok and trigger_matches_canary(trigger, str(quiet)):
         errors.append("canary fires on the quiet fixture")
 
     status = data.get("status")
@@ -285,6 +414,52 @@ def cmd_validate(files: list[str]) -> int:
     return 1 if failed_n else 0
 
 
+def iter_bank_dir(bank: Path) -> list[str]:
+    if not bank.is_dir():
+        return []
+    return sorted(str(path) for path in bank.glob("*.json") if path.is_file())
+
+
+def cmd_evaluate(signals_path: str, bank_dir: str | None) -> int:
+    if not os.path.isfile(signals_path):
+        print(f"oracfit-gotcha evaluate: not a file: {signals_path}", file=sys.stderr)
+        return 2
+    data, load_error = load_json(signals_path)
+    if load_error or not isinstance(data, dict):
+        print(f"oracfit-gotcha evaluate: invalid signals file: {signals_path}", file=sys.stderr)
+        return 2
+
+    bank = Path(bank_dir) if bank_dir else BANK_DIR
+    if not bank.is_dir():
+        print(f"oracfit-gotcha evaluate: not a directory: {bank}", file=sys.stderr)
+        return 2
+
+    signals = signals_from_obj(data)
+    hits: list[dict[str, str]] = []
+    for path in iter_bank_dir(bank):
+        triad, triad_error = load_json(path)
+        if triad_error or not isinstance(triad, dict):
+            continue
+        trigger = triad.get("trigger")
+        if not isinstance(trigger, dict):
+            continue
+        gotcha_id = triad.get("id")
+        if not nonempty_str(gotcha_id):
+            continue
+        if not trigger_matches_signals(trigger, signals):
+            continue
+        hits.append({
+            "id": str(gotcha_id),
+            "class": str(trigger.get("class") or ""),
+            "title": str(triad.get("title") or ""),
+            "prescription": str(triad.get("prescription") or ""),
+        })
+    hits.sort(key=lambda row: row["id"])
+    for row in hits:
+        sys.stdout.write(json.dumps(row, ensure_ascii=False) + "\n")
+    return 0
+
+
 def cmd_match(target: str) -> int:
     if not os.path.isfile(target):
         print(f"oracfit-gotcha match: not a file: {target}", file=sys.stderr)
@@ -313,7 +488,7 @@ def cmd_match(target: str) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="oracfit-gotcha",
-        description="Compile, validate and match gotcha triads.",
+        description="Compile, validate, match and evaluate gotcha triads.",
     )
     sub = parser.add_subparsers(dest="cmd")
 
@@ -326,6 +501,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     match_p = sub.add_parser("match", help="list triad ids whose trigger fires on a file")
     match_p.add_argument("target", nargs="?")
+
+    evaluate_p = sub.add_parser(
+        "evaluate",
+        help="list triads whose trigger fires on a signals bundle",
+    )
+    evaluate_p.add_argument("--signals", required=True, help="JSON signals bundle")
+    evaluate_p.add_argument(
+        "--bank",
+        default=None,
+        help="triad bank directory (default: core/gotchas)",
+    )
     return parser
 
 
@@ -344,6 +530,8 @@ def main(argv: list[str] | None = None) -> int:
             print("oracfit-gotcha match: expected a target file", file=sys.stderr)
             return 1
         return cmd_match(args.target)
+    if args.cmd == "evaluate":
+        return cmd_evaluate(args.signals, args.bank)
     parser.print_usage(sys.stderr)
     return 2
 
