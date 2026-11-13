@@ -171,20 +171,28 @@ def resolve_existing_dir(value: Any) -> Path | None:
     return None
 
 
-def list_readable_files(base: Path) -> list[tuple[str, str]]:
-    """(path relative to base, text) for readable files under base. Unreadable files skipped."""
+def list_matching_files(base: Path, glob: str) -> list[tuple[str, str]]:
+    """Readable files under base whose relative path matches glob.
+
+    The glob is decided before the file is opened. A `.git` directory is not
+    descended into; other hidden directories are walked. Unreadable files and
+    files that do not decode as UTF-8 are skipped.
+    """
     found: list[tuple[str, str]] = []
     try:
         walker = os.walk(base, onerror=lambda _err: None)
     except OSError:
         return found
-    for dirpath, _dirnames, filenames in walker:
+    for dirpath, dirnames, filenames in walker:
+        dirnames[:] = [name for name in dirnames if name != ".git"]
         for name in filenames:
             abs_path = Path(dirpath) / name
             try:
                 rel = abs_path.relative_to(base).as_posix()
             except ValueError:
                 rel = name
+            if not path_glob_matches(rel, glob):
+                continue
             try:
                 text = abs_path.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
@@ -193,7 +201,7 @@ def list_readable_files(base: Path) -> list[tuple[str, str]]:
     return found
 
 
-def regex_files_for_kind(kind: str, signals: dict[str, Any]) -> list[tuple[str, str]]:
+def regex_files_for_kind(kind: str, signals: dict[str, Any], glob: str) -> list[tuple[str, str]]:
     overlay = signals.get("_files")
     if isinstance(overlay, list):
         return overlay
@@ -203,14 +211,15 @@ def regex_files_for_kind(kind: str, signals: dict[str, Any]) -> list[tuple[str, 
     base = resolve_existing_dir(signals.get(dir_key))
     if base is None:
         return []
-    return list_readable_files(base)
+    return list_matching_files(base, glob)
 
 
-def regex_clause_holds(clause: dict[str, Any], files: list[tuple[str, str]]) -> bool:
-    """One regex clause against a list of (path, text). Glob + regex, shared by all commands."""
+def regex_clause_holds(clause: dict[str, Any], signals: dict[str, Any]) -> bool:
+    """One regex clause. Glob filters the walk before any file is opened."""
     glob = clause.get("path_glob")
     if not isinstance(glob, str) or not glob:
         return False
+    files = regex_files_for_kind(clause.get("kind"), signals, glob)
     for path, text in files:
         if path_glob_matches(path, glob) and clause_matches_text(clause, text):
             return True
@@ -231,7 +240,7 @@ def clause_holds(clause: dict[str, Any], signals: dict[str, Any]) -> bool:
             return False
         return clause.get("value") in flags
     if kind in REGEX_KINDS:
-        return regex_clause_holds(clause, regex_files_for_kind(kind, signals))
+        return regex_clause_holds(clause, signals)
     return False
 
 
@@ -439,6 +448,8 @@ def cmd_evaluate(signals_path: str, bank_dir: str | None) -> int:
     for path in iter_bank_dir(bank):
         triad, triad_error = load_json(path)
         if triad_error or not isinstance(triad, dict):
+            continue
+        if triad.get("status") != "active":
             continue
         trigger = triad.get("trigger")
         if not isinstance(trigger, dict):

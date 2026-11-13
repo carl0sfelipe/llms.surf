@@ -200,6 +200,44 @@ else
   not "behavior_flag right (rc=$rc out='$out')"
 fi
 
+echo "== a draft triad never fires"
+write_triad "$BANK/fixture-gotcha-match.json" '{"status":"draft"}'
+write_signals "$WORKDIR/sig-draft.json" '{"oracle_exit":1,"behavior_flags":[]}'
+set +e
+out_draft="$(eval_bank "$WORKDIR/sig-draft.json")"
+rc_draft=$?
+set -e
+write_triad "$BANK/fixture-gotcha-match.json" '{"status":"active"}'
+set +e
+out_active="$(eval_bank "$WORKDIR/sig-draft.json")"
+rc_active=$?
+set -e
+if [ "$rc_draft" -eq 0 ] && [ -z "$out_draft" ] \
+  && [ "$rc_active" -eq 0 ] && echo "$out_active" | grep -q '"id": "fixture-gotcha-match"'; then
+  ok "a draft triad never fires"
+else
+  not "a draft triad never fires (draft rc=$rc_draft out='$out_draft' active rc=$rc_active out='$out_active')"
+fi
+
+echo "== the glob filters before the file is read"
+GLOB_BANK="$WORKDIR/bank-glob"
+GLOB_TREE="$WORKDIR/glob-tree"
+mkdir -p "$GLOB_BANK" "$GLOB_TREE"
+printf 'HIT_MARKER found\n' >"$GLOB_TREE/keep.log"
+mkfifo "$GLOB_TREE/blocker.pipe"
+write_triad "$GLOB_BANK/glob.json" '{"trigger":{"class":"deterministic","clauses":[{"kind":"text_pattern","path_glob":"keep.log","pattern":"HIT_MARKER"}]}}'
+write_signals "$WORKDIR/sig-glob.json" "{\"oracle_exit\":0,\"behavior_flags\":[],\"text_root\":\"$GLOB_TREE\"}"
+set +e
+timeout 10 python3 "$GOTCHA" evaluate --signals "$WORKDIR/sig-glob.json" --bank "$GLOB_BANK" \
+  >"$WORKDIR/glob.out" 2>"$WORKDIR/glob.err"
+rc_glob=$?
+set -e
+if [ "$rc_glob" -eq 0 ] && grep -q '"id": "fixture-gotcha-match"' "$WORKDIR/glob.out"; then
+  ok "the glob filters before the file is read"
+else
+  not "the glob filters before the file is read (rc=$rc_glob out=$(cat "$WORKDIR/glob.out") err=$(cat "$WORKDIR/glob.err"))"
+fi
+
 echo "== 4. diffuse names and is not injected"
 write_triad "$BANK/fixture-gotcha-match.json" '{"trigger":{"class":"diffuse","clauses":[{"kind":"oracle_exit","value":1}]}}'
 write_signals "$WORKDIR/sig-exit-1.json" '{"oracle_exit":1,"behavior_flags":[]}'

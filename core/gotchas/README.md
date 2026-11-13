@@ -75,6 +75,11 @@ Every clause must hold (logical AND). Each clause has a `kind`:
 
 Globs match a path relative to the base directory of that kind, and also
 the file name, with the same fnmatch bash `case` uses (`*` crosses `/`).
+The glob is decided **before** the file is opened: the walk matches
+`path_glob` against the relative path (and the file name) and only then
+reads. Unreadable files and files that do not decode as UTF-8 are skipped.
+The walk does not descend into a `.git` directory; other hidden directories
+such as `.dispatch/` are still walked.
 
 ## Signals bundle
 
@@ -131,8 +136,8 @@ The compiler only writes the path.
 
 ## `status`
 
-- `active` — passes `validate`
-- `draft` — does not pass (`compile` emits this)
+- `active` — passes `validate`; `evaluate` lists the triad when the trigger closes
+- `draft` — does not pass (`compile` emits this); `evaluate` never lists it, even when the conjunction would hold
 
 ## Commands
 
@@ -147,13 +152,15 @@ python3 bin/oracfit-gotcha.py evaluate --signals <file> [--bank <dir>]
 every file is ok, 1 when any failed, 2 on usage error. `match` prints each
 matching `id`, or `no match`; it exits 1 only on usage error.
 
-`evaluate` prints one JSON object per triad whose trigger closed, fields
-`id`, `class`, `title`, `prescription`, sorted by id. When nothing closes
-it prints nothing and exits 0. `--bank` defaults to `core/gotchas`. Exit 2
-on a usage error (missing `--signals`, signals file missing or invalid,
-`--bank` not a directory).
+`evaluate` prints one JSON object per **active** triad whose trigger closed, fields
+`id`, `class`, `title`, `prescription`, sorted by id. A `draft` triad is not
+listed even when the conjunction would hold. When nothing closes it prints
+nothing and exits 0. `--bank` defaults to `core/gotchas`. Exit 2 on a usage
+error (missing `--signals`, signals file missing or invalid, `--bank` not a
+directory).
 
 At the attempt boundary the single-stage runtime evaluates the round and
-appends each **deterministic** triad that closed to the next attempt's
+appends each **active deterministic** triad that closed to the next attempt's
 composed spec, through the gauntlet channel. A `diffuse` triad is listed
-by `evaluate` and is not injected.
+by `evaluate` and is not injected. A `draft` triad is not listed and is
+not injected.
