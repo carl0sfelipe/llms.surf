@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 TOOLCALL_SUFFIX = "ToolCall"
 PREVIEW_MAX = 160
 DETAIL_MAX = 200
+INPUT_STR_MAX = 300
 
 
 def events_path():
@@ -63,6 +64,29 @@ def preview_for(tool, inner, workdir):
         target = ""
     preview = "[%s] %s" % (tool, target) if target else "[%s]" % tool
     return preview[:PREVIEW_MAX]
+
+
+def truncate_strings(value):
+    """Copy JSON values, cutting every string to INPUT_STR_MAX characters."""
+    if isinstance(value, str):
+        return value[:INPUT_STR_MAX]
+    if isinstance(value, dict):
+        return {k: truncate_strings(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [truncate_strings(v) for v in value]
+    return value
+
+
+def args_as_input(inner):
+    """Native args object for the event, or None when args is not a dict.
+
+    Returned as a dict (never json.dumps): a dumped string becomes an escaped
+    string inside the JSON event (opencode finding 2026-08-01).
+    """
+    args = inner.get("args") if isinstance(inner, dict) else None
+    if not isinstance(args, dict):
+        return None
+    return truncate_strings(args)
 
 
 class EventWriter:
@@ -122,36 +146,46 @@ def main():
             if not isinstance(obj, dict):
                 continue
 
-            typ = obj.get("type")
-            subtype = obj.get("subtype")
+            try:
+                typ = obj.get("type")
+                subtype = obj.get("subtype")
 
-            if typ == "thinking" and subtype == "delta":
-                text = obj.get("text")
-                if isinstance(text, str) and text:
-                    thinking_buf.append(text)
-            elif typ == "thinking" and subtype == "completed":
-                detail = "".join(thinking_buf)
-                thinking_buf = []
-                if detail:
-                    writer.emit("thinking", detail=detail[:DETAIL_MAX])
-            elif typ == "tool_call" and subtype == "started":
-                tool, inner = tool_from_payload(obj.get("tool_call"))
-                if not tool:
-                    continue
-                writer.emit("tool_call", tool=tool, preview=preview_for(tool, inner, workdir))
-                tool_count += 1
-                if tool_count % 10 == 0:
-                    writer.emit("metric", name="context_bytes", value=stream_bytes)
-            elif typ == "result":
-                usage = obj.get("usage") if isinstance(obj.get("usage"), dict) else {}
-                writer.emit(
-                    "metric",
-                    name="cursor_usage",
-                    input_tokens=usage.get("inputTokens", 0),
-                    output_tokens=usage.get("outputTokens", 0),
-                    cache_read_tokens=usage.get("cacheReadTokens", 0),
-                    duration_ms=obj.get("duration_ms", 0),
-                )
+                if typ == "thinking" and subtype == "delta":
+                    text = obj.get("text")
+                    if isinstance(text, str) and text:
+                        thinking_buf.append(text)
+                elif typ == "thinking" and subtype == "completed":
+                    detail = "".join(thinking_buf)
+                    thinking_buf = []
+                    if detail:
+                        writer.emit("thinking", detail=detail[:DETAIL_MAX])
+                elif typ == "tool_call" and subtype == "started":
+                    tool, inner = tool_from_payload(obj.get("tool_call"))
+                    if not tool:
+                        continue
+                    fields = {
+                        "tool": tool,
+                        "preview": preview_for(tool, inner, workdir),
+                    }
+                    native = args_as_input(inner)
+                    if native is not None:
+                        fields["input"] = native
+                    writer.emit("tool_call", **fields)
+                    tool_count += 1
+                    if tool_count % 10 == 0:
+                        writer.emit("metric", name="context_bytes", value=stream_bytes)
+                elif typ == "result":
+                    usage = obj.get("usage") if isinstance(obj.get("usage"), dict) else {}
+                    writer.emit(
+                        "metric",
+                        name="cursor_usage",
+                        input_tokens=usage.get("inputTokens", 0),
+                        output_tokens=usage.get("outputTokens", 0),
+                        cache_read_tokens=usage.get("cacheReadTokens", 0),
+                        duration_ms=obj.get("duration_ms", 0),
+                    )
+            except Exception:
+                continue
     finally:
         if writer:
             writer.close()
