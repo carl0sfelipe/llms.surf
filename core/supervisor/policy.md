@@ -164,6 +164,50 @@ The record is an **order**, not a verdict. It has no key `verdict`,
 carries what to do: the hint to inject, or the owner question with its
 fork of consequences.
 
+## Runtime
+
+The policy writes the order; the runtime (`bin/lib-oracfit-supervisor.sh`)
+is who executes it, at the attempt boundary after the gauntlet feedback.
+A refused order never fails the run: nothing happens, the reason is on
+the event, and the round follows the mechanical path as if the order
+were CONTINUE.
+
+| action | what the runtime does |
+|---|---|
+| `CONTINUE` | nothing. Result `noop` |
+| `INJECT_HINT` | append the non-empty `order.hint` to the gauntlet accumulator so the next attempt's spec carries it. Without a hint the order is refused |
+| `RESET` | snapshot, scoped restore from HEAD, then the scar plus the hint on the accumulator (see below) |
+| `ESCALATE` | not executed on this runtime. The order is refused |
+
+### RESET
+
+RESET is executed in this order. The tree does not move until the
+evidence is on a ref.
+
+1. **Evidence.** The dirty working tree (tracked edits and untracked
+   files) is saved as a commit under `refs/llms-surf/wip/<run>/iter-N`
+   before any restore. The snapshot does not move HEAD, the real index,
+   or the working tree. If the snapshot cannot be taken, the order is
+   refused and nothing happens. The commit sha and the ref name go on
+   the summary and the event.
+2. **Target.** The tracked paths the attempt changed against HEAD (the
+   index, the working tree, and deletions). Protected paths are skipped:
+   the same globs the restore already uses (`.oracfit-protected` in the
+   workdir when it exists; otherwise the default list, only when the
+   workdir is this checkout). Paths under `.dispatch/` are skipped.
+3. **Restore.** Those paths are restored from **HEAD** (the last clean
+   checkpoint), not from the snapshot ref. A refused restore restores
+   nothing; the order is refused and the event says nothing was restored.
+4. **Scar.** The scar line (naming the ref) and the order's `hint` go on
+   the accumulator, in the same markdown block the gauntlet uses, so the
+   next attempt's spec carries both.
+
+RESET does **not** delete a file, does **not** move HEAD, and does
+**not** restore a protected path. Untracked files the agent created
+stay. Without a non-empty `hint`, or when the snapshot or the restore
+cannot be done, the order is refused: nothing happens and the run
+continues.
+
 ## Pocket rule
 
 **The policy writes the order; the runtime is who executes it.**
