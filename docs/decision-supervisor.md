@@ -503,9 +503,10 @@ to call next. Fixing this is spec `specs/sup-02-argumentos-das-tool-calls.md`.
 lives in the ring, and the ring is created **in the target project**
 (`bin/oracfit-ring.sh`, `RING_DIR="$TARGET/$RING_DIR_NAME"`), not here.
 So the supervisor's labels are collected where the work happens. What
-exists here is the raw material: 632 auto-telemetry files in
-`incidents/uso/` (562 `success`, 38 `failed`, 32 `already-passing`) and
-126 postmortems.
+exists here is the raw material: 1048 auto-telemetry files in
+`incidents/uso/` (937 `success`, 63 `failed`, 48 `already-passing`, counted
+on 2026-11-13 — the directory grows with every dispatch) and 126
+postmortems.
 
 **Fact 3 — the telemetry base had rows that were not machine-readable.**
 `bin/dispatch-escalate.sh` built the `extra` payload with
@@ -851,7 +852,7 @@ everything.
 | **D2** | the safe reset: the WIP snapshot via git plumbing (`refs/llms-surf/wip/<run>/iter-N`), the scoped restore that honors `core/protected-paths-default.txt`, and the scar line in the next attempt's spec — `specs/sup-04-reset-sem-destruir-evidencia.md` | RESET becomes a policy option that does not destroy the evidence |
 | **E** | the malformed `usage.jsonl` rows are fixed and the writer is hardened: the stray brace at the origin, an `extra` that is always an object, a row that does not parse is rejected instead of appended, and a repair for the base already written — `specs/sup-06-usage-jsonl-legivel.md` | the telemetry base is machine-readable again |
 | **F** | the semantic matcher: a CPU cross-encoder reduces the gotcha bank to top-k candidates — advisory, it never decides and never triggers | a scar that has no deterministic trigger is still found |
-| **G** | the question set: the 27 class-`R` rules written as typed questions with their evidence and cost | the supervisor has something to ask |
+| **G** | the question set: the 27 class-`R` rules written as typed questions with their evidence and cost — `specs/sup-07-perguntas-tipadas.md` (delivered: `core/supervisor/questions.json`, 26 asked, 1 withheld) | the supervisor has something to ask |
 | **H** | the supervisor adapter: a client of `POST /v1/systemone` (llama.cpp on CPU today, Eikos on a GPU later), with abstention and a calibration log wired to `owner_score_pred` | the decision layer exists at all |
 | **I** | the policy decision: CONTINUE / INJECT_HINT / RESET / ESCALATE, with RESET meaning a snapshot or WIP commit and ESCALATE meaning the existing `owner_question` path (exit 7, with its `pergunta:` + fork contract) | the supervisor acts, at the attempt boundary, under a calibrated threshold |
 | **J** | the post-loop distiller: a finished run compiles into a new triad — the WIP↔HEAD diff as the *symptom*, the trigger still written by hand — and its canary joins the suite | the bank grows from the corpus instead of by hand |
@@ -867,14 +868,15 @@ nothing but bash and Python.
 ```bash
 cat VERSION                                   # 0.4.1
 find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
-ls incidents/uso/*.md | wc -l                 # 632
-grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 562 / 38 / 32
+ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
+grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 53
-python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 30
+ls tests/test-*.sh | wc -l                    # 60
+python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
-# class-R rules out of the rules map
-grep -c '| \*\*R\*\*' fluxos/_comum/mapa-regras.md                # 27
+# class-R rules out of the rules map (the legend line does not count: the
+# rule rows are the ones whose FIRST cell is the rule number)
+python3 -c "import re;print(sum(1 for l in open('fluxos/_comum/mapa-regras.md') if re.match(r'^\|\s*\d+\s*\|',l) and '**R**' in l))"   # 27
 
 # trajectories: tool_call events, and how many carry arguments
 python3 - <<'PY'
@@ -995,3 +997,9 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `specs/sup-03-gotcha-compilado.md` | dispatchable spec, rung C |
 | `specs/sup-04-reset-sem-destruir-evidencia.md` | dispatchable spec, rung D2 |
 | `specs/sup-05-matcher-determinista.md` | dispatchable spec, rung D |
+| `specs/sup-06-usage-jsonl-legivel.md` | dispatchable spec, rung E |
+| `bin/oracfit-usage-json.py` | the JSON rules for the usage slots, the line check and the repair of the base (rung E) |
+| `core/supervisor/questions.json` | the typed question set, one question per class-`R` rule (rung G) |
+| `bin/oracfit-questions.py` | the validator, the index and the System-One export of the question set (rung G) |
+| `core/supervisor/README.md` | the contract of the question set (rung G) |
+| `specs/sup-07-perguntas-tipadas.md` | dispatchable spec, rung G |

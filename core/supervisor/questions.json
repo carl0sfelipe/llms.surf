@@ -1,0 +1,308 @@
+{
+  "version": 1,
+  "source": "fluxos/_comum/mapa-regras.md", "english-ok": "on-disk path of the rules map",
+  "questions": [
+    {
+      "id": "r01-orchestrator-writes-bulk",
+      "rule": 1,
+      "type": "choice",
+      "instructions": "Is the work in front of this run a judgment call, or a deterministic transform that should not go to a model?",
+      "criteria": {
+        "judgment": "the input is open and the work needs reasoning",
+        "mechanical": "the input is known and the transform is deterministic"
+      },
+      "evidence": ["spec", "workdir"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-25-dispatch-saiu-com-exit-0-sem-fazer-nada-.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r10-fork-needs-real-session-id",
+      "rule": 10,
+      "type": "noul",
+      "instructions": "Does this fork request carry a session id that session-health actually issued?",
+      "evidence": ["bin/session-health.sh", "spec"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": false,
+      "incidents": [],
+      "withheld_reason": "The rules map cites no postmortem for this rule, and no file in incidents/ shows an invented fork session id."
+    },
+    {
+      "id": "r12-command-without-time-cap",
+      "rule": 12,
+      "type": "noul",
+      "instructions": "Is an ad-hoc command running without a time cap?",
+      "evidence": ["stderr", "log_size", "events.jsonl"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-24-travamento-silencioso.md", "incidents/2026-08-11-critic-sem-teto-trava-stage-e-run-morre-sem-run-finished.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r13-validation-network-commit-together",
+      "rule": 13,
+      "type": "noul",
+      "instructions": "Does this command mix local validation, a network call, and a commit in one block?",
+      "evidence": ["tool_call", "thinking", "stderr"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-24-travamento-silencioso.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r14-announce-duration-before-long-run",
+      "rule": 14,
+      "type": "score",
+      "instructions": "How clearly was the expected duration of this long command announced?",
+      "criteria": ["announced before start", "only inferable from the command", "the human had to ask if it was stuck"],
+      "evidence": ["log_size", "stderr", "events.jsonl"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-24-travamento-silencioso.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r16-recurring-failure-becomes-a-rule",
+      "rule": 16,
+      "type": "noul",
+      "instructions": "Does this trajectory repeat a failure that already happened before and still has no mechanism?",
+      "evidence": ["bin/oracfit-behavior-scan.py", "events.jsonl"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-24-travamento-silencioso.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r23-rule-candidate-is-continuous",
+      "rule": 23,
+      "type": "noul",
+      "instructions": "Did this round leave a repeated failure that is still not a rule or a mechanism?",
+      "evidence": ["behavior_flags", "events.jsonl", "ledger"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-25-31-regras-em-dois-dias-e-a-maioria-depen.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r25-dry-run-before-store-write",
+      "rule": 25,
+      "type": "noul",
+      "instructions": "Is this run about to write a data store without a dry-run of the same command?",
+      "evidence": ["tool_call", "git_diff", "bin/oracfit-behavior-scan.py"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-25-captura-de-resultado-mentiu-3x.md", "incidents/2026-07-27-registry-marcou-provider-como-morto-e-ni.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r26-absence-only-when-proven",
+      "rule": 26,
+      "type": "noul",
+      "instructions": "Does this claim of absence rest on a partial search?",
+      "evidence": ["workdir", "spec", "stderr"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-27-ls-la-em-symlink-reportou-tamanho-do-lin.md", "incidents/2026-07-26-hermes-default-em-servidor-local-morto-d.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r32-every-rule-declares-its-mechanism",
+      "rule": 32,
+      "type": "noul",
+      "instructions": "Does this rule or change declare a mechanism, or declare that it has none?",
+      "evidence": ["spec", "ledger"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-25-31-regras-em-dois-dias-e-a-maioria-depen.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r36-publish-needs-clean-tree",
+      "rule": 36,
+      "type": "choice",
+      "instructions": "What is the git state of the tree about to be published?",
+      "criteria": {
+        "clean": "working tree clean, HEAD on the remote, and a tag points at the commit",
+        "dirty_tree": "the working tree has uncommitted changes",
+        "not_on_remote": "HEAD is not on the remote",
+        "untagged": "no tag points at the commit"
+      },
+      "evidence": ["git_status", "git_diff"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-28-versao-publicada-sem-commit-fonte-de-0-1.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r38-report-declares-every-ledger",
+      "rule": 38,
+      "type": "noul",
+      "instructions": "Does this report omit a ledger that a later runtime already writes?",
+      "evidence": ["ledger"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-29-relatorio-media-um-ledger-de-tres.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r40-classify-task-before-dispatch",
+      "rule": 40,
+      "type": "choice",
+      "instructions": "What class is this task, before it is dispatched?",
+      "criteria": {
+        "mechanical": "a mechanical transform with a grep oracle",
+        "copy": "copy, scaffold or architecture work",
+        "judgment": "work that needs a model"
+      },
+      "evidence": ["spec"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-07-30-cursor-grok-primeiras-impressoes-do-disp.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r42-long-job-outside-dispatch-is-orphan",
+      "rule": 42,
+      "type": "noul",
+      "instructions": "Is a long-running job alive outside dispatch.sh with no watchdog?",
+      "evidence": ["log_size", "events.jsonl", "stderr"],
+      "cost": {"model_calls": 1, "state": "full", "note": "reads the whole events stream of the run"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-09-content-factory-morte-silenciosa-sem-watchdog.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r43-competitor-price-needs-condition",
+      "rule": 43,
+      "type": "noul",
+      "instructions": "Does generated copy compare a competitor price without disclosing the condition of the goods?",
+      "evidence": ["workdir", "spec"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-09-conteudo-factualmente-enganoso-compara-n.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r44-verdict-field-is-canonical",
+      "rule": 44,
+      "type": "choice",
+      "instructions": "Which shape does the T4 verdict artifact have?",
+      "criteria": {
+        "canonical": "it uses the field the oracle matches and is intact",
+        "alias": "it uses a different name for the same gate",
+        "truncated": "the YAML is truncated"
+      },
+      "evidence": ["oracle_exit", "stderr", "spec"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-09-oraculo-casa-decision-mas-t4-vem-com-sta.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r45-feedback-extractor-reads-produced-fields",
+      "rule": 45,
+      "type": "noul",
+      "instructions": "Is the gauntlet feedback extractor looking for a field the agent does not produce?",
+      "evidence": ["behavior_flags", "events.jsonl"],
+      "cost": {"model_calls": 1, "state": "full", "note": "reads the whole gauntlet loop of the run"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-10-gauntlet-loop-biggest-gap-vazio-faz-buil.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r46-oracle-command-line-has-backticks",
+      "rule": 46,
+      "type": "noul",
+      "instructions": "Does the oracle command line contain backticks that the shell would substitute?",
+      "evidence": ["spec", "oracle_exit", "stderr"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-10-backtick-no-comando-do-oraculo-vira-substituicao-e-127.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r47-control-files-stay-outside-workdir",
+      "rule": 47,
+      "type": "noul",
+      "instructions": "Does a stop, pause, or interrupt control file live inside the dispatched workdir?",
+      "evidence": ["workdir", "tool_call", "git_status"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-10-modelo-despachado-cria-arquivo-de-parada-e-mata-loop.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r48-in-place-edit-of-live-bash",
+      "rule": 48,
+      "type": "noul",
+      "instructions": "Is a live run still going to re-read a bash script that is being edited in place?",
+      "evidence": ["git_diff", "tool_call", "events.jsonl"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-12-editar-script-em-execucao-desloca-bytes-exit-127.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r49-long-process-uses-managed-background",
+      "rule": 49,
+      "type": "choice",
+      "instructions": "How was this long-lived process launched?",
+      "criteria": {
+        "managed": "through the harness managed background",
+        "one_shot": "from a one-shot shell with & or nohup"
+      },
+      "evidence": ["tool_call", "stderr", "log_size"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-12-servidor-demo-morre-quando-a-sessao-do-s.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r50-oracle-line-count-is-not-the-bar",
+      "rule": 50,
+      "type": "noul",
+      "instructions": "Is the oracle using a line-count bar as the dominant pass criterion?",
+      "evidence": ["spec", "oracle_exit"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-12-oraculo-com-regua-de-linhas-minimas-indu.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r51-disk-cleanup-never-destroys-state",
+      "rule": 51,
+      "type": "score",
+      "instructions": "How tight is free disk relative to a destructive cleanup?",
+      "criteria": ["comfortable", "alert", "too tight to keep going"],
+      "evidence": ["workdir", "stderr"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-12-disco-enche-ate-100-de-forma-recorrente-.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r52-product-repo-is-not-client-workdir",
+      "rule": 52,
+      "type": "noul",
+      "instructions": "Is this dispatch using the product repo as a client workdir or spec store?",
+      "evidence": ["workdir", "spec"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-13-oracfit-soldado-no-orbe-corte-sem-catego.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r53-verdict-lives-on-canonical-surface",
+      "rule": 53,
+      "type": "choice",
+      "instructions": "Where was this run verdict read from?",
+      "criteria": {
+        "canonical": "the workdir status --task surface for this run",
+        "other_log": "a log grep that is not this run",
+        "other_checkout": "a checkout where the work does not live"
+      },
+      "evidence": ["ledger", "events.jsonl", "workdir"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-27-dogfooding-tres-despachos-no-mesmo-workdir-e-veredito-lido-grepa-crud.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r54-allowlist-governs-free-path-only",
+      "rule": 54,
+      "type": "noul",
+      "instructions": "Is a paid explicit-id dispatch being recorded as an allowlist violation?",
+      "evidence": ["ledger"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-30-allowlist-do-free-path-assertiona-dispat.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r55-fallback-validated-in-the-chain",
+      "rule": 55,
+      "type": "noul",
+      "instructions": "Does a registry fallback point at a ghost id or a dead endpoint?",
+      "evidence": ["stderr", "oracle_exit", "ledger"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-08-30-fallback-do-registry-aponta-endpoint-sus.md"], "english-ok": "on-disk incident filename"
+    }
+  ]
+}
