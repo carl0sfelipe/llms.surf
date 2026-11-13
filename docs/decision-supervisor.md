@@ -870,6 +870,8 @@ everything.
 | **I** | the policy decision: CONTINUE / INJECT_HINT / RESET / ESCALATE, with RESET meaning a snapshot or WIP commit and ESCALATE meaning the existing `owner_question` path (exit 7, with its `pergunta:` + fork contract) — `specs/sup-11-politica-do-supervisor.md` (delivered: `bin/oracfit-policy.py`, which reads the typed answers and writes **one order**; the shipped `core/supervisor/policy.json` is **not calibrated**, so it always answers CONTINUE) | the supervisor acts, at the attempt boundary, under a calibrated threshold |
 | **J** | the post-loop distiller: a finished run compiles into a new triad — the WIP↔HEAD diff as the *symptom*, the trigger still written by hand — and its canary joins the suite — `specs/sup-10-destilador-pos-loop.md` (delivered: `bin/oracfit-distill.py`, which turns a usage report into a **draft** triad; the trigger and the prescription stay written by hand) | the bank grows from the corpus instead of by hand |
 | **K** | the local dev assistant registered as a first-class runner, its trajectory feeding the ring | the flywheel closes |
+| **12** | the telemetry defect (Fact 3b): the `log_tail` of the usage row was **always** empty on Linux, because the two `stat` forms were chained inside a value capture and the failing form's output poisoned the value — `specs/sup-12-telemetria-log-tail.md` (delivered: the working form is detected **once**, with its own output discarded; filling the tail then exposed a second latent defect — GNU `tr` wrote the `↵` marker as a single byte, and the row stopped parsing) | the telemetry finally carries what happened in the round |
+| **13** | the runtime **executes** the order: at the attempt boundary — after the gauntlet feedback, before the next attempt composes the spec — the single-stage runtime reads the decision record and applies it — `specs/sup-13-runtime-executa-a-ordem.md` (delivered: `bin/lib-oracfit-supervisor.sh`; **INJECT_HINT** is executed, **CONTINUE** is a no-op, and **RESET** and **ESCALATE** are *refused* — nothing is executed by half) | the supervisor stops only writing orders and starts acting |
 
 A through E are independent of every open decision above: they are about
 the evidence and the mechanism, not about the models. F onward needs the
@@ -884,7 +886,7 @@ find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 64
+ls tests/test-*.sh | wc -l                    # 65
 python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
 # class-R rules out of the rules map (the legend line does not count: the
@@ -1027,3 +1029,5 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `core/supervisor/policy.md` | the contract of the policy (rung I) |
 | `specs/sup-11-politica-do-supervisor.md` | dispatchable spec, rung I |
 | `specs/sup-12-telemetria-log-tail.md` | dispatchable spec, rung 12 (the `log_tail` defect) |
+| `bin/lib-oracfit-supervisor.sh` | the runtime side of the order: applies it at the attempt boundary (rung 13) |
+| `specs/sup-13-runtime-executa-a-ordem.md` | dispatchable spec, rung 13 |
