@@ -298,6 +298,43 @@ file is not written, the runtime emits a `supervisor_ask` event with the
 result and the reason, and the run continues as if there were no order.
 A failed ask never fails the run.
 
+## The two runtimes
+
+Both runtimes ask through the same chain (`bin/oracfit-supervisor-ask.sh`,
+rung 16) and apply through the same library
+(`bin/lib-oracfit-supervisor.sh`, rung 13). The endpoint is the owner's
+(D1): there is no default. Without an endpoint, neither runtime asks.
+A hand-placed decision file in `ORACFIT_SUPERVISOR_DECISION` wins and
+nothing is asked. A failed ask never fails the run.
+
+### Single-stage (`bin/dispatch-mode.sh`)
+
+At the attempt boundary, after the gauntlet feedback, the single-stage
+runtime asks (rung 16) and applies all four actions: `CONTINUE`,
+`INJECT_HINT`, `RESET`, and `ESCALATE`. An applied `ESCALATE` pauses
+the run with status `owner_question` and exit 7.
+
+### Multi-stage (`bin/dispatch-stages.sh`)
+
+At the stage's attempt boundary, after the gauntlet feedback, the
+multi-stage runtime asks and applies `CONTINUE` and `INJECT_HINT`. The
+hint of an `INJECT_HINT` is appended to that stage's accumulator
+(`feedback.md`) and travels in the spec of the next attempt of the
+stage.
+
+The other two actions are **refused**, with the reason on the event.
+The refusal does not change the run's result.
+
+- `RESET` is refused because it would restore tracked files from HEAD.
+  The checkpoint of a multi-stage run is the tree after the last stage,
+  not HEAD: the runtime does not commit between stages, so restoring
+  from HEAD would destroy the work of earlier stages. RESET waits for
+  a rung that defines the multi-stage checkpoint.
+- `ESCALATE` is refused because it would pause the whole run. In the
+  multi-stage runtime the pause is the owner-question channel the
+  runtime already has (the stage artifact `owner-question.md`, status
+  `owner_question`, exit 7). This rung does not touch that channel.
+
 ## Pocket rule
 
 **The policy writes the order; the runtime is who executes it.**

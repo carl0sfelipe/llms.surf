@@ -876,6 +876,7 @@ everything.
 | **15** | the **ESCALATE** becomes executable: the order's `pergunta` and its `se ... -> ...` fork are validated (an order without the fork is refused), the question lands in the workdir inbox, the run leaves the attempt loop with status `owner_question` and exit **7**, and the final oracle recheck is skipped so a paused run is never flipped to `pass` — `specs/sup-15-escalate-pausa-a-run.md` | a question nobody in the system can answer reaches the owner on the channel that already exists |
 | **16** | the runtime **asks**: the three pieces that were never joined — the typed question set (rung G), the System-One client (rung H) and the policy engine (rung I) — become one command, and the single-stage runtime calls it at the attempt boundary when no hand-placed decision file exists — `specs/sup-16-o-runtime-pergunta.md` (delivered: `bin/oracfit-supervisor-ask.sh`, which exports the question set, asks, and hands the answers to the engine; the endpoint has **no default** — it is the owner's, so the whole path stays dormant until D1 and a calibration exist) | the order stops being a file someone writes by hand and becomes the answer to a question the system asked |
 | **17** | the **calibration becomes a file**: the ring stores the measured calibration line on its own score event (the English `CALIBRATION` line it prints), and a new command copies that line into a *derived* policy — `specs/sup-17-a-calibracao-e-registrada.md` (delivered: `bin/oracfit-calibrate.py`; it refuses without a scored ring, it never writes the source policy, and the **threshold is the owner's number**, not a measurement) | the shipped policy stops being permanently `not calibrated` the moment the owner scores one ring |
+| **18** | the **multi-stage runtime asks too**: the same chain, at the stage attempt boundary — `specs/sup-18-o-multi-stage-tambem-pergunta.md` (delivered: `bin/dispatch-stages.sh` consults the supervisor and applies `CONTINUE` and `INJECT_HINT`; it **refuses** `RESET` — the tree is shared across stages and HEAD is not a multi-stage checkpoint — and **refuses** `ESCALATE`, whose pause belongs to the stage's own owner-question channel) | the long runs, the ones with stages and gauntlet, stop degrading alone |
 
 A through E are independent of every open decision above: they are about
 the evidence and the mechanism, not about the models. F onward needs the
@@ -890,7 +891,7 @@ find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 69
+ls tests/test-*.sh | wc -l                    # 70
 python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
 # class-R rules out of the rules map (the legend line does not count: the
@@ -1045,3 +1046,5 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `bin/oracfit-calibrate.py` | the calibration recorder: a scored ring plus the owner's threshold become a derived policy (rung 17) |
 | `tests/test-supervisor-calibrate.sh` | the suite of the calibration: no score is refused, the line is copied, the threshold is the owner's (rung 17) |
 | `specs/sup-17-a-calibracao-e-registrada.md` | dispatchable spec, rung 17 (the calibration is recorded) |
+| `tests/test-supervisor-stages-ask.sh` | the suite of the multi-stage ask: the hint reaches the next stage attempt, RESET and ESCALATE are refused there (rung 18) |
+| `specs/sup-18-o-multi-stage-tambem-pergunta.md` | dispatchable spec, rung 18 (the multi-stage asks too) |

@@ -17,6 +17,7 @@ source "$SCRIPT_DIR/lib-oracfit-events.sh"
 source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
+source "$SCRIPT_DIR/lib-oracfit-supervisor.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
 
@@ -25,6 +26,132 @@ source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 # Quem serviu + veredito da allowlist + sidecar do kernel (mesma leitura do dispatch.sh).
 oracfit_stages_read_efetivo() {
   oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}"
+}
+
+# Ask the supervisor at a stage attempt boundary and apply CONTINUE /
+# INJECT_HINT. RESET and ESCALATE are refused here: restoring from HEAD
+# would drop earlier stages' work, and pausing the run belongs to the
+# owner-question channel. A failed ask never changes the run's exit.
+oracfit_stages_supervisor_boundary() {
+  local accum="${1:-}"
+  local attempt="${2:-}"
+  local oracle_exit="${3:-}"
+  local role="${4:-}"
+  local gauntlet_dir="${5:-}"
+  local _sup_hand=""
+  local _sup_inbox=""
+  local _sup_state=""
+  local _sup_out=""
+  local _sup_timeout=""
+  local _sup_ask_rc=0
+  local _sup_ask_err=""
+  local _sup_reason=""
+  local _sup_action=""
+
+  if [ -n "${ORACFIT_SUPERVISOR_DECISION:-}" ] && [ -f "${ORACFIT_SUPERVISOR_DECISION}" ]; then
+    _sup_hand="$ORACFIT_SUPERVISOR_DECISION"
+  elif [ -n "${ORACFIT_SUPERVISOR_ENDPOINT:-}" ]; then
+    _sup_inbox="$(oracfit_inbox_dir)"
+    _sup_state="${_sup_inbox}/${RUN_ID}.state.json"
+    _sup_out="${_sup_inbox}/${RUN_ID}.json"
+    _sup_timeout="${ORACFIT_SUPERVISOR_TIMEOUT:-20}"
+    mkdir -p "$_sup_inbox" 2>/dev/null || true
+    if python3 - "$_sup_state" "$RUN_ID" "$role" "$attempt" "$oracle_exit" "$accum" "$mode_id" "$task_name" <<'PY'
+import json
+import os
+import sys
+
+out, run_id, role, attempt, oracle_exit, accum, mode_id, task_name = sys.argv[1:9]
+text = ""
+try:
+    with open(accum, encoding="utf-8") as fh:
+        text = fh.read()
+except OSError:
+    pass
+parent = os.path.dirname(out)
+if parent:
+    os.makedirs(parent, exist_ok=True)
+doc = {
+    "run_id": run_id,
+    "role": role,
+    "attempt": int(attempt),
+    "oracle_exit": int(oracle_exit),
+    "gauntlet_accum": text,
+    "mode_id": mode_id,
+    "task_name": task_name,
+}
+with open(out, "w", encoding="utf-8") as fh:
+    json.dump(doc, fh, ensure_ascii=False, indent=2)
+    fh.write("\n")
+PY
+    then
+      _sup_ask_rc=0
+      _sup_ask_err="${gauntlet_dir}/supervisor-ask.err"
+      if [ -n "${ORACFIT_SUPERVISOR_POLICY:-}" ]; then
+        "$SCRIPT_DIR/oracfit-supervisor-ask.sh" \
+          --endpoint "${ORACFIT_SUPERVISOR_ENDPOINT}" \
+          --state "$_sup_state" \
+          --out "$_sup_out" \
+          --policy "${ORACFIT_SUPERVISOR_POLICY}" \
+          --timeout "$_sup_timeout" \
+          >/dev/null 2>"$_sup_ask_err" || _sup_ask_rc=$?
+      else
+        "$SCRIPT_DIR/oracfit-supervisor-ask.sh" \
+          --endpoint "${ORACFIT_SUPERVISOR_ENDPOINT}" \
+          --state "$_sup_state" \
+          --out "$_sup_out" \
+          --timeout "$_sup_timeout" \
+          >/dev/null 2>"$_sup_ask_err" || _sup_ask_rc=$?
+      fi
+      if [ "$_sup_ask_rc" -eq 0 ] && [ -f "$_sup_out" ]; then
+        export ORACFIT_SUPERVISOR_DECISION="$_sup_out"
+      else
+        _sup_reason="$(tr '\r\n\t' '   ' < "$_sup_ask_err" 2>/dev/null | cut -c1-200)"
+        [ -n "$_sup_reason" ] || _sup_reason="ask failed"
+        oracfit_emit_event supervisor_ask result=failed reason="$_sup_reason" attempt="$attempt" stage="$role" || true
+      fi
+    else
+      oracfit_emit_event supervisor_ask result=failed reason="could not write round state" attempt="$attempt" stage="$role" || true
+    fi
+  fi
+
+  if [ -n "${ORACFIT_SUPERVISOR_DECISION:-}" ] && [ -f "${ORACFIT_SUPERVISOR_DECISION}" ]; then
+    _sup_action="$(python3 - "${ORACFIT_SUPERVISOR_DECISION}" <<'PY'
+import json
+import sys
+try:
+    rec = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, ValueError):
+    raise SystemExit(0)
+decision = rec.get("decision")
+if isinstance(decision, str) and decision.strip():
+    sys.stdout.write(decision.strip())
+PY
+)" || _sup_action=""
+  fi
+
+  if [ "$_sup_action" = "RESET" ]; then
+    _sup_reason="RESET would restore from HEAD; a multi-stage run checkpoint is not HEAD"
+    printf 'supervisor_order action=%s attempt=%s result=%s reason=%s\n' \
+      RESET "$attempt" refused "$_sup_reason"
+    oracfit_emit_event supervisor_order \
+      attempt="$attempt" action=RESET result=refused reason="$_sup_reason" stage="$role" || true
+  elif [ "$_sup_action" = "ESCALATE" ]; then
+    _sup_reason="ESCALATE would pause the run; multi-stage pause is the owner-question channel"
+    printf 'supervisor_order action=%s attempt=%s result=%s reason=%s\n' \
+      ESCALATE "$attempt" refused "$_sup_reason"
+    oracfit_emit_event supervisor_order \
+      attempt="$attempt" action=ESCALATE result=refused reason="$_sup_reason" stage="$role" || true
+  else
+    oracfit_supervisor_apply_order "$ORACFIT_WORKDIR" "$accum" "$RUN_ID" "$attempt" || true
+  fi
+
+  if [ -n "$_sup_hand" ]; then
+    export ORACFIT_SUPERVISOR_DECISION="$_sup_hand"
+  else
+    unset ORACFIT_SUPERVISOR_DECISION
+  fi
+  return 0
 }
 
 mode_id=""
@@ -706,6 +833,13 @@ for line in open(sys.argv[1]):
       # || true mantém o fail open: critic nunca derruba o stage loop.
       critic_gap="$(oracfit_gauntlet_run_critic "$mode_yaml" "$model_ref" "$oracle_log" "$accum" "$attempt" "$barra_file" || true)"
       [ -n "$critic_gap" ] && gap="$critic_gap" && echo "gauntlet stage=$role attempt=$attempt critic_gap=$gap" >&2
+      # Attempt boundary: ask the supervisor (when no hand-placed decision
+      # file and an endpoint is set), then apply CONTINUE / INJECT_HINT
+      # for the next attempt of this stage. RESET and ESCALATE are
+      # refused: the tree is shared across stages, and the pause is the
+      # owner-question channel. A failed ask must not change this run's
+      # exit code.
+      oracfit_stages_supervisor_boundary "$accum" "$attempt" "$oracle_exit" "$role" "$gauntlet_dir" || true
     fi
   done
 
