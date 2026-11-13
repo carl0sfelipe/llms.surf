@@ -102,12 +102,40 @@ If `calibration.ring` **or** `calibration.line` is empty, the decision is
 `CONTINUE` with reason `not calibrated`. There is no valid threshold
 without that evidence. The supervisor reuses the ring loop
 (`bin/oracfit-ring.sh` subcommand `score`, which records `owner_score`
-and prints a `CALIBRATION` line). This policy does not invent a second
-loop and does not parse the line: non-empty ring and line **are** the
-evidence.
+with the `CALIBRATION` line and prints that same line). This policy does
+not invent a second loop and does not parse the line: non-empty ring and
+line **are** the evidence.
 
 The shipped `act_above` of `0.8` is a placeholder. It is not a measured
 threshold.
+
+## Who calibrates
+
+The owner calibrates with `bin/oracfit-calibrate.py`. The command reads
+the ring's ledger at the target, copies the measured evidence, and writes
+a **new** policy file (`--out`). It does not write the source policy.
+
+Evidence (measured, never declared):
+
+- `calibration.ring` — the ring id that recorded the owner's score
+- `calibration.line` — the `CALIBRATION` line stored on that
+  `owner_score` event, copied as-is. The command does not format the
+  line.
+
+The owner's choice, not a measurement:
+
+- `thresholds.act_above` — the number the owner passes as `--act-above`.
+  The command requires it, checks it is in `0..1`, and does not derive it
+  from the ring.
+
+The command does **not** measure the threshold, does **not** write the
+source policy, and does **not** calibrate without evidence: a ring with
+no `owner_score` event is refused (exit 1, cause on stderr, no output
+file).
+
+The shipped policy at `core/supervisor/policy.json` stays uncalibrated.
+The calibrated file is derived; the runtime chooses which policy to
+load.
 
 ## Abstention is a first-class answer
 
