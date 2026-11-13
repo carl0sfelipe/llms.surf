@@ -507,13 +507,28 @@ exists here is the raw material: 632 auto-telemetry files in
 `incidents/uso/` (562 `success`, 38 `failed`, 32 `already-passing`) and
 126 postmortems.
 
-**Fact 3 — 5% of the telemetry rows are not machine-readable.**
-`bin/emit-usage-feedback.sh` writes the `extra` field with a raw
-`--extra-json` payload into a `printf` template that already closes the
-object, so the 32 `already-passing` rows in `.dispatch/usage/usage.jsonl`
-end with an extra `}` and **fail to parse**. Every other row (600) parses.
-Any consumer that reads usage.jsonl must tolerate this today, and the
-writer should be fixed (rule 16: a recurring failure becomes a mechanism).
+**Fact 3 — the telemetry base had rows that were not machine-readable.**
+`bin/dispatch-escalate.sh` built the `extra` payload with
+`local extra="${3:-{}}"`: the `${...}` expansion ends at the first `}`, so
+the payload the caller wrote arrived with **one extra closing brace** and
+the whole usage row failed to parse. Measured on 2026-11-13: **46 of 1010**
+rows in `.dispatch/usage/usage.jsonl` were broken — every one of them from
+`source` `escalate`, every one of them with the same shape — while the
+other 964 parsed. Rung **E** fixed the origin and hardened the writer
+(`specs/sup-06-usage-jsonl-legivel.md`): `extra` is always an object,
+`mode` and `exit_code` are never raw caller text, a row that does not
+parse is rejected instead of appended, and
+`bin/oracfit-usage-json.py repair` recovers the rows already written
+without dropping any of them.
+
+**Fact 3b — the `log_tail` of the telemetry is always empty on Linux.**
+`bin/emit-usage-feedback.sh` reads the mtime of the newest task log with
+`stat -f %m "$f"`. On GNU coreutils `stat -f` means *filesystem status*: it
+prints a multi-line blob and exits 0, so the `|| stat -c %Y` fallback never
+runs and the comparison fails with `integer expected` — the newest log is
+never picked and `log_tail` is written empty. Measured, not inferred: a
+usage row written with a 4 KB task log present carries `"log_tail":""`.
+The log *index* (path and size) is unaffected.
 
 There is a fourth, smaller fact: the multi-stage runtime and the
 single-stage runtime are not symmetric. `bin/dispatch-stages.sh` has an
@@ -832,7 +847,7 @@ everything.
 | **C** | the gotcha triad: a schema, a compiler from an incident file to a triad (trigger / symptom / prescription), a validator, and a canary that proves each trigger still fires — `specs/sup-03-gotcha-compilado.md` | the bank the supervisor matches against exists, and its triggers are falsifiable |
 | **D** | the deterministic matcher: a trigger that fires injects its triad's prescription into the spec the agent reads, through the existing gauntlet feedback channel — `specs/sup-05-matcher-determinista.md` | the first real intervention, with no model in the loop at all |
 | **D2** | the safe reset: the WIP snapshot via git plumbing (`refs/llms-surf/wip/<run>/iter-N`), the scoped restore that honors `core/protected-paths-default.txt`, and the scar line in the next attempt's spec — `specs/sup-04-reset-sem-destruir-evidencia.md` | RESET becomes a policy option that does not destroy the evidence |
-| **E** | the malformed `usage.jsonl` rows are fixed and the writer is hardened | the telemetry base is machine-readable again |
+| **E** | the malformed `usage.jsonl` rows are fixed and the writer is hardened: the stray brace at the origin, an `extra` that is always an object, a row that does not parse is rejected instead of appended, and a repair for the base already written — `specs/sup-06-usage-jsonl-legivel.md` | the telemetry base is machine-readable again |
 | **F** | the semantic matcher: a CPU cross-encoder reduces the gotcha bank to top-k candidates — advisory, it never decides and never triggers | a scar that has no deterministic trigger is still found |
 | **G** | the question set: the 27 class-`R` rules written as typed questions with their evidence and cost | the supervisor has something to ask |
 | **H** | the supervisor adapter: a client of `POST /v1/systemone` (llama.cpp on CPU today, Eikos on a GPU later), with abstention and a calibration log wired to `owner_score_pred` | the decision layer exists at all |
@@ -886,7 +901,10 @@ for line in open('.dispatch/usage/usage.jsonl'):
         json.loads(line)
     except ValueError:
         bad += 1
-print(bad)                                     # 32
+print(bad)                                     # 46 (of 1010, on 2026-11-13)
+
+# the repair that recovers those rows (keeps every row; quarantines the rest)
+python3 bin/oracfit-usage-json.py repair .dispatch/usage/usage.jsonl --in-place
 PY
 
 # the runtime asymmetry
