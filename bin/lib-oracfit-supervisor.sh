@@ -5,7 +5,8 @@
 # no-op. INJECT_HINT writes the hint on the accumulator the next attempt
 # composes into the spec. RESET snapshots the dirty tree, restores the
 # changed tracked files from HEAD, and writes the scar plus the hint.
-# ESCALATE is refused: nothing is executed by half, and the reason is visible.
+# ESCALATE writes the owner question to the workdir inbox; the runtime is
+# who pauses the run. A refused order does nothing.
 
 if ! declare -F oracfit_wip_snapshot >/dev/null 2>&1; then
   # shellcheck source=bin/oracfit-wip-snapshot.sh
@@ -159,6 +160,127 @@ PY
   return 0
 }
 
+# Three lines on stdout: result, reason, question file. Always returns 0.
+_oracfit_supervisor_escalate_emit() {
+  printf '%s\n' "$1"
+  printf '%s\n' "$(_oracfit_supervisor_one_line "$2")"
+  printf '%s\n' "$3"
+}
+
+_oracfit_supervisor_inbox_dir() {
+  local workdir="$1"
+  local inbox=""
+  if command -v oracfit_inbox_dir >/dev/null 2>&1; then
+    inbox="$(oracfit_inbox_dir)" || inbox=""
+  fi
+  if [ -z "$inbox" ]; then
+    inbox="${workdir%/}/.dispatch/logs/inbox"
+  fi
+  printf '%s\n' "$inbox"
+}
+
+# ESCALATE: validate the owner-question contract, write the question to the
+# inbox. The runtime is who pauses the run. A refusal writes nothing.
+_oracfit_supervisor_escalate() {
+  local workdir="${1:-}" run_id="${2:-}" attempt="${3:-}" path="${4:-}"
+  local success_reason="${5:-escalate}"
+  local inbox="" qfile="" mode="" task=""
+  local body_rc=0
+
+  [ -n "$success_reason" ] || success_reason="escalate"
+
+  inbox="$(_oracfit_supervisor_inbox_dir "$workdir")"
+  if [ -z "$inbox" ] || ! mkdir -p "$inbox"; then
+    echo "supervisor: could not write question" >&2
+    _oracfit_supervisor_escalate_emit refused "could not write question" ""
+    return 0
+  fi
+
+  mode="${mode_id:-}"
+  task="${task_name:-}"
+  if [ -z "$mode" ] && [ -f "$inbox/${run_id}.mode-id" ]; then
+    mode="$(cat "$inbox/${run_id}.mode-id" 2>/dev/null || true)"
+  fi
+  if [ -z "$task" ] && [ -f "$inbox/${run_id}.task-name" ]; then
+    task="$(cat "$inbox/${run_id}.task-name" 2>/dev/null || true)"
+  fi
+
+  qfile="$inbox/${run_id}.question.md"
+  python3 - "$path" "$qfile" "$run_id" "$mode" "$task" "$attempt" <<'PY'
+import json
+import os
+import re
+import sys
+
+path, qfile, run_id, mode, task, attempt = sys.argv[1:7]
+consequence = re.compile(r"^se .+ -> .+$")
+
+
+def one_line(value):
+    return str(value).replace("\r", " ").replace("\n", " ").replace("\t", " ")
+
+
+try:
+    rec = json.load(open(path, encoding="utf-8"))
+except (OSError, ValueError):
+    raise SystemExit(1)
+
+order = rec.get("order") if isinstance(rec.get("order"), dict) else {}
+pergunta = order.get("pergunta") if "pergunta" in order else None
+if not isinstance(pergunta, str) or not pergunta.strip():
+    raise SystemExit(1)
+se = order.get("se")
+if (
+    not isinstance(se, list)
+    or len(se) < 2
+    or any(
+        not isinstance(item, str) or not consequence.match(item.strip())
+        for item in se
+    )
+):
+    raise SystemExit(1)
+
+parent = os.path.dirname(qfile)
+if parent:
+    os.makedirs(parent, exist_ok=True)
+tmp = qfile + ".tmp"
+try:
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write("pergunta: " + one_line(pergunta.strip()) + "\n")
+        for item in se:
+            fh.write(item.strip() + "\n")
+        fh.write("\n")
+        fh.write("run_id: " + one_line(run_id) + "\n")
+        fh.write("mode: " + one_line(mode) + "\n")
+        fh.write("task: " + one_line(task) + "\n")
+        fh.write("attempt: " + one_line(attempt) + "\n")
+    os.replace(tmp, qfile)
+except OSError:
+    try:
+        os.remove(tmp)
+    except OSError:
+        pass
+    raise SystemExit(1)
+PY
+  body_rc=$?
+  if [ "$body_rc" -ne 0 ] || [ ! -f "$qfile" ]; then
+    echo "supervisor: could not write question" >&2
+    rm -f "$qfile" "$qfile.tmp" 2>/dev/null || true
+    _oracfit_supervisor_escalate_emit refused "could not write question" ""
+    return 0
+  fi
+
+  if command -v oracfit_emit_event >/dev/null 2>&1; then
+    ORACFIT_WORKDIR="${ORACFIT_WORKDIR:-$workdir}" \
+      ORACFIT_RUN_ID="${ORACFIT_RUN_ID:-$run_id}" \
+      oracfit_emit_event owner_question \
+        attempt="$attempt" file="$qfile" || true
+  fi
+
+  _oracfit_supervisor_escalate_emit applied "$success_reason" "$qfile"
+  return 0
+}
+
 # Apply the order in ORACFIT_SUPERVISOR_DECISION. Always returns 0.
 oracfit_supervisor_apply_order() {
   local workdir="${1:-}"
@@ -175,6 +297,8 @@ oracfit_supervisor_apply_order() {
   local snap_sha=""
   local restored_count=0
   local reset_parsed=""
+  local question_file=""
+  local esc_parsed=""
 
   case "$-" in
     *e*) set +e; restore_e=1 ;;
@@ -184,6 +308,7 @@ oracfit_supervisor_apply_order() {
     parsed="$(python3 - "$accum" "$attempt" "$path" <<'PY'
 import json
 import os
+import re
 import sys
 
 accum, attempt, path = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -241,11 +366,32 @@ if action == "CONTINUE":
     raise SystemExit(0)
 
 if action == "ESCALATE":
-    refuse(
-        action,
-        "action is not executable on this rung",
-        action + " is not executable on this rung",
-    )
+    order = rec.get("order") if isinstance(rec.get("order"), dict) else {}
+    pergunta = order.get("pergunta") if "pergunta" in order else None
+    if not isinstance(pergunta, str) or not pergunta.strip():
+        refuse(
+            action,
+            "ESCALATE order has no question",
+            "ESCALATE order has no question",
+        )
+        raise SystemExit(0)
+    se = order.get("se")
+    consequence = re.compile(r"^se .+ -> .+$")
+    if (
+        not isinstance(se, list)
+        or len(se) < 2
+        or any(
+            not isinstance(item, str) or not consequence.match(item.strip())
+            for item in se
+        )
+    ):
+        refuse(
+            action,
+            "ESCALATE order has no fork",
+            "ESCALATE order has no fork",
+        )
+        raise SystemExit(0)
+    emit(action, "execute", record_reason or "escalate")
     raise SystemExit(0)
 
 order = rec.get("order") if isinstance(rec.get("order"), dict) else {}
@@ -293,6 +439,17 @@ PY
     reason="no decision record"
   fi
 
+  if [ "$action" = "ESCALATE" ] && [ "$result" != "refused" ]; then
+    esc_parsed="$(_oracfit_supervisor_escalate "$workdir" "$run_id" "$attempt" "$path" "$reason")"
+    if [ -n "$esc_parsed" ]; then
+      result="$(printf '%s\n' "$esc_parsed" | sed -n '1p')"
+      reason="$(printf '%s\n' "$esc_parsed" | sed -n '2p')"
+      question_file="$(printf '%s\n' "$esc_parsed" | sed -n '3p')"
+    else
+      result="refused"
+      reason="could not write question"
+    fi
+  fi
   if [ "$action" = "RESET" ] && [ "$result" != "refused" ]; then
     reset_parsed="$(_oracfit_supervisor_reset "$workdir" "$accum" "$run_id" "$attempt" "$path" "$reason")"
     if [ -n "$reset_parsed" ]; then
@@ -309,12 +466,19 @@ PY
   fi
   if [ "$result" = "execute" ]; then
     result="refused"
-    reason="snapshot failed"
+    if [ "$action" = "ESCALATE" ]; then
+      reason="could not write question"
+    else
+      reason="snapshot failed"
+    fi
   fi
 
   if [ "$action" = "RESET" ]; then
     printf 'supervisor_order action=%s attempt=%s result=%s reason=%s ref=%s sha=%s restored=%s\n' \
       "$action" "$attempt" "$result" "$reason" "$ref_name" "$snap_sha" "$restored_count"
+  elif [ "$action" = "ESCALATE" ]; then
+    printf 'supervisor_order action=%s attempt=%s result=%s reason=%s file=%s\n' \
+      "$action" "$attempt" "$result" "$reason" "$question_file"
   else
     printf 'supervisor_order action=%s attempt=%s result=%s reason=%s\n' \
       "$action" "$attempt" "$result" "$reason"
@@ -327,6 +491,12 @@ PY
         oracfit_emit_event supervisor_order \
           attempt="$attempt" action="$action" result="$result" reason="$reason" \
           ref="$ref_name" sha="$snap_sha" restored="$restored_count" || true
+    elif [ "$action" = "ESCALATE" ]; then
+      ORACFIT_WORKDIR="${ORACFIT_WORKDIR:-$workdir}" \
+        ORACFIT_RUN_ID="${ORACFIT_RUN_ID:-$run_id}" \
+        oracfit_emit_event supervisor_order \
+          attempt="$attempt" action="$action" result="$result" reason="$reason" \
+          file="$question_file" || true
     else
       ORACFIT_WORKDIR="${ORACFIT_WORKDIR:-$workdir}" \
         ORACFIT_RUN_ID="${ORACFIT_RUN_ID:-$run_id}" \
@@ -334,6 +504,10 @@ PY
           attempt="$attempt" action="$action" result="$result" reason="$reason" || true
     fi
   fi
+
+  ORACFIT_SUPERVISOR_LAST_ACTION="$action"
+  ORACFIT_SUPERVISOR_LAST_RESULT="$result"
+  ORACFIT_SUPERVISOR_LAST_FILE="$question_file"
 
   [ "$restore_e" -eq 1 ] && set -e
   return 0

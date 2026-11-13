@@ -54,7 +54,6 @@ print(n)
 }
 
 HINT="SUPERVISOR_HINT_MARKER put the prescription in the next attempt spec"
-RESET_HINT="SUPERVISOR_HINT_MARKER should not appear after a RESET"
 
 SPEC="$TMPDIR/spec.md"
 # english-ok-begin: the spec headings the gauntlet gate still parses are Portuguese.
@@ -301,58 +300,33 @@ else
   not "an INJECT_HINT without a hint is refused (rc=$nohint_rc applied=$n_nohint_applied refused=$n_nohint_refused accum=$(printf '%s' "$NOHINT_ACCUM" | head -c 200))"
 fi
 
-# ── 6. an order this rung cannot execute is refused ─────────────────────
-RESET_JSON="$TMPDIR/reset.json"
-write_decision "$RESET_JSON" <<JSON
+# ── 6. an unknown action is refused ─────────────────────────────────────
+UNKNOWN_JSON="$TMPDIR/unknown.json"
+write_decision "$UNKNOWN_JSON" <<JSON
 {
-  "decision": "RESET",
-  "reason": "fixture reset",
+  "decision": "PAUSE",
+  "reason": "fixture unknown action",
   "order": {
-    "action": "RESET",
-    "question_id": "r16-recurring-failure-becomes-a-rule",
+    "action": "PAUSE",
+    "question_id": "r01-orchestrator-writes-bulk",
     "value": 0.9,
-    "hint": "$RESET_HINT"
+    "hint": "$HINT"
   }
 }
 JSON
-ESC_JSON="$TMPDIR/escalate.json"
-write_decision "$ESC_JSON" <<'JSON'
-{
-  "decision": "ESCALATE",
-  "reason": "fixture escalate",
-  "order": {
-    "action": "ESCALATE",
-    "question_id": "r42-long-job-outside-dispatch-is-orphan",
-    "value": 0.9,
-    "pergunta": "which watchdog should cover this long-running job?",
-    "se": [
-      "se keep it outside dispatch -> leave it running and ask after one attempt",
-      "se bring it under dispatch -> stop the orphan and relaunch through dispatch.sh"
-    ]
-  }
-}
-JSON
-RESET_WD="$TMPDIR/reset"
-ESC_WD="$TMPDIR/escalate"
-reset_rc="$(run_dispatch "$RESET_WD" "$RESET_JSON")"
-esc_rc="$(run_dispatch "$ESC_WD" "$ESC_JSON")"
-RESET_ACCUM="$(accum_body "$RESET_WD")"
-ESC_ACCUM="$(accum_body "$ESC_WD")"
-RESET_TREE="$(workdir_tree "$RESET_WD")"
-n_reset_applied="$(count_jsonl "$RESET_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=applied)"
-n_esc_applied="$(count_jsonl "$ESC_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=applied)"
-n_reset_refused="$(count_jsonl "$RESET_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=refused)"
-n_esc_refused="$(count_jsonl "$ESC_WD/.dispatch/logs/events.jsonl" type=supervisor_order result=refused)"
-if [ "$reset_rc" -eq "$base_rc" ] && [ "$esc_rc" -eq "$base_rc" ] \
-  && [ "$n_reset_applied" -eq 0 ] && [ "$n_esc_applied" -eq 0 ] \
-  && [ "$n_reset_refused" -ge 1 ] && [ "$n_esc_refused" -ge 1 ] \
-  && ! printf '%s' "$RESET_ACCUM" | grep -q "$RESET_HINT" \
-  && ! printf '%s' "$RESET_ACCUM" | grep -q "SUPERVISOR ORDER" \
-  && ! printf '%s' "$ESC_ACCUM" | grep -q "SUPERVISOR ORDER" \
-  && [ "$RESET_TREE" = "$BASE_TREE" ]; then
-  ok "an order this rung cannot execute is refused"
+UNKNOWN="$TMPDIR/unknown"
+unknown_rc="$(run_dispatch "$UNKNOWN" "$UNKNOWN_JSON")"
+UNKNOWN_ACCUM="$(accum_body "$UNKNOWN")"
+UNKNOWN_TREE="$(workdir_tree "$UNKNOWN")"
+n_unknown_applied="$(count_jsonl "$UNKNOWN/.dispatch/logs/events.jsonl" type=supervisor_order result=applied)"
+n_unknown_refused="$(count_jsonl "$UNKNOWN/.dispatch/logs/events.jsonl" type=supervisor_order result=refused)"
+if [ "$unknown_rc" -eq "$base_rc" ] \
+  && [ "$n_unknown_applied" -eq 0 ] && [ "$n_unknown_refused" -ge 1 ] \
+  && ! printf '%s' "$UNKNOWN_ACCUM" | grep -q "SUPERVISOR ORDER" \
+  && [ "$UNKNOWN_TREE" = "$BASE_TREE" ]; then
+  ok "an unknown action is refused"
 else
-  not "an order this rung cannot execute is refused (reset_rc=$reset_rc esc_rc=$esc_rc applied=$n_reset_applied/$n_esc_applied refused=$n_reset_refused/$n_esc_refused tree=$( [ "$RESET_TREE" = "$BASE_TREE" ] && echo match || echo differ))"
+  not "an unknown action is refused (rc=$unknown_rc applied=$n_unknown_applied refused=$n_unknown_refused tree=$( [ "$UNKNOWN_TREE" = "$BASE_TREE" ] && echo match || echo differ))"
 fi
 
 # ── 7. the supervisor never fails the run ───────────────────────────────

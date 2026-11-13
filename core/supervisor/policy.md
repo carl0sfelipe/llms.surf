@@ -168,6 +168,9 @@ fork of consequences.
 
 The policy writes the order; the runtime (`bin/lib-oracfit-supervisor.sh`)
 is who executes it, at the attempt boundary after the gauntlet feedback.
+The attempt boundary is reached only when the oracle failed the previous
+attempt, so the supervisor is consulted **after a failure**: a run that
+passes on its first attempt ends without any order.
 A refused order never fails the run: nothing happens, the reason is on
 the event, and the round follows the mechanical path as if the order
 were CONTINUE.
@@ -177,7 +180,7 @@ were CONTINUE.
 | `CONTINUE` | nothing. Result `noop` |
 | `INJECT_HINT` | append the non-empty `order.hint` to the gauntlet accumulator so the next attempt's spec carries it. Without a hint the order is refused |
 | `RESET` | snapshot, scoped restore from HEAD, then the scar plus the hint on the accumulator (see below) |
-| `ESCALATE` | not executed on this runtime. The order is refused |
+| `ESCALATE` | write the owner question to the inbox and pause the run (see below) |
 
 ### RESET
 
@@ -207,6 +210,38 @@ RESET does **not** delete a file, does **not** move HEAD, and does
 stay. Without a non-empty `hint`, or when the snapshot or the restore
 cannot be done, the order is refused: nothing happens and the run
 continues.
+
+### ESCALATE
+
+ESCALATE is the owner-question path. Nobody in the system knows the
+answer; the answer exists only in the owner's head. Burning more
+attempts would fill the hole with invention, so this action spends the
+attempt in progress and waits.
+
+1. **Validate the fork.** The order needs a non-empty `pergunta` and
+   `se` with **at least two** consequences, each `se <answer> -> <what
+   you do>` — the same form the multi-stage runtime checks with
+   `grep -cE` on a consequence line. Without that, the order is
+   refused: nothing is written, the run is not paused, and the round
+   follows the mechanical path as if the order were CONTINUE.
+2. **Write the question.** The file goes to the workdir inbox as
+   `<run_id>.question.md`. It has, in this order: a `pergunta:` line
+   with the order's text; the consequences, one per line, as they came
+   in the order; and the minimum context the owner needs (run id, mode,
+   task, attempt). The library does not invent the question.
+3. **Pause the run.** The runtime leaves the attempt loop, records
+   status `owner_question` and `oracle_exit` 7, skips the final oracle
+   recheck (that recheck runs only on `fail`; it must not flip a run
+   that is waiting for the owner), emits `owner_question`, and closes
+   the ledger, the usage row, and the final lines with that status.
+   Exit is **7**. The paused run is not `pass` and not `fail`.
+4. **The owner answers** through `oracfit resume <run_id> "<answer>"`,
+   which appends to the inbox queue. The question file is for the owner
+   to read; the queue is what the runtime injects into the spec.
+
+ESCALATE does **not** invent the question, does **not** accept a
+question without a fork, and does **not** mark the paused run as
+`pass`. A refused order never fails the run.
 
 ## Pocket rule
 

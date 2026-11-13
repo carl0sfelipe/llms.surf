@@ -470,6 +470,7 @@ oracfit_emit_event stage_changed stage=run
 attempt=0
 oracle_exit=1
 final_status=fail
+supervisor_question_file=""
 flash_work_s=0
 # Gauntlet accum: oracle failures → next builder prompt (fresh session still).
 gauntlet_dir="$(oracfit_inbox_dir)/${RUN_ID}.gauntlet"
@@ -772,9 +773,21 @@ print(fired, det)
   fi
 
   # Attempt boundary: apply the supervisor order for the next attempt.
-  # A refusal must not change this run's exit code.
+  # A refusal must not change this run's exit code. An applied ESCALATE
+  # spends this attempt and pauses the run for the owner.
   if [ "$attempt" -lt "$max_attempts" ]; then
     oracfit_supervisor_apply_order "$ORACFIT_WORKDIR" "$gauntlet_accum" "$RUN_ID" "$attempt" || true
+    if [ "${ORACFIT_SUPERVISOR_LAST_ACTION:-}" = "ESCALATE" ] \
+      && [ "${ORACFIT_SUPERVISOR_LAST_RESULT:-}" = "applied" ]; then
+      final_status=owner_question
+      oracle_exit=7
+      supervisor_question_file="${ORACFIT_SUPERVISOR_LAST_FILE:-}"
+      [ -n "$supervisor_question_file" ] \
+        || supervisor_question_file="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
+      oracfit_emit_event owner_question \
+        attempt="$attempt" file="$supervisor_question_file" || true
+      break
+    fi
   fi
 done
 
@@ -790,6 +803,8 @@ set +e
 # ele mesmo roda o oráculo no fim e se autocorrige). Fechar como fail sem reler
 # o disco grava falso-fail no ledger e dispara retrabalho/rollback de trabalho
 # bom. ADR-0002: o ledger mede o DISCO, não a memória da última avaliação.
+# A paused run (owner_question) must not be rechecked: the recheck can
+# flip the outcome of a run that is waiting for the owner.
 if [ "$final_status" = "fail" ] && [ "$attempt" -gt 0 ]; then
   if [ -n "$art_dir" ] && [ -z "$(find "$art_dir" -type f ! -empty -print -quit 2>/dev/null)" ]; then
     # The artifacts promise is still broken on disk: the recheck below must not
@@ -898,6 +913,7 @@ oracfit_emit_event run_finished status="$final_status" attempt="$attempt" oracle
 # incidente de uso. --source mode (novo valor, distingue deste caminho).
 usage_result="failed"
 [ "$final_status" = "pass" ] && usage_result="success"
+[ "$final_status" = "owner_question" ] && usage_result="owner_question"
 # NOTA: --mode em emit-usage-feedback.sh e injetado CRU no JSON (sem aspas,
 # ver printf em bin/emit-usage-feedback.sh) — espera numero, nao string.
 # mode_id do Oracfit e string ("normal", "flash_paid_0731"...): vai no
@@ -920,9 +936,18 @@ echo "flash_work_s: $flash_work_s"
 echo "frontier_wait_s: $frontier_wait_s"
 echo "events: $(oracfit_events_path)"
 echo "ledger: $(oracfit_ledger_path)"
+if [ "$final_status" = "owner_question" ]; then
+  [ -n "$supervisor_question_file" ] \
+    || supervisor_question_file="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
+  echo "question: $supervisor_question_file"
+  echo "resume: oracfit resume $RUN_ID \"<your answer>\""
+fi
 echo "$CREDIT"
 
 if [ "$final_status" = "pass" ]; then
   exit 0
+fi
+if [ "$final_status" = "owner_question" ]; then
+  exit 7
 fi
 exit 1
