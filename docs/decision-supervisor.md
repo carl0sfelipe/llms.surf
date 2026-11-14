@@ -34,7 +34,7 @@ rewrite.
 |---|---|---|
 | Trajectory capture | `events.jsonl` (`thinking`, `tool_call`), written by `bin/oracfit-thinking-tee.py` and by each adapter's stream translator | records the model's reasoning and which tool it called |
 | Deterministic behavior scan | `bin/oracfit-behavior-scan.py` (tiers B1–B8: restore loop, identical failing call ≥3, write without validate, empty biggest-gap streak, stuck pair, log >5 MB, pass with no write, transport-failure streak) | the Tier-0 cousin of the supervisor: a static scanner over the same trajectory |
-| Incident + rule corpus | `incidents/` (126 postmortems) + `fluxos/_comum/mapa-regras.md` (55 rules, 27 of them class `R` — "needs judgment, no mechanism possible today") | the evidence a supervisor would learn from |
+| Incident + rule corpus | `incidents/` (127 postmortems) + `fluxos/_comum/mapa-regras.md` (55 rules, 27 of them class `R` — "needs judgment, no mechanism possible today") | the evidence a supervisor would learn from |
 
 **The deterministic scan is currently running on one leg.** B1 (restore
 loop), B2 (identical failing call) and B3 (write without validate) all
@@ -901,7 +901,7 @@ nothing but bash and Python.
 
 ```bash
 cat VERSION                                   # 0.0.1
-find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
+find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 127
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
@@ -972,7 +972,7 @@ And the gotcha corpus (§5.2, and the numbers quoted in
 `specs/sup-03-gotcha-compilado.md`):
 
 ```bash
-find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
+find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 127
 grep -h '^## Sintoma' incidents/*.md | wc -l                        # 103 occurrences
 grep -h '^## Sintoma' incidents/*.md | sort | uniq -c               # the 3 heading variants
 grep -h '^## Correção aplicada' incidents/*.md | wc -l              # 62 occurrences
