@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
-"""oracfit-distill.py — turn a finished run's usage report into a gotcha draft.
+"""oracfit-distill.py — turn a usage report or a postmortem into a gotcha draft.
 
-The distiller reads a usage report (`incidents/uso/`, written by
-`bin/emit-usage-feedback.sh`) and writes a triad frame under
-`core/gotchas/drafts/`. The symptom is the round's diff (WIP ref against
-HEAD, or the working tree against the recorded sha). The trigger and the
-prescription stay empty: those are written by hand. This program does not
-promote, does not decide, does not inject, and does not call a model.
+The distiller reads either a usage report (`incidents/uso/`, written by
+`bin/emit-usage-feedback.sh`) or a human postmortem (`incidents/*.md`) and
+writes a triad frame under `core/gotchas/drafts/`. It distinguishes the two
+by the file itself: a `task` field is a usage report; `id` plus `titulo`
+without `task` is a postmortem.
+
+From a usage report the symptom is the round's diff (WIP ref against HEAD,
+or the working tree against the recorded sha). From a postmortem the symptom
+is the symptom section, the prescription is the first accepted correction
+section that exists (verbatim, truncated at the same limit as the symptom),
+and a fire-fixture skeleton is written next to the draft with citations
+copied from backtick literals in the file. The trigger and the skeleton's
+`signals` stay empty: those are written by hand. A postmortem with no
+correction section still yields a draft, with an empty prescription. This
+program does not promote, does not decide, does not inject, does not invent
+a literal, and does not call a model.
 
 Subcommands:
   distill --incident FILE [--wip-ref REF] [--out DIR] [--force]
@@ -32,8 +42,17 @@ NEEDS = ["prescription", "trigger", "canary.fire_fixture"]
 QUIET_FIXTURE = "tests/fixtures/gotchas/healthy.json"
 SHA_RE = re.compile(r"@([0-9a-fA-F]+)")
 DIRTY_RE = re.compile(r"dirty=(\S+)")
-# english-ok-begin: usage reports from emit-usage-feedback.sh use this heading and dirty=sim/nao
+BACKTICK_RE = re.compile(r"`([^`\n]+)`")
+# english-ok-begin: usage reports and postmortems keep their original headings, keys and dirty=sim/nao
 CONTEXT_HEADING = "Contexto"
+SINTOMA_HEADING = "Sintoma"
+# Closed list: first name that exists wins, regardless of heading order in the file.
+CORRECTION_HEADINGS = (
+    "Correção aplicada",
+    "Correção (aplicada)",
+    "Prevenção",
+)
+TITULO_KEY = "titulo"
 DIRTY_YES = "sim"
 DIRTY_NO = "nao"
 # english-ok-end
@@ -168,6 +187,61 @@ def truncate(text: str) -> str:
     return text[:SECTION_LIMIT]
 
 
+def prescription_from_postmortem(body: str) -> str:
+    """Literal body of the first accepted correction heading, or empty.
+
+    The first name in CORRECTION_HEADINGS that exists wins, regardless of
+    heading order in the file. Missing every accepted heading is not an
+    error: the draft keeps an empty prescription.
+    """
+    for name in CORRECTION_HEADINGS:
+        section = extract_named_section(body, name)
+        if section is not None:
+            return truncate(section.strip())
+    return ""
+
+
+def is_usage_report(meta: dict[str, str]) -> bool:
+    return bool(meta.get("task", "").strip())
+
+
+def is_postmortem(meta: dict[str, str]) -> bool:
+    if is_usage_report(meta):
+        return False
+    gotcha_id = meta.get("id", "").strip()
+    title = meta.get(TITULO_KEY, "").strip()
+    return bool(gotcha_id and title)
+
+
+def repo_relative(path: str) -> str:
+    """Path relative to cwd or ORACFIT_ROOT when the file lives there."""
+    given = Path(path)
+    try:
+        resolved = given.resolve()
+    except OSError:
+        return given.as_posix()
+    roots: list[Path] = [Path.cwd()]
+    env_root = os.environ.get("ORACFIT_ROOT")
+    if env_root:
+        roots.append(Path(env_root))
+    for root in roots:
+        try:
+            rel = resolved.relative_to(root.resolve())
+        except (OSError, ValueError):
+            continue
+        return rel.as_posix()
+    return given.as_posix()
+
+
+def citations_from(text: str) -> dict[str, str]:
+    """Map each backtick literal to itself. Values are substrings of text."""
+    citations: dict[str, str] = {}
+    for literal in BACKTICK_RE.findall(text):
+        if literal and literal not in citations:
+            citations[literal] = literal
+    return citations
+
+
 def build_symptom(
     workdir: str,
     git_field: str,
@@ -202,26 +276,110 @@ def fire_fixture_path(task: str) -> str:
 
 
 def draft_payload(
+    gotcha_id: str,
+    title: str,
+    incident_path: str,
+    symptom: str,
+    fire_fixture: str,
+    prescription: str = "",
+) -> dict[str, Any]:
+    return {
+        "id": gotcha_id,
+        "title": title,
+        "source_incident": incident_path,
+        "symptom": symptom,
+        "prescription": prescription,
+        "trigger": {"class": "", "clauses": []},
+        "canary": {
+            "fire_fixture": fire_fixture,
+            "quiet_fixture": QUIET_FIXTURE,
+        },
+        "status": "draft",
+        "needs": list(NEEDS),
+    }
+
+
+def usage_draft_payload(
     task: str,
     result: str,
     exit_code: str,
     incident_path: str,
     symptom: str,
 ) -> dict[str, Any]:
-    return {
-        "id": task,
-        "title": f"{task}: {result} (exit {exit_code})",
-        "source_incident": incident_path,
-        "symptom": symptom,
-        "prescription": "",
-        "trigger": {"class": "", "clauses": []},
-        "canary": {
-            "fire_fixture": fire_fixture_path(task),
-            "quiet_fixture": QUIET_FIXTURE,
-        },
-        "status": "draft",
-        "needs": list(NEEDS),
+    return draft_payload(
+        task,
+        f"{task}: {result} (exit {exit_code})",
+        incident_path,
+        symptom,
+        fire_fixture_path(task),
+    )
+
+
+def write_draft(out_dir: Path, gotcha_id: str, payload: dict[str, Any], force: bool) -> int:
+    dest = out_dir / f"{gotcha_id}.json"
+    if dest.exists() and not force:
+        print(
+            f"oracfit-distill: draft already exists: {dest} (pass --force to overwrite)",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        dest.write_text(dumps(payload), encoding="utf-8")
+    except OSError as exc:
+        print(f"oracfit-distill: cannot write {dest}: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def distill_postmortem(
+    incident: str,
+    text: str,
+    meta: dict[str, str],
+    body: str,
+    out: str,
+    force: bool,
+) -> int:
+    gotcha_id = meta.get("id", "").strip()
+    title = meta.get(TITULO_KEY, "").strip()
+    section = extract_named_section(body, SINTOMA_HEADING)
+    if section is None:
+        print(f"oracfit-distill: no symptom section in {incident}", file=sys.stderr)
+        return 1
+
+    source = repo_relative(incident)
+    symptom = truncate(section.strip())
+    prescription = prescription_from_postmortem(body)
+    out_dir = Path(out)
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"oracfit-distill: cannot create {out_dir}: {exc}", file=sys.stderr)
+        return 1
+
+    skeleton_path = out_dir / f"{gotcha_id}.fire.json"
+    payload = draft_payload(
+        gotcha_id,
+        title,
+        source,
+        symptom,
+        skeleton_path.as_posix(),
+        prescription,
+    )
+    rc = write_draft(out_dir, gotcha_id, payload, force)
+    if rc != 0:
+        return rc
+
+    skeleton = {
+        "citations": citations_from(text),
+        "signals": {},
+        "source_incident": source,
     }
+    try:
+        skeleton_path.write_text(dumps(skeleton), encoding="utf-8")
+    except OSError as exc:
+        print(f"oracfit-distill: cannot write {skeleton_path}: {exc}", file=sys.stderr)
+        return 1
+    return 0
 
 
 def cmd_distill(
@@ -241,6 +399,8 @@ def cmd_distill(
         return 1
 
     meta, body = parse_frontmatter(text)
+    if is_postmortem(meta):
+        return distill_postmortem(incident, text, meta, body, out, force)
     task = meta.get("task", "").strip()
     result = meta.get("result", "").strip()
     if not task:
@@ -263,7 +423,7 @@ def cmd_distill(
     git_field = context.get("git", "")
     exit_code = context.get("exit_code", "")
     symptom = build_symptom(workdir, git_field, wip_ref, result, exit_code)
-    payload = draft_payload(task, result, exit_code, incident, symptom)
+    payload = usage_draft_payload(task, result, exit_code, incident, symptom)
 
     out_dir = Path(out)
     try:
@@ -271,19 +431,7 @@ def cmd_distill(
     except OSError as exc:
         print(f"oracfit-distill: cannot create {out_dir}: {exc}", file=sys.stderr)
         return 1
-    dest = out_dir / f"{task}.json"
-    if dest.exists() and not force:
-        print(
-            f"oracfit-distill: draft already exists: {dest} (pass --force to overwrite)",
-            file=sys.stderr,
-        )
-        return 1
-    try:
-        dest.write_text(dumps(payload), encoding="utf-8")
-    except OSError as exc:
-        print(f"oracfit-distill: cannot write {dest}: {exc}", file=sys.stderr)
-        return 1
-    return 0
+    return write_draft(out_dir, task, payload, force)
 
 
 def format_needs(value: Any) -> str:
@@ -325,15 +473,19 @@ def cmd_list(directory: str) -> int:
 def build_parser() -> DistillParser:
     parser = DistillParser(
         prog="oracfit-distill",
-        description="Distill a usage report into a gotcha draft. Does not invent a trigger.",
+        description="Distill a usage report or a postmortem into a gotcha draft. Does not invent a trigger.",
     )
     sub = parser.add_subparsers(dest="cmd")
 
     distill_p = sub.add_parser(
         "distill",
-        help="write a draft triad from a usage report",
+        help="write a draft triad from a usage report or a postmortem",
     )
-    distill_p.add_argument("--incident", required=True, help="usage report markdown")
+    distill_p.add_argument(
+        "--incident",
+        required=True,
+        help="usage report or postmortem markdown",
+    )
     distill_p.add_argument(
         "--wip-ref",
         dest="wip_ref",

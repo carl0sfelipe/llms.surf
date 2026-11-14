@@ -111,7 +111,10 @@ OUT_F=$(mktemp)
 _cursor_cleanup() { rm -f "$OUT_F"; }
 trap _cursor_cleanup EXIT
 
-"$BIN" "${ARGS[@]}" "$(cat "$SPEC_FILE")" 2>&1 \
+# The prompt goes after "--": cursor-agent parses options in argv, and a spec
+# that starts with YAML frontmatter ("---") is read as an unknown option and
+# the agent aborts before any model call (dogfood run v001-s2, 2026-11-14).
+"$BIN" "${ARGS[@]}" -- "$(cat "$SPEC_FILE")" 2>&1 \
   | PYTHONUNBUFFERED=1 python3 -u "$ADAPTER_DIR/stream-events.py" \
   | tee "$OUT_F"
 EXIT_CODE=${PIPESTATUS[0]}
