@@ -261,7 +261,7 @@ body = req["body"]
 got = body["questions"]
 want = exported["questions"]
 assert set(got) == set(want), (sorted(got), sorted(want))
-assert len(got) == 26, len(got)
+assert len(got) == 27, len(got)
 for qid, q in got.items():
     src = want[qid]
     assert q["type"] in ("noul", "choice", "score"), q
@@ -278,9 +278,9 @@ for qid, q in got.items():
             assert isinstance(q["criteria"], list) and len(q["criteria"]) >= 2
 PY
 then
-  ok "request body has the 26 asked ids in the API shape"
+  ok "request body has the 27 asked ids in the API shape"
 else
-  not "request body has the 26 asked ids in the API shape"
+  not "request body has the 27 asked ids in the API shape"
 fi
 
 echo "== 3. a noul answer is reported as an abstention mass"

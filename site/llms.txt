@@ -47,7 +47,7 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 ## Counts (from this git tree  -  tests/test-site-honesty.sh)
 
 - version: 0.0.1
-- incidents: 126 (excludes incidents/uso/)
+- incidents: 127 (excludes incidents/uso/)
 - models in registry: 31,
 - modes: 21
 - adapters: 8 + 1 stub
@@ -127,7 +127,7 @@ GitHub issue; leaving costs one click.
 - docs/modes-catalog.md  -  the mode YAML grammar, in full
 - examples/  -  four modes to copy: one cheap stage, unlock + run, mechanical, elevate
 - adapters/<name>/  -  runner contract per CLI
-- incidents/  -  the ledger; 126 postmortems in this cut
+- incidents/  -  the ledger; 127 postmortems in this cut
 - LICENSE  -  AGPL-3.0 (core) + MIT (kernel, adapters). See NOTICE.
 - site/index.html?as=agent  -  HTML twin of this file
 - site/blog/  -  writing (source: site/blog/posts/*.md)

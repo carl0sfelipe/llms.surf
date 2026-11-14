@@ -78,15 +78,15 @@ for line in text.splitlines():
     parts = [p.strip() for p in line.split("|")]
     if len(parts) >= 4 and "**R**" in parts[3]:
         map_rules.append(int(m.group(1)))
-assert len(map_rules) == 27, map_rules
-assert len(q_rules) == 27, q_rules
+assert len(map_rules) == 28, map_rules
+assert len(q_rules) == 28, q_rules
 assert set(q_rules) == set(map_rules), (sorted(set(q_rules)), sorted(set(map_rules)))
 assert len(q_rules) == len(set(q_rules)), q_rules
 PY
 then
-  ok "set of rule numbers equals the map (27)"
+  ok "set of rule numbers equals the map (28)"
 else
-  not "set of rule numbers equals the map (27)"
+  not "set of rule numbers equals the map (28)"
 fi
 
 echo "== 3. every asked question cites an incident that exists"

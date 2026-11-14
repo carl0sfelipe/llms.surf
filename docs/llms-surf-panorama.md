@@ -64,7 +64,7 @@ the same events, the same exit codes.
 | Adapters | `adapters/<cli>/` | per-CLI trajectory translators into one event stream |
 | Events & ledger | `.dispatch/logs/events.jsonl`, `.dispatch/ledger/mode.jsonl` | what happened, and what it cost |
 | Gauntlet | `bin/lib-oracfit-gauntlet.sh` | the feedback loop: attempts, feedback injection, ground truth |
-| Incidents | `incidents/` (126 postmortems) | the corpus; each is a symptom, a cause, a correction |
+| Incidents | `incidents/` (127 postmortems) | the corpus; each is a symptom, a cause, a correction |
 | Rules | `fluxos/_comum/mapa-regras.md` (55; 27 of class `R`) | what became a mechanism (class C) and what still needs judgment (class R) |
 | Panel | `panel/`, `bin/oracfit-panel*.sh` | live view of runs, events, ledger |
 | Ring | `bin/oracfit-ring.sh` | the calibration loop: predicted owner score vs real owner score |
@@ -150,7 +150,7 @@ lives in `docs/decision-supervisor.md`; the short version:
 | Fact | Value | Where |
 |---|---|---|
 | Version | 0.0.1 | `VERSION` |
-| Incidents | 126 | `incidents/*.md` |
+| Incidents | 127 | `incidents/*.md` |
 | Rules | 55, of which 27 class `R` | `fluxos/_comum/mapa-regras.md` |
 | Modes | 21 | `core/modes/*.yaml` |
 | Test suites | 78 | `tests/` |
