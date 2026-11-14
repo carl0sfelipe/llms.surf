@@ -59,3 +59,7 @@ Nunca inventa flag equivalente nem tenta simular o comportamento.
 ## Capacidades
 
 Scripts em `bin/` que dependem de uma capacidade opcional (fork, session-reuse, attach TUI, format json) devem checar `adapters/<cli>/capabilities.env` antes de assumir que o `runner.sh` ativo suporta aquela flag. Capacidade ausente = `exit 3`, nunca degradação silenciosa. `capabilities.env` é escrito pela etapa de Descoberta (seção 7, Passo 0 do PRD) — fora do escopo F1.
+
+## Fim de stream (evento `result`)
+
+Um runner cujo CLI entregue um stream JSON pode fechá-lo com um evento `result`: um objeto com `type` igual a `result`, um `session_id` (string) e um objeto `usage` com `inputTokens`, `outputTokens`, `cacheReadTokens` e `cacheWriteTokens`. O finalizador (`bin/ledger-finalize.sh`) lê esses fatos do log da run quando o CLI não tem banco de sessões. Quando o banco existe e devolve uma sessão para a run, ele continua sendo a fonte primária.

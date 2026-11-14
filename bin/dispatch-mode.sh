@@ -9,8 +9,12 @@ source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
+source "$SCRIPT_DIR/lib-oracfit-gotcha.sh"
+source "$SCRIPT_DIR/lib-oracfit-supervisor.sh"
+source "$SCRIPT_DIR/lib-oracfit-supervisor-ask.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
+source "$SCRIPT_DIR/lib-oracfit-json-schema.sh"
 
 CREDIT="Oracfit — Carlos Felipe"
 MAX_ATTEMPTS_DEFAULT=3
@@ -122,6 +126,10 @@ ROOT="$(oracfit_resolve_root)" || exit 1
 oracfit_run_lock_acquire
 lock_rc=$?
 [ "$lock_rc" -eq 0 ] || exit "$lock_rc"
+# Replaced after preflight passes by the EXIT/TERM/INT traps that also run the
+# emergency epilogue. Until then, only the lock has to be released: a run that
+# dies at preflight never started, so it must not write a ledger row or a
+# run_finished event (tests/test-tuned-measure.sh T2).
 trap 'oracfit_run_lock_release' EXIT
 
 # Resume (v1, 2026-08-01): oracfit resume <run_id> "<msg>" chama a gente com
@@ -277,6 +285,26 @@ for stage in stages:
 ')"
 prompt_template_path=""
 prompt_template_missing=false
+# json_schema of the stage this runtime dispatches (the first stage
+# that carries a model_ref). Same reader as prompt_template.
+json_schema="$(printf '%s' "$mode_stage_json" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    print("")
+    raise SystemExit(0)
+stages = data.get("stages") or []
+for stage in stages:
+    if not isinstance(stage, dict):
+        continue
+    if stage.get("model_ref"):
+        value = stage.get("json_schema")
+        print(value if isinstance(value, str) else "")
+        break
+')"
+json_schema_path=""
+json_schema_missing=false
 # The throttle the mode declares: two calls of the same model, or two
 # attempts of the same stage, are at least rate_limit_s seconds apart. Read
 # from the stage that carries the model_ref - the stage this runtime
@@ -369,6 +397,47 @@ mkdir -p "$(dirname "$DISPATCH_EFETIVO_FILE")"
 rm -f "$DISPATCH_EFETIVO_FILE"
 t_run0=$(python3 -c 'import time; print(time.time())')
 
+# Guaranteed epilogue, ported from oracfit_stages_emergency_epilogue (incident
+# 2026-08-10-dispatch-mode-run-finished-sem-ledger-nem-usage-feedback): if this
+# process dies before the normal close (set -e, SIGTERM/SIGINT, killed from
+# outside), still emit run_finished + a ledger row (best effort) and the final
+# run_id/status lines. The happy path sets epilogue_done=1 so this trap is a
+# no-op. Defensive: every call has || true, so set -e cannot kill the trap.
+epilogue_done=0
+oracfit_mode_emergency_epilogue() {
+  [ "${epilogue_done:-0}" = "1" ] && return 0
+  epilogue_done=1
+  local t_abn dur_abn
+  dur_abn=0
+  if [ -n "${t_run0:-}" ]; then
+    t_abn="$(python3 -c 'import time; print(time.time())' 2>/dev/null || true)"
+    if [ -n "$t_abn" ]; then
+      dur_abn="$(python3 -c "print(round(float('$t_abn')-float('$t_run0'), 3))" 2>/dev/null || echo 0)"
+    fi
+  fi
+  oracfit_emit_event run_finished status=fail reason=abnormal_exit \
+    attempt="${attempt:-0}" duration_s="$dur_abn" 2>/dev/null || true
+  ORACFIT_FREE_FIELDS=()
+  oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}" 2>/dev/null || true
+  oracfit_emit_metric_and_ledger \
+    mode_id="${mode_id:-}" \
+    stage=run \
+    oracle_exit="${oracle_exit:-1}" \
+    attempt="${attempt:-0}" \
+    model_id="${model_ref:-}" \
+    flash_work_s="${flash_work_s:-0}" \
+    frontier_wait_s="${frontier_wait_s:-0}" \
+    estimated_cost="${estimated_cost:-0}" \
+    task="${task_name:-}" \
+    status=fail \
+    "${ORACFIT_FREE_FIELDS[@]}" 2>/dev/null || true
+  echo "run_id: ${RUN_ID:-}"
+  echo "status: fail"
+  return 0
+}
+# Traps that call this function are armed only after preflight passes.
+# Installing them here would write a ledger row for a run that never started.
+
 # The artifacts dir of this stage (only when the mode declares one). The
 # runner writes there, the gate below reads it, and the model is told where
 # it is — a declared artifacts dir is a promise the runtime keeps.
@@ -409,24 +478,44 @@ if [ "$pf_rc" -ne 0 ]; then
   exit "$pf_rc"
 fi
 
+# Preflight passed: the run has started. From here an abnormal death must
+# close evidence (run_finished + ledger) the same way dispatch-stages.sh
+# does after its own preflight (traps at lines 194-196, after preflight
+# at line 126). The lock-only EXIT trap above stays armed until this point.
+trap 'oracfit_mode_emergency_epilogue; oracfit_run_lock_release' EXIT
+trap 'oracfit_mode_emergency_epilogue; oracfit_run_lock_release; exit 143' TERM
+trap 'oracfit_mode_emergency_epilogue; oracfit_run_lock_release; exit 130' INT
+
 oracfit_emit_event run_started mode="$mode_id" stage=run task="$task_name" model_id="$model_ref"
 oracfit_emit_event stage_changed stage=run
 
 attempt=0
 oracle_exit=1
 final_status=fail
+supervisor_question_file=""
 flash_work_s=0
 # Gauntlet accum: oracle failures → next builder prompt (fresh session still).
 gauntlet_dir="$(oracfit_inbox_dir)/${RUN_ID}.gauntlet"
 gauntlet_accum="${gauntlet_dir}/feedback.md"
+gauntlet_gotcha="${gauntlet_dir}/gotcha.md"
 mkdir -p "$gauntlet_dir"
 : >"$gauntlet_accum"
+: >"$gauntlet_gotcha"
 if [ -n "$prompt_template" ]; then
   if ! prompt_template_path="$(oracfit_prompt_template_resolve "$prompt_template")"; then
     prompt_template_path=""
     prompt_template_missing=true
     echo "PROMPT TEMPLATE NOT FOUND: $prompt_template" >&2
     printf '%s\n' "PROMPT TEMPLATE NOT FOUND: $prompt_template" \
+      >"${gauntlet_dir}/oracle-attempt-1.log"
+  fi
+fi
+if [ -n "$json_schema" ]; then
+  if ! json_schema_path="$(oracfit_json_schema_resolve "$json_schema")"; then
+    json_schema_path=""
+    json_schema_missing=true
+    echo "JSON SCHEMA NOT FOUND: $json_schema" >&2
+    printf '%s\n' "JSON SCHEMA NOT FOUND: $json_schema" \
       >"${gauntlet_dir}/oracle-attempt-1.log"
   fi
 fi
@@ -478,7 +567,7 @@ resume_session_id=""
 if [ -n "$resume_run_id" ]; then
   resume_session_id="$(cat "$(oracfit_session_file "$RUN_ID")" 2>/dev/null || true)"
 fi
-while [ "$prompt_template_missing" = false ] && [ "$attempt" -lt "$max_attempts" ]; do
+while [ "$prompt_template_missing" = false ] && [ "$json_schema_missing" = false ] && [ "$attempt" -lt "$max_attempts" ]; do
   attempt=$((attempt + 1))
   oracfit_emit_event attempt_started attempt="$attempt" mode="$mode_id"
 
@@ -511,16 +600,27 @@ while [ "$prompt_template_missing" = false ] && [ "$attempt" -lt "$max_attempts"
     } >"$pt_composed"
     run_spec_file="$pt_composed"
   fi
+  # json_schema next: after the prompt template (when it exists), before
+  # ground truth, gauntlet feedback and the human message.
+  if [ -n "$json_schema_path" ]; then
+    js_composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-schema-XXXXXX")"
+    {
+      cat "$run_spec_file"
+      oracfit_json_schema_emit "$json_schema" "$json_schema_path"
+    } >"$js_composed"
+    [ "$run_spec_file" != "$spec_file" ] && rm -f "$run_spec_file"
+    run_spec_file="$js_composed"
+  fi
   # P4: refresh ground-truth from ## Dados verificados every attempt/resume.
   gauntlet_gt="${gauntlet_dir}/ground-truth.md"
   oracfit_gauntlet_extract_ground_truth "$spec_file" >"$gauntlet_gt" 2>/dev/null || : >"$gauntlet_gt"
   # Gauntlet + ground-truth: compose BEFORE HITL inbox.
-  if $gauntlet_on && { [ -s "$gauntlet_accum" ] || [ -s "$gauntlet_gt" ]; }; then
+  if $gauntlet_on && { [ -s "$gauntlet_accum" ] || [ -s "$gauntlet_gt" ] || [ -s "$gauntlet_gotcha" ]; } || [ -s "$gauntlet_accum" ]; then
     # BSD/macOS mktemp: XXXXXX tem que terminar o template — sufixo .md fazia
     # mkstemp criar arquivo literal na 1a chamada e falhar "File exists" nas seguintes
     # (descoberto 2026-08-10 no relancamento do piloto content_factory).
     gauntlet_composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-gauntlet-XXXXXX")"
-    oracfit_gauntlet_compose_spec "$run_spec_file" "$gauntlet_accum" "$gauntlet_composed" "$gauntlet_gt"
+    oracfit_gauntlet_compose_spec "$run_spec_file" "$gauntlet_accum" "$gauntlet_composed" "$gauntlet_gt" "$gauntlet_gotcha"
     [ "$run_spec_file" != "$spec_file" ] && rm -f "$run_spec_file"
     run_spec_file="$gauntlet_composed"
     oracfit_emit_event gauntlet_compose attempt="$attempt" has_feedback="$([ -s "$gauntlet_accum" ] && echo true || echo false)" has_ground_truth="$([ -s "$gauntlet_gt" ] && echo true || echo false)"
@@ -680,6 +780,108 @@ with open(path, "a") as f:
     biggest_gap="$(oracfit_gauntlet_append_feedback "$gauntlet_accum" "$attempt" "$oracle_exit" "$oracle_log")"
     oracfit_emit_event gauntlet_feedback attempt="$attempt" oracle_exit="$oracle_exit" biggest_gap="$(printf '%s' "$biggest_gap" | tr '\n' ' ' | cut -c1-200)"
     echo "gauntlet: attempt $attempt failed — gap: $biggest_gap" >&2
+    # Deterministic gotcha match: best-effort. A failed evaluation must not
+    # change the run's exit code or the oracle text.
+    _gotcha_ids=""
+    _gotcha_fired=0
+    _gotcha_det=0
+    _gotcha_events="$(oracfit_events_path)"
+    _gotcha_ids="$(oracfit_gotcha_match_inject "$ORACFIT_WORKDIR" "$gauntlet_dir" "$_gotcha_events" "$oracle_exit" "$attempt" "$gauntlet_gotcha" || true)"
+    _gotcha_fires="${gauntlet_dir}/fires-attempt-${attempt}.jsonl"
+    if [ -f "$_gotcha_fires" ]; then
+      _gotcha_counts="$(python3 -c '
+import json, sys
+fired = det = 0
+try:
+    for line in open(sys.argv[1], encoding="utf-8"):
+        line = line.strip()
+        if not line:
+            continue
+        fired += 1
+        try:
+            if json.loads(line).get("class") == "deterministic":
+                det += 1
+        except ValueError:
+            pass
+except OSError:
+    pass
+print(fired, det)
+' "$_gotcha_fires" 2>/dev/null || echo "0 0")"
+      _gotcha_fired="${_gotcha_counts%% *}"
+      _gotcha_det="${_gotcha_counts##* }"
+    fi
+    oracfit_emit_event gotcha_match attempt="$attempt" oracle_exit="$oracle_exit" fired="${_gotcha_fired:-0}" deterministic="${_gotcha_det:-0}" ids="${_gotcha_ids}"
+    unset _gotcha_ids _gotcha_fired _gotcha_det _gotcha_events _gotcha_fires _gotcha_counts
+  fi
+
+  # Attempt boundary: ask the supervisor (when no hand-placed decision
+  # file and an endpoint is set), then apply the order for the next
+  # attempt. A failed ask must not change this run's exit code. An
+  # applied ESCALATE spends this attempt and pauses the run for the
+  # owner.
+  if [ "$attempt" -lt "$max_attempts" ]; then
+    _sup_hand=""
+    if [ -n "${ORACFIT_SUPERVISOR_DECISION:-}" ] && [ -f "${ORACFIT_SUPERVISOR_DECISION}" ]; then
+      _sup_hand="$ORACFIT_SUPERVISOR_DECISION"
+    elif [ -n "${ORACFIT_SUPERVISOR_ENDPOINT:-}" ]; then
+      _sup_inbox="$(oracfit_inbox_dir)"
+      _sup_state="${_sup_inbox}/${RUN_ID}.state.json"
+      _sup_out="${_sup_inbox}/${RUN_ID}.json"
+      mkdir -p "$_sup_inbox" 2>/dev/null || true
+      if python3 - "$_sup_state" "$RUN_ID" "$mode_id" "$task_name" "$attempt" "$oracle_exit" "$gauntlet_accum" <<'PY'
+import json
+import os
+import sys
+
+out, run_id, mode_id, task_name, attempt, oracle_exit, accum = sys.argv[1:8]
+text = ""
+try:
+    with open(accum, encoding="utf-8") as fh:
+        text = fh.read()
+except OSError:
+    pass
+parent = os.path.dirname(out)
+if parent:
+    os.makedirs(parent, exist_ok=True)
+doc = {
+    "run_id": run_id,
+    "mode_id": mode_id,
+    "task_name": task_name,
+    "attempt": int(attempt),
+    "oracle_exit": int(oracle_exit),
+    "gauntlet_accum": text,
+}
+with open(out, "w", encoding="utf-8") as fh:
+    json.dump(doc, fh, ensure_ascii=False, indent=2)
+    fh.write("\n")
+PY
+      then
+        oracfit_supervisor_ask_order "$ORACFIT_WORKDIR" "$RUN_ID" "$attempt" "$_sup_state" >/dev/null || true
+        if [ -f "$_sup_out" ]; then
+          export ORACFIT_SUPERVISOR_DECISION="$_sup_out"
+        fi
+      else
+        oracfit_emit_event supervisor_ask result=failed reason="could not write round state" attempt="$attempt" || true
+      fi
+    fi
+    oracfit_supervisor_apply_order "$ORACFIT_WORKDIR" "$gauntlet_accum" "$RUN_ID" "$attempt" || true
+    if [ -n "$_sup_hand" ]; then
+      export ORACFIT_SUPERVISOR_DECISION="$_sup_hand"
+    else
+      unset ORACFIT_SUPERVISOR_DECISION
+    fi
+    unset _sup_hand _sup_inbox _sup_state _sup_out
+    if [ "${ORACFIT_SUPERVISOR_LAST_ACTION:-}" = "ESCALATE" ] \
+      && [ "${ORACFIT_SUPERVISOR_LAST_RESULT:-}" = "applied" ]; then
+      final_status=owner_question
+      oracle_exit=7
+      supervisor_question_file="${ORACFIT_SUPERVISOR_LAST_FILE:-}"
+      [ -n "$supervisor_question_file" ] \
+        || supervisor_question_file="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
+      oracfit_emit_event owner_question \
+        attempt="$attempt" file="$supervisor_question_file" || true
+      break
+    fi
   fi
 done
 
@@ -695,6 +897,8 @@ set +e
 # ele mesmo roda o oráculo no fim e se autocorrige). Fechar como fail sem reler
 # o disco grava falso-fail no ledger e dispara retrabalho/rollback de trabalho
 # bom. ADR-0002: o ledger mede o DISCO, não a memória da última avaliação.
+# A paused run (owner_question) must not be rechecked: the recheck can
+# flip the outcome of a run that is waiting for the owner.
 if [ "$final_status" = "fail" ] && [ "$attempt" -gt 0 ]; then
   if [ -n "$art_dir" ] && [ -z "$(find "$art_dir" -type f ! -empty -print -quit 2>/dev/null)" ]; then
     # The artifacts promise is still broken on disk: the recheck below must not
@@ -790,6 +994,9 @@ oracfit_emit_metric_and_ledger \
   status="$final_status" \
   "${ORACFIT_FREE_FIELDS[@]}"
 
+# Normal close is complete for events: the EXIT/TERM/INT trap becomes a no-op
+# so it cannot emit a second run_finished.
+epilogue_done=1
 oracfit_emit_event run_finished status="$final_status" attempt="$attempt" oracle_exit="$oracle_exit"
 
 # Achado 2026-08-01 (docs-findings/audit-funcionalidades-meio-plugadas.md):
@@ -800,6 +1007,7 @@ oracfit_emit_event run_finished status="$final_status" attempt="$attempt" oracle
 # incidente de uso. --source mode (novo valor, distingue deste caminho).
 usage_result="failed"
 [ "$final_status" = "pass" ] && usage_result="success"
+[ "$final_status" = "owner_question" ] && usage_result="owner_question"
 # NOTA: --mode em emit-usage-feedback.sh e injetado CRU no JSON (sem aspas,
 # ver printf em bin/emit-usage-feedback.sh) — espera numero, nao string.
 # mode_id do Oracfit e string ("normal", "flash_paid_0731"...): vai no
@@ -822,9 +1030,18 @@ echo "flash_work_s: $flash_work_s"
 echo "frontier_wait_s: $frontier_wait_s"
 echo "events: $(oracfit_events_path)"
 echo "ledger: $(oracfit_ledger_path)"
+if [ "$final_status" = "owner_question" ]; then
+  [ -n "$supervisor_question_file" ] \
+    || supervisor_question_file="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
+  echo "question: $supervisor_question_file"
+  echo "resume: oracfit resume $RUN_ID \"<your answer>\""
+fi
 echo "$CREDIT"
 
 if [ "$final_status" = "pass" ]; then
   exit 0
+fi
+if [ "$final_status" = "owner_question" ]; then
+  exit 7
 fi
 exit 1

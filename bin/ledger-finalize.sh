@@ -3,14 +3,15 @@
 # Uso: nohup bash bin/ledger-finalize.sh <task_name> &
 # Chamado automaticamente por dispatch.sh. Nao executar manualmente.
 #
-# Env obrigatória: DB_PATH, LOG_DIR, PID_DIR
-# Env opcional: DISPATCH_RUNNER_NAME (RF-07 — nome do CLI que despachou, grava campo
-#   "runner" no ledger, retrocompatível pois é opcional), DISPATCH_LOCK_FILE (removido
-#   ao final, ver RNF-07 em bin/dispatch.sh)
+# Required env: LOG_DIR, PID_DIR
+# Optional env: DB_PATH (session store of the active CLI; when unset, the
+#   finalizer still closes the ledger from the run log), DISPATCH_RUNNER_NAME
+#   (RF-07 — CLI name, written as "runner" on the ledger row), DISPATCH_LOCK_FILE
+#   (removed at the end, see RNF-07 in bin/dispatch.sh)
 
 set -euo pipefail
 
-: "${DB_PATH:?Erro: env DB_PATH não definida. Caminho do banco de sessões do CLI ativo.}"
+DB_PATH="${DB_PATH:-}"
 : "${LOG_DIR:?Erro: env LOG_DIR não definida.}"
 : "${PID_DIR:?Erro: env PID_DIR não definida.}"
 
@@ -89,6 +90,7 @@ if [ ! -f "$LOG_FILE" ] || [ ! -s "$LOG_FILE" ]; then
 fi
 
 SESSION_ID=""
+FORKS=""
 TOKENS_INPUT=0; TOKENS_OUTPUT=0; TOKENS_REASONING=0
 TOKENS_CACHE_READ=0; TOKENS_CACHE_WRITE=0
 COST_USD=0; MODEL_ID=""; PROVIDER_ID=""
@@ -115,6 +117,46 @@ if [ -f "$DB_PATH" ]; then
       SELECT id FROM session WHERE parent_id = '$SESSION_ID' ORDER BY time_created ASC;
     " 2>/dev/null || true)
   fi
+fi
+
+# When the session store did not yield a session for this run, read the facts
+# the CLI already wrote into the run log (stream event `result`). Invalid
+# output from the reader must not abort the finalizer: keep the empty/zero
+# values from above. cost_usd stays 0 — the stream does not report a price.
+if [ -z "$SESSION_ID" ]; then
+  _facts_row=$(
+    python3 "$BIN_DIR/lib-oracfit-session-facts.py" "$LOG_FILE" 2>/dev/null \
+      | python3 -c '
+import json, sys
+try:
+    obj = json.loads(sys.stdin.read() or "null")
+except Exception:
+    sys.exit(1)
+if not isinstance(obj, dict):
+    sys.exit(1)
+sid = obj.get("session_id", "")
+if not isinstance(sid, str):
+    sys.exit(1)
+
+def n(key):
+    value = obj.get(key, 0)
+    return value if type(value) is int else 0
+
+print("%s|%d|%d|%d|%d" % (
+    sid.replace("|", ""),
+    n("tokens_input"),
+    n("tokens_output"),
+    n("tokens_cache_read"),
+    n("tokens_cache_write"),
+))
+' 2>/dev/null || true
+  )
+  if [ -n "${_facts_row:-}" ]; then
+    IFS='|' read -r SESSION_ID TOKENS_INPUT TOKENS_OUTPUT TOKENS_CACHE_READ TOKENS_CACHE_WRITE <<EOF
+${_facts_row}
+EOF
+  fi
+  unset _facts_row
 fi
 
 FINISHED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -235,6 +277,32 @@ case "${RUNNER_EXIT:-}" in
   *) USAGE_ARGS+=(--exit-code "$RUNNER_EXIT") ;;
 esac
 bash "$REPO_ROOT_FOR_USAGE/bin/emit-usage-feedback.sh" "${USAGE_ARGS[@]}" 2>/dev/null || true
+
+# Close the live-run announce. Best effort: must not block the ledger or
+# usage rows already written. One run_finished per run, and only when the
+# dispatch exported a run id.
+if [ -n "${ORACFIT_RUN_ID:-}" ]; then
+  EVENT_STATUS=fail
+  EVENT_REASON=runner_nonzero
+  case "$USAGE_RESULT" in
+    success) EVENT_STATUS=pass; EVENT_REASON="" ;;
+    blocked) EVENT_REASON=runner_killed ;;
+    failed)
+      if [ "$ORACLE_EXIT" != "null" ]; then
+        EVENT_REASON=oracle_failed
+      elif [ "$RUNNER_EXIT" = "killed" ] || [ "$RUNNER_EXIT" = "unknown" ]; then
+        EVENT_REASON=runner_killed
+      fi
+      ;;
+  esac
+  # shellcheck source=lib-oracfit-events.sh
+  source "$BIN_DIR/lib-oracfit-events.sh" || true
+  if [ "$EVENT_STATUS" = "pass" ]; then
+    oracfit_emit_event run_finished status=pass oracle_exit="$ORACLE_EXIT" || true
+  else
+    oracfit_emit_event run_finished status=fail reason="${EVENT_REASON:-runner_nonzero}" oracle_exit="$ORACLE_EXIT" || true
+  fi
+fi
 
 rm -f "$META_FILE" "$EXIT_FILE" "$EFETIVO_FILE" "$KERNEL_FILE"
 [ -n "${DISPATCH_LOCK_FILE:-}" ] && rm -f "$DISPATCH_LOCK_FILE"

@@ -68,7 +68,7 @@ stages:
     input: prev_stage      # feed the previous stage's output in
     artifacts: out/        # directory for this stage's artifacts
     prompt_template: ...   # file with the prompt for this stage
-    json_schema: ...       # file with the JSON schema the answer must match
+    json_schema: ...       # file with the JSON schema handed to the model as the answer shape
     tools: true            # allow the runner to use tools
     max_attempts: 3        # attempts for this stage
     rate_limit_s: 0        # seconds of pause between attempts (the runtime waits)
@@ -133,6 +133,23 @@ declared template whose file is missing fails the stage
 declares nothing is not affected. Both runtimes honor it. The loader only
 checks that the value is a non-empty string: it does not know the user's
 workdir, so it cannot demand the file exists.
+
+**`json_schema:` is the shape of the answer, and the runtime keeps it.**
+A stage that declares `json_schema: product_from_photo` is naming the file
+that is the JSON Schema the answer must match. A bare name resolves to
+`core/schemas/<name>.json` (the workdir first, then `ORACFIT_ROOT`); a value
+that already ends in `.json` or contains `/` is a path relative to the
+workdir. The file's content is injected into the spec as
+`## Stage answer schema (json_schema: <name>)`, right after the prompt
+template (when the stage declares one) and before the ground truth, the
+gauntlet feedback and the human message. A declared schema whose file is
+missing fails the stage (`JSON SCHEMA NOT FOUND: <name>`) — it is not a
+warning. The runtime does **not** validate the model's answer against the
+schema: which artifact is "the answer" changes from stage to stage, and
+that is the owner's decision. A stage that declares nothing is not
+affected. Both runtimes honor it. The loader only checks that the value is
+a non-empty string: it does not know the user's workdir, so it cannot
+demand the file exists.
 
 **Tiers.** `tier:cheap`, `tier:mid`, `tier:expensive` and `tier:vision` expand
 into an ordered chain of models from the free catalog / registry. The first
@@ -244,6 +261,8 @@ run before anything is spent downstream.
 - `rate_limit_s`, on any stage, must be a number between 0 and 3600
 - `prompt_template`, when present, must be a non-empty string (the file is
   checked at run time)
+- `json_schema`, when present, must be a non-empty string (the file is
+  checked at run time; the answer is not validated against the schema)
 - `run_attempt_budget` must be a positive integer
 
 The canonical check is mechanical: `oracfit mode validate <id>` — exit 0 means

@@ -753,6 +753,25 @@
       "verified_by": "cursor",
       "verified_at": "2026-09-29",
       "nota": "Dono testou: 4.6 xhigh-fast melhor que 4.7 (2026-09-29)."
+    },
+    {
+      "id": "claude-opus-5-5",
+      "provider": "cursor",
+      "tier": "token-plan",
+      "accuracy": null,
+      "latency_ms": null,
+      "id_status": "VERIFICADO",
+      "best_for": [
+        "story body with an oracle (Cursor)",
+        "periphery arms: implementing an already-decided spec"
+      ],
+      "source": "cursor-agent --list-models 2026-11-13; smoke test cursor-agent -p --model claude-opus-5-5-xhigh 'responda apenas: OK' -> OK (2026-11-13)",
+      "cli_hints": {
+        "cursor": "claude-opus-5-5-xhigh"
+      },
+      "verified_by": "cursor",
+      "verified_at": "2026-11-13",
+      "nota": "Role: the arms. The center (spec, oracle, design) is written by the orchestrator; the periphery implementation is dispatched here. The fast variant of the same model line answers sooner."
     }
   ]
 }

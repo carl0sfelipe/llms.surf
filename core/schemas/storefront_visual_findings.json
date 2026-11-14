@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "screenshot",
+    "page_guess",
+    "broken_images",
+    "css_issues",
+    "layout_issues",
+    "overall_severity",
+    "summary"
+  ],
+  "properties": {
+    "screenshot": { "type": "string" },
+    "page_guess": {
+      "type": "string",
+      "enum": ["pdp", "catalog", "blog", "other"]
+    },
+    "broken_images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["area", "reason"],
+        "properties": {
+          "area": { "type": "string" },
+          "reason": {
+            "type": "string",
+            "enum": ["404", "empty", "placeholder", "stretched", "other"]
+          }
+        }
+      }
+    },
+    "css_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "area", "problem"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "major", "minor"]
+          },
+          "area": { "type": "string" },
+          "problem": { "type": "string" }
+        }
+      }
+    },
+    "layout_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "problem"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "major", "minor"]
+          },
+          "problem": { "type": "string" }
+        }
+      }
+    },
+    "overall_severity": {
+      "type": "string",
+      "enum": ["ok", "minor", "major", "critical"]
+    },
+    "summary": { "type": "string" }
+  }
+}

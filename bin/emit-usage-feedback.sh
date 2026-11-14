@@ -45,7 +45,14 @@ while [ $# -gt 0 ]; do
     --spec) SPEC="${2:?}"; shift 2 ;;
     --oracle) ORACLE="${2:?}"; shift 2 ;;
     --exit-code) EXIT_CODE="${2:?}"; shift 2 ;;
-    --extra-json) EXTRA_JSON="${2:?}"; shift 2 ;;
+    --extra-json)
+      if [ $# -lt 2 ]; then
+        echo "emit-usage-feedback: --extra-json requires a value" >&2
+        exit 3
+      fi
+      EXTRA_JSON="$2"
+      shift 2
+      ;;
     *) echo "emit-usage-feedback: flag desconhecida: $1" >&2; exit 3 ;;
   esac
 done
@@ -55,9 +62,14 @@ done
 [ -n "$RESULT" ] || { echo "emit-usage-feedback: --result obrigatório" >&2; exit 3; }
 
 LOG_DIR="${LOG_DIR:-$REPO_ROOT/.dispatch/logs}"
-USAGE_DIR="$REPO_ROOT/.dispatch/usage"
-USO_DIR="$REPO_ROOT/incidents/uso"
+USAGE_DIR="${ORACFIT_USAGE_DIR:-$REPO_ROOT/.dispatch/usage}"
+USO_DIR="${ORACFIT_USO_DIR:-$REPO_ROOT/incidents/uso}"
 mkdir -p "$USAGE_DIR" "$USO_DIR" "$LOG_DIR"
+USAGE_PY="$REPO_ROOT/bin/oracfit-usage-json.py"
+HAVE_PYTHON=0
+if command -v python3 >/dev/null 2>&1; then
+  HAVE_PYTHON=1
+fi
 
 TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 DATE_LOCAL=$(date +"%Y-%m-%d")
@@ -96,16 +108,39 @@ if [ -n "$SPEC" ] && [ -f "$SPEC" ]; then
   SPEC_HEAD=$(head -40 "$SPEC" 2>/dev/null | sed 's/`/\\`/g')
 fi
 
-# Logs da task: paths, tamanhos, cauda do mais recente
+# Logs of the task: paths, sizes, tail of the newest. Pick the working
+# `stat` form once. The two forms must not be chained inside a capture:
+# on GNU coreutils `stat -f` prints filesystem status to stdout, the
+# captured value is no longer an integer, and `-ge` never picks a log.
+# Detection discards its own output and does not abort the writer.
+STAT_MTIME_KIND=bsd
+if stat -c %Y "$0" >/dev/null 2>&1; then
+  STAT_MTIME_KIND=gnu
+fi
+
 LOG_INDEX=""
 LATEST_LOG=""
 LATEST_MTIME=0
 for f in "$LOG_DIR"/${TASK}-*.log "$LOG_DIR"/dispatch-${TASK}.log; do
-  [ -f "$f" ] || continue
-  sz=$(wc -c < "$f" | tr -d ' ')
-  mt=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo 0)
+  [ -e "$f" ] || continue
+  sz=$(wc -c < "$f" 2>/dev/null | tr -d ' ') || true
+  sz=${sz:-0}
+  mt=0
+  mt_ok=0
+  mt_raw=""
+  if [ "$STAT_MTIME_KIND" = gnu ]; then
+    mt_raw=$(stat -c %Y "$f" 2>/dev/null) && mt_ok=1
+  else
+    mt_raw=$(stat -f %m "$f" 2>/dev/null) && mt_ok=1
+  fi
+  if [ "$mt_ok" -eq 1 ]; then
+    case "$mt_raw" in
+      ''|*[!0-9]*) mt=0; mt_ok=0 ;;
+      *) mt=$mt_raw ;;
+    esac
+  fi
   LOG_INDEX="${LOG_INDEX}${f}|${sz};"
-  if [ "$mt" -ge "$LATEST_MTIME" ]; then
+  if [ "$mt_ok" -eq 1 ] && [ "$mt" -ge "$LATEST_MTIME" ]; then
     LATEST_MTIME=$mt
     LATEST_LOG=$f
   fi
@@ -113,7 +148,13 @@ done
 
 LOG_TAIL=""
 if [ -n "$LATEST_LOG" ]; then
-  LOG_TAIL=$(tail -40 "$LATEST_LOG" 2>/dev/null | sed 's/"/\\"/g' | tr '\n' '↵' | head -c 4000)
+  # GNU tr only replaces with a single byte, so `tr '\n' '↵'` would
+  # write 0xe2 and the usage row would stop parsing. Expand the ↵
+  # (U+21B5) in bash, then cap at 4000 bytes — same quote / newline
+  # treatment, valid UTF-8.
+  LOG_TAIL=$(tail -40 "$LATEST_LOG" 2>/dev/null | sed 's/"/\\"/g')
+  LOG_TAIL=${LOG_TAIL//$'\n'/↵}
+  LOG_TAIL=$(printf '%s' "$LOG_TAIL" | head -c 4000)
 fi
 
 # Env DISPATCH_* (sem secrets óbvios)
@@ -150,21 +191,59 @@ HARNESS_ESC=$(json_esc "$HARNESS")
 LOG_INDEX_ESC=$(json_esc "$LOG_INDEX")
 LOG_TAIL_ESC=$(json_esc "$LOG_TAIL")
 DISPATCH_ENV_ESC=$(json_esc "$DISPATCH_ENV")
-EXTRA_ESC=$(json_esc "$EXTRA_JSON")
+
+# extra, mode and exit_code never take raw caller text.
+if [ "$HAVE_PYTHON" -eq 1 ]; then
+  EXTRA_SLOT=$(python3 "$USAGE_PY" extra -- "$EXTRA_JSON")
+  MODE_SLOT=$(python3 "$USAGE_PY" number -- "${MODE}")
+  EXIT_SLOT=$(python3 "$USAGE_PY" number -- "${EXIT_CODE}")
+else
+  RAW_ESC=$(json_esc "$EXTRA_JSON")
+  EXTRA_SLOT="{\"raw\":\"${RAW_ESC}\"}"
+  if [[ "${MODE}" =~ ^-?(0|[1-9][0-9]*)$ ]]; then
+    MODE_SLOT="$MODE"
+  else
+    MODE_SLOT="null"
+  fi
+  if [[ "${EXIT_CODE}" =~ ^-?(0|[1-9][0-9]*)$ ]]; then
+    EXIT_SLOT="$EXIT_CODE"
+  else
+    EXIT_SLOT="null"
+  fi
+fi
 
 JSON_LINE=$(printf '{"ts":"%s","source":"%s","task":"%s","result":"%s","mode":%s,"exit_code":%s,"workdir":"%s","spec":"%s","spec_sha256":"%s","spec_bytes":%s,"oracle":"%s","host":"%s","user":"%s","uname":"%s","pwd":"%s","harness":"%s","term_program":"%s","git_head":"%s","git_branch":"%s","git_dirty":"%s","logs":"%s","log_tail":"%s","dispatch_env":"%s","extra":%s}\n' \
   "$TS" "$SOURCE_ESC" "$TASK_ESC" "$RESULT_ESC" \
-  "${MODE:-null}" \
-  "${EXIT_CODE:-null}" \
+  "$MODE_SLOT" \
+  "$EXIT_SLOT" \
   "$WORKDIR_ESC" "$SPEC_ESC" "${SPEC_SHA:-}" "${SPEC_BYTES:-0}" \
   "$ORACLE_ESC" \
   "$(json_esc "$HOST")" "$(json_esc "$USER_NAME")" "$(json_esc "$UNAME")" "$(json_esc "$PWD_NOW")" \
   "$HARNESS_ESC" "$(json_esc "$TERM_PROG")" \
   "$(json_esc "$GIT_HEAD")" "$(json_esc "$GIT_BRANCH")" "$(json_esc "$GIT_DIRTY")" \
   "$LOG_INDEX_ESC" "$LOG_TAIL_ESC" "$DISPATCH_ENV_ESC" \
-  "${EXTRA_JSON}")
+  "$EXTRA_SLOT")
 
-printf '%s\n' "$JSON_LINE" >> "$USAGE_DIR/usage.jsonl"
+append_usage_line() {
+  if [ "$HAVE_PYTHON" -eq 1 ]; then
+    local check_err check_rc=0
+    check_err=$(mktemp)
+    printf '%s\n' "$JSON_LINE" | python3 "$USAGE_PY" check 2>"$check_err" || check_rc=$?
+    if [ "$check_rc" -eq 0 ]; then
+      printf '%s\n' "$JSON_LINE" >> "$USAGE_DIR/usage.jsonl"
+    else
+      local reason
+      reason=$(cat "$check_err")
+      python3 -c 'import json,sys; print(json.dumps({"reason":sys.argv[1],"line":sys.stdin.read()}, ensure_ascii=False))' \
+        "$reason" <<<"$JSON_LINE" >> "$USAGE_DIR/usage.jsonl.rejected"
+      echo "emit-usage-feedback: rejected usage row ($reason)" >&2
+    fi
+    rm -f "$check_err"
+  else
+    printf '%s\n' "$JSON_LINE" >> "$USAGE_DIR/usage.jsonl"
+  fi
+}
+append_usage_line
 
 # Slug curto do task
 SLUG=$(printf '%s' "$TASK" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g' | cut -c1-40)

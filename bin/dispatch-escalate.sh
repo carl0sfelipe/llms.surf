@@ -259,7 +259,11 @@ tier_label() {
 # Não depende de humano pedir feedback. Opt-out: DISPATCH_USAGE_FEEDBACK=0
 emit_usage() {
   local result="$1" exit_code="${2:-}"
-  local extra="${3:-{}}"
+  # ${3:-{}} ends the expansion at the first } and leaves a leftover brace.
+  local extra="${3-}"
+  if [ -z "$extra" ]; then
+    extra="{}"
+  fi
   local args=(
     --source escalate
     --task "$TASK_NAME"

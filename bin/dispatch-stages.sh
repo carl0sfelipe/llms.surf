@@ -17,14 +17,185 @@ source "$SCRIPT_DIR/lib-oracfit-events.sh"
 source "$SCRIPT_DIR/lib-oracfit-preflight.sh"
 source "$SCRIPT_DIR/lib-oracfit-metrics.sh"
 source "$SCRIPT_DIR/lib-oracfit-gauntlet.sh"
+source "$SCRIPT_DIR/lib-oracfit-supervisor.sh"
+source "$SCRIPT_DIR/lib-oracfit-supervisor-ask.sh"
+source "$SCRIPT_DIR/lib-oracfit-checkpoint.sh"
 source "$SCRIPT_DIR/lib-oracfit-rate-limit.sh"
 source "$SCRIPT_DIR/lib-oracfit-prompt-template.sh"
+source "$SCRIPT_DIR/lib-oracfit-json-schema.sh"
 
 source "$SCRIPT_DIR/lib-oracfit-allowlist.sh"
 
 # Quem serviu + veredito da allowlist + sidecar do kernel (mesma leitura do dispatch.sh).
 oracfit_stages_read_efetivo() {
   oracfit_free_path_read "${DISPATCH_EFETIVO_FILE:-}"
+}
+
+# Close a paused run on the owner-question channel. Both the stage
+# artifact path (after copying the file into the inbox) and an applied
+# ESCALATE (the library already wrote the inbox file) call this.
+oracfit_stages_pause_for_owner() {
+  local question_file="${1:-}"
+  local role="${2:-}"
+  local attempt="${3:-}"
+  local t_oq dur_oq
+
+  [ -n "$question_file" ] || question_file="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
+  oracfit_emit_event owner_question stage="$role" attempt="$attempt" file="$question_file"
+  t_oq=$(python3 -c 'import time; print(time.time())')
+  dur_oq=$(python3 -c "print(round(float('$t_oq')-float('$t0'), 3))")
+  oracfit_emit_event run_finished status=owner_question stages="$stage_count" duration_s="$dur_oq"
+  oracfit_stages_read_efetivo
+  oracfit_emit_metric_and_ledger \
+    mode_id="$mode_id" \
+    stage=multi \
+    oracle_exit=7 \
+    attempt="$total_attempt_count" \
+    model_id=multi \
+    flash_work_s="$dur_oq" \
+    frontier_wait_s=0 \
+    estimated_cost=0 \
+    task="$task_name" \
+    status=owner_question \
+    "${ORACFIT_FREE_FIELDS[@]}" || true
+  epilogue_done=1
+  echo "run_id: $RUN_ID"
+  echo "status: owner_question"
+  echo "question: $question_file"
+  echo "resume: oracfit resume $RUN_ID \"<your answer>\""
+  exit 7
+}
+
+# Take a tracked-tree checkpoint and record it as the restore origin for
+# stage index dest. A failure leaves that slot empty: RESET is then
+# refused, and the run continues. Additive: nothing is deleted.
+oracfit_stages_take_checkpoint() {
+  local label="${1:-}"
+  local dest="${2:-}"
+  local ref="" sha=""
+  [ -n "$label" ] || return 0
+  [ -n "$dest" ] || dest=0
+  : "${_stages_restore_refs[$dest]:=}"
+  ref="$(oracfit_checkpoint_ref_name "$RUN_ID" "$label")"
+  sha="$(oracfit_checkpoint_commit "$ORACFIT_WORKDIR" "$ref" "llms.surf: checkpoint ${label}")" || return 0
+  _stages_restore_refs[$dest]="$ref"
+  return 0
+}
+
+# Ask the supervisor at a stage attempt boundary and apply the order.
+# RESET restores from the current stage's checkpoint (not HEAD), so
+# earlier stages' work stays. Without a checkpoint the order is refused.
+# ESCALATE pauses the run on the owner-question channel (one question
+# per run: a second ESCALATE is refused). A failed ask never changes
+# the run's exit.
+oracfit_stages_supervisor_boundary() {
+  local accum="${1:-}"
+  local attempt="${2:-}"
+  local oracle_exit="${3:-}"
+  local role="${4:-}"
+  local gauntlet_dir="${5:-}"
+  local restore_ref="${6:-}"
+  local _sup_hand=""
+  local _sup_inbox=""
+  local _sup_state=""
+  local _sup_out=""
+  local _sup_reason=""
+  local _sup_action=""
+  local _sup_qfile=""
+
+  if [ -n "${ORACFIT_SUPERVISOR_DECISION:-}" ] && [ -f "${ORACFIT_SUPERVISOR_DECISION}" ]; then
+    _sup_hand="$ORACFIT_SUPERVISOR_DECISION"
+  elif [ -n "${ORACFIT_SUPERVISOR_ENDPOINT:-}" ]; then
+    _sup_inbox="$(oracfit_inbox_dir)"
+    _sup_state="${_sup_inbox}/${RUN_ID}.state.json"
+    _sup_out="${_sup_inbox}/${RUN_ID}.json"
+    mkdir -p "$_sup_inbox" 2>/dev/null || true
+    if python3 - "$_sup_state" "$RUN_ID" "$role" "$attempt" "$oracle_exit" "$accum" "$mode_id" "$task_name" <<'PY'
+import json
+import os
+import sys
+
+out, run_id, role, attempt, oracle_exit, accum, mode_id, task_name = sys.argv[1:9]
+text = ""
+try:
+    with open(accum, encoding="utf-8") as fh:
+        text = fh.read()
+except OSError:
+    pass
+parent = os.path.dirname(out)
+if parent:
+    os.makedirs(parent, exist_ok=True)
+doc = {
+    "run_id": run_id,
+    "role": role,
+    "attempt": int(attempt),
+    "oracle_exit": int(oracle_exit),
+    "gauntlet_accum": text,
+    "mode_id": mode_id,
+    "task_name": task_name,
+}
+with open(out, "w", encoding="utf-8") as fh:
+    json.dump(doc, fh, ensure_ascii=False, indent=2)
+    fh.write("\n")
+PY
+    then
+      oracfit_supervisor_ask_order "$ORACFIT_WORKDIR" "$RUN_ID" "$attempt" "$_sup_state" >/dev/null || true
+      if [ -f "$_sup_out" ]; then
+        export ORACFIT_SUPERVISOR_DECISION="$_sup_out"
+      fi
+    else
+      oracfit_emit_event supervisor_ask result=failed reason="could not write round state" attempt="$attempt" stage="$role" || true
+    fi
+  fi
+
+  if [ -n "${ORACFIT_SUPERVISOR_DECISION:-}" ] && [ -f "${ORACFIT_SUPERVISOR_DECISION}" ]; then
+    _sup_action="$(python3 - "${ORACFIT_SUPERVISOR_DECISION}" <<'PY'
+import json
+import sys
+try:
+    rec = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, ValueError):
+    raise SystemExit(0)
+decision = rec.get("decision")
+if isinstance(decision, str) and decision.strip():
+    sys.stdout.write(decision.strip())
+PY
+)" || _sup_action=""
+  fi
+
+  _sup_qfile="$(oracfit_inbox_dir)/${RUN_ID}.question.md"
+  if [ "$_sup_action" = "RESET" ] && [ -z "$restore_ref" ]; then
+    _sup_reason="RESET has no stage checkpoint"
+    printf 'supervisor_order action=%s attempt=%s result=%s reason=%s\n' \
+      RESET "$attempt" refused "$_sup_reason"
+    oracfit_emit_event supervisor_order \
+      attempt="$attempt" action=RESET result=refused reason="$_sup_reason" stage="$role" || true
+  elif [ "$_sup_action" = "ESCALATE" ] && [ -f "$_sup_qfile" ]; then
+    _sup_reason="the run already asked the owner; one question per run"
+    printf 'supervisor_order action=%s attempt=%s result=%s reason=%s\n' \
+      ESCALATE "$attempt" refused "$_sup_reason"
+    oracfit_emit_event supervisor_order \
+      attempt="$attempt" action=ESCALATE result=refused reason="$_sup_reason" stage="$role" || true
+  else
+    if [ "$_sup_action" = "RESET" ]; then
+      export ORACFIT_SUPERVISOR_RESTORE_REF="$restore_ref"
+    fi
+    oracfit_supervisor_apply_order "$ORACFIT_WORKDIR" "$accum" "$RUN_ID" "$attempt" || true
+    unset ORACFIT_SUPERVISOR_RESTORE_REF
+    if [ "${ORACFIT_SUPERVISOR_LAST_ACTION:-}" = "ESCALATE" ] \
+      && [ "${ORACFIT_SUPERVISOR_LAST_RESULT:-}" = "applied" ]; then
+      [ -n "${ORACFIT_SUPERVISOR_LAST_FILE:-}" ] \
+        && _sup_qfile="$ORACFIT_SUPERVISOR_LAST_FILE"
+      oracfit_stages_pause_for_owner "$_sup_qfile" "$role" "$attempt"
+    fi
+  fi
+
+  if [ -n "$_sup_hand" ]; then
+    export ORACFIT_SUPERVISOR_DECISION="$_sup_hand"
+  else
+    unset ORACFIT_SUPERVISOR_DECISION
+  fi
+  return 0
 }
 
 mode_id=""
@@ -230,6 +401,12 @@ mkdir -p "$stage_input_dir"
 stage_roles=()
 stage_dirs=()
 
+# Restore origin per stage: start is stage 1; the checkpoint at the end of
+# each stage is the origin of the next. Empty slot = RESET is refused.
+_stages_restore_refs=()
+_stages_restore_refs[0]=""
+oracfit_stages_take_checkpoint start 0
+
 i=0
 while [ "$i" -lt "$stage_count" ]; do
   role=$(printf '%s' "$stages_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['stages'][$i].get('role',''))")
@@ -265,6 +442,11 @@ while [ "$i" -lt "$stage_count" ]; do
   # promise is broken and the stage fails before any model is called.
   prompt_template="$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('prompt_template'); print(v if isinstance(v, str) else '')")"
   prompt_template_path=""
+  # json_schema: the file that is this stage's answer shape. Resolved against
+  # the workdir (and, for a bare name, ORACFIT_ROOT). Missing file = the
+  # promise is broken and the stage fails before any model is called.
+  json_schema="$(printf '%s' "$stages_json" | python3 -c "import json,sys; v=json.load(sys.stdin)['stages'][$i].get('json_schema'); print(v if isinstance(v, str) else '')")"
+  json_schema_path=""
   freshness_targets=()
   while IFS= read -r freshness_target; do
     [ -n "$freshness_target" ] && freshness_targets+=("$freshness_target")
@@ -347,6 +529,16 @@ for target in targets:
       oracle_exit=1
     fi
   fi
+  if [ -n "$json_schema" ]; then
+    if ! json_schema_path="$(oracfit_json_schema_resolve "$json_schema")"; then
+      json_schema_path=""
+      echo "JSON SCHEMA NOT FOUND: $json_schema" >&2
+      printf '%s\n' "JSON SCHEMA NOT FOUND: $json_schema" \
+        >"${gauntlet_dir}/oracle-attempt-1.log"
+      stage_preflight_failed=true
+      oracle_exit=1
+    fi
+  fi
   if [ "$role" = "run" ] && [ -n "$run_attempt_budget" ] \
     && [ "$run_attempt_count" -ge "$run_attempt_budget" ]; then
     budget_exhausted=true
@@ -412,12 +604,15 @@ for target in targets:
     owner_asked=false
     [ -f "$(oracfit_inbox_dir)/${RUN_ID}.question.md" ] && owner_asked=true
     inbox_jsonl="$(oracfit_inbox_file "$RUN_ID")"
-    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ] || [ -n "$prev_chain_file" ] || [ -n "$artifacts" ] || [ -n "$prompt_template_path" ]; then
+    if [ -s "$accum" ] || [ -s "$gt" ] || { [ -n "$owner_question_cfg" ] && ! $owner_asked; } || [ -s "$inbox_jsonl" ] || [ -n "$prev_chain_file" ] || [ -n "$artifacts" ] || [ -n "$prompt_template_path" ] || [ -n "$json_schema_path" ]; then
       composed="$(mktemp "${TMPDIR:-/tmp}/oracfit-stage-XXXXXX")"
       {
         cat "$spec_file"
         if [ -n "$prompt_template_path" ]; then
           oracfit_prompt_template_emit "$prompt_template" "$prompt_template_path"
+        fi
+        if [ -n "$json_schema_path" ]; then
+          oracfit_json_schema_emit "$json_schema" "$json_schema_path"
         fi
         echo ""
         echo "## Stage context (Oracfit multi-stage)"
@@ -564,29 +759,7 @@ for line in open(sys.argv[1]):
       _oq_forks="$(grep -cE '^se .+ -> ' "$art_dir/owner-question.md" || true)"
       if grep -q '^pergunta: .' "$art_dir/owner-question.md" && [ "${_oq_forks:-0}" -ge 2 ]; then
         cp "$art_dir/owner-question.md" "$(oracfit_inbox_dir)/${RUN_ID}.question.md"
-        oracfit_emit_event owner_question stage="$role" attempt="$attempt" file="${RUN_ID}.question.md"
-        t_oq=$(python3 -c 'import time; print(time.time())')
-        dur_oq=$(python3 -c "print(round(float('$t_oq')-float('$t0'), 3))")
-        oracfit_emit_event run_finished status=owner_question stages="$stage_count" duration_s="$dur_oq"
-        oracfit_stages_read_efetivo
-        oracfit_emit_metric_and_ledger \
-          mode_id="$mode_id" \
-          stage=multi \
-          oracle_exit=7 \
-          attempt="$total_attempt_count" \
-          model_id=multi \
-          flash_work_s="$dur_oq" \
-          frontier_wait_s=0 \
-          estimated_cost=0 \
-          task="$task_name" \
-          status=owner_question \
-          "${ORACFIT_FREE_FIELDS[@]}" || true
-        epilogue_done=1
-        echo "run_id: $RUN_ID"
-        echo "status: owner_question (pausado — pergunta do dono no inbox)"
-        echo "pergunta: $(oracfit_inbox_dir)/${RUN_ID}.question.md"
-        echo "responda: oracfit resume $RUN_ID \"<sua resposta>\""
-        exit 7
+        oracfit_stages_pause_for_owner "$(oracfit_inbox_dir)/${RUN_ID}.question.md" "$role" "$attempt"
       else
         echo "owner-question.md malformado (sem linha 'pergunta:' ou garfo < 2 linhas 'se ... -> ...') — ignorado; o oráculo governa" >&2
       fi
@@ -706,6 +879,13 @@ for line in open(sys.argv[1]):
       # || true mantém o fail open: critic nunca derruba o stage loop.
       critic_gap="$(oracfit_gauntlet_run_critic "$mode_yaml" "$model_ref" "$oracle_log" "$accum" "$attempt" "$barra_file" || true)"
       [ -n "$critic_gap" ] && gap="$critic_gap" && echo "gauntlet stage=$role attempt=$attempt critic_gap=$gap" >&2
+      # Attempt boundary: ask the supervisor (when no hand-placed decision
+      # file and an endpoint is set), then apply the order for the next
+      # attempt of this stage. RESET restores from this stage's checkpoint.
+      # An applied ESCALATE pauses the run on the owner-question channel.
+      # A failed ask must not change this run's exit code.
+      : "${_stages_restore_refs[$i]:=}"
+      oracfit_stages_supervisor_boundary "$accum" "$attempt" "$oracle_exit" "$role" "$gauntlet_dir" "${_stages_restore_refs[$i]}" || true
     fi
   done
 
@@ -733,6 +913,9 @@ for line in open(sys.argv[1]):
     >"$stage_input_dir/stage-$i.md" 2>/dev/null \
     || printf '### Output of stage %s (role: %s)\n\n- (this stage wrote no output)\n' \
          "$((i+1))" "$role" >"$stage_input_dir/stage-$i.md"
+
+  # End-of-stage checkpoint: the restore origin of the next stage.
+  oracfit_stages_take_checkpoint "stage-$((i + 1))" $((i + 1))
 
   if [ "$role" = "run" ] && [ -n "$run_attempt_budget" ] \
     && [ "$run_attempt_count" -ge "$run_attempt_budget" ] && ! $stage_ok; then

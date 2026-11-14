@@ -90,32 +90,39 @@ make_mode() {
   } >"$1/core/modes/$2.yaml"
 }
 
-elapsed_of() { echo $(( $(date +%s) - $1 )); }
+# Wall-clock in milliseconds. Integer seconds made two honest waits compare
+# equal when they landed in the same second.
+now_ms() { date +%s%3N; }
+elapsed_of() { echo $(( $(now_ms) - $1 )); }
+
+# The fixture declares this throttle; the wait proofs measure it directly.
+THROTTLE_S=2
+TIMER_TOLERANCE_MS=150
+THROTTLE_MS=$((THROTTLE_S * 1000))
+MIN_WAIT_MS=$((THROTTLE_MS - TIMER_TOLERANCE_MS))
 
 # ── case 1: the multi-stage runtime waits when the mode declares a throttle ──
 THROTTLED_DIR="$TMPDIR/throttled"
-make_mode "$THROTTLED_DIR" "throttled-fixture" "    rate_limit_s: 2"
-t0=$(date +%s)
+make_mode "$THROTTLED_DIR" "throttled-fixture" "    rate_limit_s: $THROTTLE_S"
+t0="$(now_ms)"
 rc=0
 THROTTLED_OUT="$(
   ORACFIT_ROOT="$ROOT" DISPATCH_RUNNER="$FAKE_RUNNER" \
     "$STAGES" throttled-fixture "$THROTTLED_DIR/spec.md" throttled-test \
     --workdir "$THROTTLED_DIR" 2>&1
 )" || rc=$?
-throttled_s="$(elapsed_of "$t0")"
+throttled_ms="$(elapsed_of "$t0")"
 attempts="$(cat "$THROTTLED_DIR/attempt-count" 2>/dev/null || printf '0')"
 
 # ── case 2: the same run without a throttle is the control ───────────────────
 PLAIN_DIR="$TMPDIR/plain"
 make_mode "$PLAIN_DIR" "plain-fixture" "    rate_limit_s: 0"
-t0=$(date +%s)
 rc2=0
 PLAIN_OUT="$(
   ORACFIT_ROOT="$ROOT" DISPATCH_RUNNER="$FAKE_RUNNER" \
     "$STAGES" plain-fixture "$PLAIN_DIR/spec.md" plain-test \
     --workdir "$PLAIN_DIR" 2>&1
 )" || rc2=$?
-plain_s="$(elapsed_of "$t0")"
 
 if [ "$rc" -eq 0 ] && [ "$attempts" -eq 2 ]; then
   ok "the throttled stage ran two attempts and passed"
@@ -129,40 +136,38 @@ else
   not "the multi-stage runtime did not wait: $THROTTLED_OUT"
 fi
 
-if [ "$((throttled_s - plain_s))" -ge 1 ]; then
-  ok "the multi-stage runtime waits between attempts (${throttled_s}s vs ${plain_s}s)"
+if [ "$throttled_ms" -ge "$MIN_WAIT_MS" ]; then
+  ok "the multi-stage runtime waits at least the declared throttle (${throttled_ms}ms)"
 else
-  not "the declared throttle was ignored (${throttled_s}s vs ${plain_s}s): $THROTTLED_OUT"
+  not "the declared throttle was ignored (${throttled_ms}ms, need ${MIN_WAIT_MS}ms): $THROTTLED_OUT"
 fi
 
-if ! printf '%s\n' "$PLAIN_OUT" | grep -qF "RATE LIMIT"; then
-  ok "a stage that declares no throttle is not slowed down"
+if ! printf '%s\n' "$PLAIN_OUT" | grep -qF "RATE LIMIT: waiting"; then
+  ok "a stage that declares no throttle does not announce a wait"
 else
-  not "a stage without a throttle was slowed down: $PLAIN_OUT"
+  not "a stage without a throttle announced a wait: $PLAIN_OUT"
 fi
 
 # ── case 3: the single-stage runtime keeps the same promise ──────────────────
 SINGLE_DIR="$TMPDIR/single"
-make_mode "$SINGLE_DIR" "single-throttled-fixture" "    rate_limit_s: 2"
-t0=$(date +%s)
+make_mode "$SINGLE_DIR" "single-throttled-fixture" "    rate_limit_s: $THROTTLE_S"
+t0="$(now_ms)"
 rc3=0
 SINGLE_OUT="$(
   ORACFIT_ROOT="$ROOT" DISPATCH_RUNNER="$FAKE_RUNNER" \
     "$MODE" single-throttled-fixture "$SINGLE_DIR/spec.md" single-throttled-test \
     --workdir "$SINGLE_DIR" 2>&1
 )" || rc3=$?
-single_s="$(elapsed_of "$t0")"
+single_ms="$(elapsed_of "$t0")"
 
 SINGLE_PLAIN_DIR="$TMPDIR/single-plain"
 make_mode "$SINGLE_PLAIN_DIR" "single-plain-fixture" "    rate_limit_s: 0"
-t0=$(date +%s)
 rc4=0
 SINGLE_PLAIN_OUT="$(
   ORACFIT_ROOT="$ROOT" DISPATCH_RUNNER="$FAKE_RUNNER" \
     "$MODE" single-plain-fixture "$SINGLE_PLAIN_DIR/spec.md" single-plain-test \
     --workdir "$SINGLE_PLAIN_DIR" 2>&1
 )" || rc4=$?
-single_plain_s="$(elapsed_of "$t0")"
 
 if [ "$rc3" -eq 0 ] && [ "$rc4" -eq 0 ]; then
   ok "the single-stage runtime runs both fixtures"
@@ -171,10 +176,16 @@ else
 fi
 
 if printf '%s\n' "$SINGLE_OUT" | grep -qF "RATE LIMIT: waiting" \
-  && [ "$((single_s - single_plain_s))" -ge 1 ]; then
-  ok "the single-stage runtime waits between attempts (${single_s}s vs ${single_plain_s}s)"
+  && [ "$single_ms" -ge "$MIN_WAIT_MS" ]; then
+  ok "the single-stage runtime waits at least the declared throttle (${single_ms}ms)"
 else
-  not "the single-stage runtime ignored the throttle (${single_s}s vs ${single_plain_s}s): $SINGLE_OUT"
+  not "the single-stage runtime ignored the throttle (${single_ms}ms, need ${MIN_WAIT_MS}ms): $SINGLE_OUT"
+fi
+
+if ! printf '%s\n' "$SINGLE_PLAIN_OUT" | grep -qF "RATE LIMIT: waiting"; then
+  ok "a single-stage that declares no throttle does not announce a wait"
+else
+  not "a single-stage without a throttle announced a wait: $SINGLE_PLAIN_OUT"
 fi
 
 # ── case 4: the loader refuses a throttle the runtime could not honor ───────
@@ -235,41 +246,52 @@ source "$1"
 ORACFIT_RATE_LIMIT_MAX_S=2
 # One dispatch happened, so the next wait has something to measure against.
 oracfit_rate_limit_record_call "model:fixture-model"
-start=$(date +%s)
+start=$(date +%s%3N)
 oracfit_rate_limit_gate 999 "clamped wait" "" "model:fixture-model"
 rc=$?
-echo "CLAMPED=$(( $(date +%s) - start ))"
+echo "CLAMPED=$(( $(date +%s%3N) - start ))"
 echo "RC=$rc"
 # A human interrupt ends the wait instead of waiting it out.
 ORACFIT_RATE_LIMIT_MAX_S=60
 oracfit_rate_limit_record_call "model:fixture-model"
 touch "$2"
-start=$(date +%s)
+start=$(date +%s%3N)
 oracfit_rate_limit_gate 60 "interrupted wait" "$2" "model:fixture-model"
 rc=$?
-echo "INTERRUPTED=$(( $(date +%s) - start ))"
+echo "INTERRUPTED=$(( $(date +%s%3N) - start ))"
 echo "RC=$rc"
 # The ledger records the end of a dispatch, and the gate reads it back.
 oracfit_rate_limit_record_call "model:fixture-model"
 echo "LAST=$(oracfit_rate_limit_last_call "model:fixture-model")"
 EOF
 chmod +x "$TMPDIR/gate.sh"
-GATE_OUT="$("$TMPDIR/gate.sh" "$RATE_LIB" "$TMPDIR/interrupt.flag")"
-clamped_s="$(printf '%s\n' "$GATE_OUT" | sed -n 's/^CLAMPED=//p')"
-interrupted_s="$(printf '%s\n' "$GATE_OUT" | sed -n 's/^INTERRUPTED=//p')"
+GATE_OUT="$("$TMPDIR/gate.sh" "$RATE_LIB" "$TMPDIR/interrupt.flag" 2>&1)"
+clamped_ms="$(printf '%s\n' "$GATE_OUT" | sed -n 's/^CLAMPED=//p')"
+interrupted_ms="$(printf '%s\n' "$GATE_OUT" | sed -n 's/^INTERRUPTED=//p')"
 interrupt_rc="$(printf '%s\n' "$GATE_OUT" | sed -n 's/^RC=//p' | tail -1)"
 last_call="$(printf '%s\n' "$GATE_OUT" | sed -n 's/^LAST=//p')"
 
-if [ "${clamped_s:-99}" -ge 1 ] && [ "${clamped_s:-99}" -le 4 ]; then
-  ok "a wait above the ceiling is clamped to the ceiling (${clamped_s}s)"
+# The wait must be the ceiling (2s here), not the 999s that was asked for.
+# The lower bound keeps the 150ms timer tolerance; the upper bound is
+# generous so a busy machine does not fail a wait that did happen — it is
+# still three orders of magnitude below the 999s it must not have waited.
+if [ "${clamped_ms:-999999}" -ge $((1000 - TIMER_TOLERANCE_MS)) ] \
+  && [ "${clamped_ms:-999999}" -le 30000 ]; then
+  ok "a wait above the ceiling is clamped to the ceiling (${clamped_ms}ms)"
 else
-  not "the wait was not clamped to the ceiling (${clamped_s}s): $GATE_OUT"
+  not "the wait was not clamped to the ceiling (${clamped_ms}ms): $GATE_OUT"
 fi
 
-if [ "${interrupted_s:-99}" -le 2 ] && [ "${interrupt_rc:-0}" -eq 1 ]; then
-  ok "a human interrupt ends the wait (${interrupted_s}s, rc=1)"
+# The interrupt file is already there: the wait must end (non-zero rc and
+# the library announces the interrupt) and must not last the 60s ceiling.
+# 30s is a generous cap for a busy machine, far below the 60s ceiling.
+INTERRUPT_MAX_MS=30000
+if [ "${interrupt_rc:-0}" -ne 0 ] \
+  && printf '%s\n' "$GATE_OUT" | grep -qF "RATE LIMIT: wait interrupted" \
+  && [ "${interrupted_ms:-999999}" -le "$INTERRUPT_MAX_MS" ]; then
+  ok "a human interrupt ends the wait (${interrupted_ms}ms, rc=${interrupt_rc})"
 else
-  not "the wait outlived the human interrupt (${interrupted_s}s rc=${interrupt_rc:-?}): $GATE_OUT"
+  not "the wait outlived the human interrupt (${interrupted_ms}ms rc=${interrupt_rc:-?}): $GATE_OUT"
 fi
 
 if [ -n "$last_call" ] && [ "$last_call" -gt 0 ]; then

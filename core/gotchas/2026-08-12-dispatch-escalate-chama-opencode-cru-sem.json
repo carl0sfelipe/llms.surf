@@ -1,0 +1,28 @@
+{
+  "_prose": "english-ok-begin: title, symptom and prescription copied from the source incident",
+  "canary": {
+    "fire_fixture": "tests/fixtures/gotchas/2026-08-12-dispatch-escalate-chama-opencode-cru-sem.fire.json",
+    "quiet_fixture": "tests/fixtures/gotchas/healthy.json"
+  },
+  "id": "2026-08-12-dispatch-escalate-chama-opencode-cru-sem",
+  "prescription": "Nenhuma edicao no script nesta sessao — havia run vivo de dispatch-escalate\n(pid 16352, CanIRunIt, via <home-do-dono>/.oracfit/current/bin) e a regra 48\nproibe editar script bash que run vivo ainda vai executar. Workarounds usados:\n\n- Tiers: override por env `DISPATCH_TIERS=\"opencode/deepseek-v4-flash-free\n  opencode/deepseek-v4-pro\"` (mecanismo ja existente, linha 78).\n- Frontmatter: removido do specs/scentmatch-fotos-cdn.md (comentario HTML no\n  lugar). Com os dois workarounds o flash passou na 1a tentativa (104s).\n\nCorrecao definitiva pendente (quando nao houver run vivo):\n1. dispatch_model deve usar $DISPATCH_RUNNER (o runner ja resolve model id\n   pelo registry e ja poe o `--`), ou no minimo adicionar `--` e validar o\n   model id contra `opencode models` antes de despachar.\n2. Atualizar os TIERS default das linhas 70-72 para ids existentes.",
+  "source_incident": "incidents/2026-08-12-dispatch-escalate-chama-opencode-cru-sem.md",
+  "status": "active",
+  "symptom": "Run scentmatch-fotos-cdn (2026-08-12 ~05:44): dois dispatch-escalate seguidos\nBLOQUEADOS com 6 tentativas de 0-1s cada. Logs de TODAS as tentativas\n(.dispatch/logs/scentmatch-fotos-cdn-*-N.log, 3053 bytes identicos) continham\napenas o HELP do yargs do opencode — nenhum erro, nenhuma resposta de modelo.\nOraculo reportou oracle_exit=1 e o gauntlet escalou tier achando que o modelo\nestava travado.",
+  "title": "dispatch-escalate chama opencode cru sem -- e com tiers default mortos",
+  "trigger": {
+    "class": "diffuse",
+    "clauses": [
+      {
+        "kind": "oracle_exit",
+        "value": 1
+      },
+      {
+        "kind": "text_pattern",
+        "path_glob": "dispatch-escalate.sh",
+        "pattern": "opencode run --auto --model"
+      }
+    ]
+  },
+  "zz_prose": "english-ok-end"
+}

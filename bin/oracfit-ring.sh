@@ -967,14 +967,24 @@ score)
   score_field="$(state_get score_field)"
   pred=$(echo "$close_line" | py -c "import json,sys;print(json.load(sys.stdin).get('$score_field',''))")
   [ -n "$pred" ] || { echo "QUEBRADO: close de $ring sem campo $score_field no ledger" >&2; exit 2; }
-  score_extra=$(REAL="$REAL_SCORE" PRED="$pred" py - <<'EOF'
+  score_extra=$(RING="$ring" REAL="$REAL_SCORE" PRED="$pred" py - <<'EOF'
 import json, os
 real, pred = float(os.environ["REAL"]), float(os.environ["PRED"])
-print(json.dumps({"real": real, "pred": pred, "delta": round(real - pred, 2)}))
+delta = round(real - pred, 2)
+calibration_line = "CALIBRATION %s: predicted=%s real=%s delta=%s" % (
+    os.environ["RING"], os.environ["PRED"], os.environ["REAL"], delta)
+print(json.dumps({
+    "real": real,
+    "pred": pred,
+    "delta": delta,
+    "calibration_line": calibration_line,
+}, ensure_ascii=False))
 EOF
 )
   delta=$(echo "$score_extra" | py -c "import json,sys;print(json.load(sys.stdin)['delta'])")
+  calibration_line=$(echo "$score_extra" | py -c "import json,sys;print(json.load(sys.stdin)['calibration_line'])")
   append_ledger "$(make_event "$ring" owner_score "$score_extra")"
+  echo "$calibration_line"
   echo "CALIBRAÇÃO $ring: previsto=$pred real=$REAL_SCORE delta=$delta"
   echo "(delta acumulado do critic: rg owner_score $LEDGER)"
   echo "lembrete: commite $RING_DIR_NAME/ledger.jsonl no próximo anel (linha de score fora de commit até lá)"

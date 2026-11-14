@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "photo",
+    "name",
+    "brand",
+    "price",
+    "currency",
+    "category",
+    "sku",
+    "color",
+    "material",
+    "notes"
+  ],
+  "properties": {
+    "photo": { "type": "string" },
+    "name": { "type": "string" },
+    "brand": { "type": "string" },
+    "price": { "type": ["number", "null"] },
+    "currency": { "type": "string" },
+    "category": { "type": "string" },
+    "sku": { "type": "string" },
+    "color": { "type": "string" },
+    "material": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}

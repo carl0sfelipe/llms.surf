@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "calibration": {
+    "ring": "",
+    "line": ""
+  },
+  "thresholds": {
+    "act_above": 0.8
+  },
+  "rules": {}
+}
