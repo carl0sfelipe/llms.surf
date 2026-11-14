@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# bin/check-owner-suites.sh — confere que as suítes de aceitação do dono estão
-# intactas, por HASH (o modelo pode mover o arquivo de lugar, não alterá-lo).
+# bin/check-owner-suites.sh — verifies the owner's acceptance suites are intact,
+# by HASH (the executor may move a suite file, never change it).
 #
-# Portable: funciona em qualquer repo. O manifesto fica na raiz do repo:
-#   .owner-suites.sha256   →   "<sha256>  <caminho>"
+# Portable: works in any repo. The manifest lives at the repo root:
+#   .owner-suites.sha256   ->   "<sha256>  <path>"
 #
-# Uso: bash bin/check-owner-suites.sh [caminho-do-repo]
-# Exit: 0 = todas intactas; 1 = alguma alterada/sumiu.
+# Usage: bash bin/check-owner-suites.sh [repo-path]
+# Exit: 0 = all suites intact; 1 = a suite changed or is missing; 2 = bad repo path.
 set -uo pipefail
 REPO="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$REPO" || exit 2
 
 MANIFEST=".owner-suites.sha256"
-[ -f "$MANIFEST" ] || { echo "FALTA: manifesto $MANIFEST ausente em $REPO" >&2; exit 1; }
+[ -f "$MANIFEST" ] || { echo "MISSING: manifest $MANIFEST not found in $REPO" >&2; exit 1; }
 
 declare -A INDEX
 while read -r hash path; do
@@ -27,9 +27,9 @@ FAILED=0
 while read -r expected path; do
   [ -n "${expected:-}" ] || continue
   if [[ -n "${INDEX[$expected]:-}" ]]; then
-    echo "ok: suíte do dono intacta (${INDEX[$expected]})"
+    echo "ok: owner suite intact (${INDEX[$expected]})"
   else
-    echo "FALTA: suíte do dono alterada ou ausente: ${path} (sha256 ${expected})" >&2
+    echo "MISSING: owner suite changed or missing: ${path} (sha256 ${expected})" >&2
     FAILED=1
   fi
 done < "$MANIFEST"
