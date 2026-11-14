@@ -106,6 +106,15 @@ rm -f "$DISPATCH_EFETIVO_FILE"
 EXIT_FILE="$PID_DIR/dispatch-${TASK_NAME}.exit"
 rm -f "$EXIT_FILE"
 
+# Announce the run so the panel shows it while the runner works.
+# Best effort: a failed emit must not stop the run. Export the run id
+# first so the cursor translator records the trajectory in the same
+# events.jsonl the panel already reads.
+export ORACFIT_RUN_ID="$TASK_NAME"
+# shellcheck source=lib-oracfit-events.sh
+source "$BIN_DIR/lib-oracfit-events.sh" || true
+oracfit_emit_event run_started task="$TASK_NAME" model_id="$MODEL" || true
+
 set -m   # job control: runner vira líder do próprio grupo (incidente incidents/2026-07-24-timeout-matava-so-o-filho-neto-sobrevivi.md)
 nohup bash -c '"$0" "$1" "$2"; echo $? > "$3"' \
   "$RUNNER_ENTRY" "$MODEL" "$SPEC_FILE" "$EXIT_FILE" > "$LOG_FILE" 2>&1 &

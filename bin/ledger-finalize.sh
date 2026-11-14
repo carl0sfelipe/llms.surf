@@ -278,6 +278,32 @@ case "${RUNNER_EXIT:-}" in
 esac
 bash "$REPO_ROOT_FOR_USAGE/bin/emit-usage-feedback.sh" "${USAGE_ARGS[@]}" 2>/dev/null || true
 
+# Close the live-run announce. Best effort: must not block the ledger or
+# usage rows already written. One run_finished per run, and only when the
+# dispatch exported a run id.
+if [ -n "${ORACFIT_RUN_ID:-}" ]; then
+  EVENT_STATUS=fail
+  EVENT_REASON=runner_nonzero
+  case "$USAGE_RESULT" in
+    success) EVENT_STATUS=pass; EVENT_REASON="" ;;
+    blocked) EVENT_REASON=runner_killed ;;
+    failed)
+      if [ "$ORACLE_EXIT" != "null" ]; then
+        EVENT_REASON=oracle_failed
+      elif [ "$RUNNER_EXIT" = "killed" ] || [ "$RUNNER_EXIT" = "unknown" ]; then
+        EVENT_REASON=runner_killed
+      fi
+      ;;
+  esac
+  # shellcheck source=lib-oracfit-events.sh
+  source "$BIN_DIR/lib-oracfit-events.sh" || true
+  if [ "$EVENT_STATUS" = "pass" ]; then
+    oracfit_emit_event run_finished status=pass oracle_exit="$ORACLE_EXIT" || true
+  else
+    oracfit_emit_event run_finished status=fail reason="${EVENT_REASON:-runner_nonzero}" oracle_exit="$ORACLE_EXIT" || true
+  fi
+fi
+
 rm -f "$META_FILE" "$EXIT_FILE" "$EFETIVO_FILE" "$KERNEL_FILE"
 [ -n "${DISPATCH_LOCK_FILE:-}" ] && rm -f "$DISPATCH_LOCK_FILE"
 
