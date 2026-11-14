@@ -1,0 +1,13 @@
+{
+  "name": "llms.surf",
+  "install": "command -v jq >/dev/null 2>&1 || { sudo apt-get update -qq && sudo apt-get install -y -qq jq; }; jq --version && python3 --version && git --version && echo 'llms.surf environment ready'",
+  "ports": [
+    { "name": "llms-surf-gui", "port": 8766 }
+  ],
+  "terminals": [
+    {
+      "name": "llms-surf-gui",
+      "command": "export ORACFIT_ROOT=\"$PWD\" DISPATCH_RUNNER=\"$PWD/adapters/stub/runner.sh\"; bin/llms-surf gui --port 8766"
+    }
+  ]
+}
