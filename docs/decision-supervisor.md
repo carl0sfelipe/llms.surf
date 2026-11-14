@@ -34,7 +34,7 @@ rewrite.
 |---|---|---|
 | Trajectory capture | `events.jsonl` (`thinking`, `tool_call`), written by `bin/oracfit-thinking-tee.py` and by each adapter's stream translator | records the model's reasoning and which tool it called |
 | Deterministic behavior scan | `bin/oracfit-behavior-scan.py` (tiers B1–B8: restore loop, identical failing call ≥3, write without validate, empty biggest-gap streak, stuck pair, log >5 MB, pass with no write, transport-failure streak) | the Tier-0 cousin of the supervisor: a static scanner over the same trajectory |
-| Incident + rule corpus | `incidents/` (127 postmortems) + `fluxos/_comum/mapa-regras.md` (55 rules, 27 of them class `R` — "needs judgment, no mechanism possible today") | the evidence a supervisor would learn from |
+| Incident + rule corpus | `incidents/` (127 postmortems) + `fluxos/_comum/mapa-regras.md` (56 rules, 28 of them class `R` — "needs judgment, no mechanism possible today") | the evidence a supervisor would learn from |
 
 **The deterministic scan is currently running on one leg.** B1 (restore
 loop), B2 (identical failing call) and B3 (write without validate) all

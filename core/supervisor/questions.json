@@ -303,6 +303,16 @@
       "cost": {"model_calls": 1, "state": "short"},
       "asked": true,
       "incidents": ["incidents/2026-08-30-fallback-do-registry-aponta-endpoint-sus.md"], "english-ok": "on-disk incident filename"
+    },
+    {
+      "id": "r56-service-oracle-starts-the-production-runtime",
+      "rule": 56,
+      "type": "noul",
+      "instructions": "Does a service sprint's oracle start the process with the production command and talk to it over HTTP?",
+      "evidence": ["spec", "oracle_exit"],
+      "cost": {"model_calls": 1, "state": "short"},
+      "asked": true,
+      "incidents": ["incidents/2026-11-14-dogfood-semantype-13-sprints-via-adapter.md"], "english-ok": "on-disk incident filename"
     }
   ]
 }
