@@ -51,7 +51,7 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 - models in registry: 31,
 - modes: 21
 - adapters: 8 + 1 stub
-- test suites: 76
+- test suites: 77
 
 ## Surf aliases (the UI names — tree ids stay canonical)
 
