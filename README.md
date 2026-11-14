@@ -21,7 +21,7 @@ Orchestrate work across AI models from the CLIs you already have. Code — not t
 - Even the AI judge is watched: one write, and code kills it.
 
 [![License](https://img.shields.io/badge/license-AGPL--3.0%20%2B%20MIT-blue.svg)](NOTICE)
-[![Version](https://img.shields.io/badge/version-0.0.1-brightgreen.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.5.0-brightgreen.svg)](VERSION)
 [![Incidents](https://img.shields.io/badge/incidents%E2%86%92mechanisms-127-orange.svg)](incidents/)
 
 ---

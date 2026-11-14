@@ -2,7 +2,7 @@
 
 > Status: **design note**. Nothing here is implemented. Every number was
 > measured in this tree on 2026-11-12 (tree `main` = `26c9204`, `VERSION`
-> 0.0.1); the appendix has the command that reproduces each one.
+> 0.5.0); the appendix has the command that reproduces each one.
 >
 > One decision is deliberately **open**: the local serving topology for
 > Eikos-27B and the Qwen-27B dev assistant (section 9, D1). It is written
@@ -900,7 +900,7 @@ nothing but bash and Python.
 ## Appendix A — reproducing every number in this note
 
 ```bash
-cat VERSION                                   # 0.0.1
+cat VERSION                                   # 0.5.0
 find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 127
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
