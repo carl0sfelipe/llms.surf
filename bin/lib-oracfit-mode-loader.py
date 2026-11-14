@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Oracfit mode YAML schema v1 loader — validate, resolve-tier, dump."""
+"""Oracfit mode YAML schema v1 loader — validate, resolve-tier, dump, promises."""
 
 import json
 import re
@@ -823,6 +823,67 @@ def dump(path):
     print()
 
 
+def _read_mode_yaml(path):
+    """Load a mode file. Missing file exits 3; unreadable file exits 3.
+
+    This is the reader only: it does not resolve any named file. The
+    conference that keeps prompt_template and json_schema promises calls
+    the runtime libs; this function just says what the YAML declared.
+    """
+    p = Path(path)
+    if not p.exists():
+        print(f"ERROR: file not found: {p}", file=sys.stderr)
+        sys.exit(3)
+    try:
+        text = p.read_text(encoding="utf-8")
+    except (OSError, PermissionError) as e:
+        print(f"ERROR: cannot read {p}: {e}", file=sys.stderr)
+        sys.exit(3)
+    try:
+        import yaml as _yaml_lib
+        data = _yaml_lib.safe_load(text)
+    except ImportError:
+        data = _load_yaml(text)
+    return data
+
+
+def promises(path):
+    """Print the prompt_template and json_schema names each stage declares.
+
+    JSON on stdout, one object, no file lookup. A stage that does not
+    name a prompt or a schema is omitted. The conference resolves.
+    """
+    data = _read_mode_yaml(path)
+    out = []
+    if isinstance(data, dict):
+        for index, stage in enumerate(_find_stages(data)):
+            if not isinstance(stage, dict):
+                continue
+            role = stage.get("role", "")
+            if not isinstance(role, str):
+                role = str(role) if role is not None else ""
+            if "prompt_template" in stage:
+                name = stage["prompt_template"]
+                if isinstance(name, str) and name.strip():
+                    out.append({
+                        "stage": index,
+                        "role": role,
+                        "type": "prompt_template",
+                        "name": name,
+                    })
+            if "json_schema" in stage:
+                name = stage["json_schema"]
+                if isinstance(name, str) and name.strip():
+                    out.append({
+                        "stage": index,
+                        "role": role,
+                        "type": "json_schema",
+                        "name": name,
+                    })
+    json.dump({"promises": out}, sys.stdout, ensure_ascii=False)
+    print()
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage:", file=sys.stderr)
@@ -830,6 +891,7 @@ def main():
         print("  lib-oracfit-mode-loader.py lint <path.yaml> [--root DIR] [--workdir DIR] [--strict]", file=sys.stderr)
         print("  lib-oracfit-mode-loader.py resolve-tier <tier> [--registry path.json]", file=sys.stderr)
         print("  lib-oracfit-mode-loader.py dump <path.yaml>", file=sys.stderr)
+        print("  lib-oracfit-mode-loader.py promises <path.yaml>", file=sys.stderr)
         sys.exit(2)
 
     cmd = sys.argv[1]
@@ -882,6 +944,12 @@ def main():
             print("Usage: dump <path.yaml>", file=sys.stderr)
             sys.exit(2)
         dump(sys.argv[2])
+
+    elif cmd == "promises":
+        if len(sys.argv) < 3:
+            print("Usage: promises <path.yaml>", file=sys.stderr)
+            sys.exit(2)
+        promises(sys.argv[2])
 
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)

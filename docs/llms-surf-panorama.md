@@ -149,11 +149,11 @@ lives in `docs/decision-supervisor.md`; the short version:
 
 | Fact | Value | Where |
 |---|---|---|
-| Version | 0.4.1 | `VERSION` |
+| Version | 0.0.1 | `VERSION` |
 | Incidents | 126 | `incidents/*.md` |
 | Rules | 55, of which 27 class `R` | `fluxos/_comum/mapa-regras.md` |
 | Modes | 21 | `core/modes/*.yaml` |
-| Test suites | 53 | `tests/` |
+| Test suites | 76 | `tests/` |
 | Models in the registry | 30 | `model-registry.json` |
 | Host | 1× RTX 3090 (24 GB), Ryzen 5 3500X, 32 GB RAM | measured 2026-11-12 |
 

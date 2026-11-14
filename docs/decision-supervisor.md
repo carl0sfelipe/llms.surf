@@ -2,7 +2,7 @@
 
 > Status: **design note**. Nothing here is implemented. Every number was
 > measured in this tree on 2026-11-12 (tree `main` = `26c9204`, `VERSION`
-> 0.4.1); the appendix has the command that reproduces each one.
+> 0.0.1); the appendix has the command that reproduces each one.
 >
 > One decision is deliberately **open**: the local serving topology for
 > Eikos-27B and the Qwen-27B dev assistant (section 9, D1). It is written
@@ -887,6 +887,7 @@ everything.
 | **26** | the **simple dispatch announces itself while it works**: the mode runtime emits `run_started` and `run_finished`, but the simple dispatch emitted nothing — so the owner's panel could only show a run *after* the fact, in the dispatches tab, and a run in flight looked like no run at all — `specs/sup-26-o-dispatch-aparece-no-painel.md` (delivered: the dispatch exports the run id and emits `run_started` before the runner starts, the finalizer closes it with one `run_finished` — `pass`, `fail` with a one-word reason — and the same run id makes the cursor runner write its trajectory to the same events file; the emit is best effort and never breaks the run) | the owner sees the run he started while it is still running, in the same panel |
 | **27** | the **guard of the throttle stops lying about the throttle**: the suite that proves the runtime waits what the mode declares compared two runs measured in whole seconds and demanded one to be a full second longer than the other — under load both landed on the same second and the suite failed on a wait that had happened (`the declared throttle was ignored (3s vs 3s)`) — `specs/sup-27-o-suite-do-rate-limit-sem-flake.md` (delivered: the measurement is in milliseconds, the throttled run has to have lasted at least the throttle the fixture declares (minus a 150ms timer tolerance), the control became **behavioural** (a run without a throttle announces no wait), and the interrupt case is bounded generously instead of by a stopwatch; the runtimes were not touched — the runtime was right, the measurement was wrong) | a green suite means what it says, and the flaky gate stops eating trust |
 | **28** | the **first real triad in the bank**: the whole supervisor mechanism existed (the compiler, the validator, the canary, the deterministic matcher, the injection at the attempt boundary) and the bank was **empty** — 126 incidents, zero triads, so the supervisor matched against nothing — `specs/sup-28-o-primeiro-trio-real.md` (delivered: one triad compiled from a real incident, its trigger written by hand and *narrow* (the round failed **and** the defect's own shape is still in the tree), the fire fixture pointing at versioned paths with a citation per value, a negative control that proves the trigger does not fire on any failed round, and the class `diffuse` — it names candidates, it never decides) | the bank stops being a schema and becomes memory with evidence in it |
+| **29** | the **custom-mode tools refuse a broken promise**: a mode may declare `prompt_template` or `json_schema`; the runtime honours the promise (it dies with `PROMPT TEMPLATE NOT FOUND` / `JSON SCHEMA NOT FOUND` before any model call) but the tools that *create* the mode checked nothing — the broken promise only surfaced after the whole preparation, at the first stage — `specs/sup-29-o-tools-de-custom-mode-recusam-promessa.md` (delivered: the loader gained a `promises` subcommand that only **declares** the names (JSON), a new `bin/lib-oracfit-mode-promises.sh` **resolves** them by calling the two libs the runtime already uses (no second copy of "where the file lives"), and `mode validate`, `mode add` and `mode init` all refuse a broken promise at creation time, naming the promise that broke) | a mode that promises a missing file is refused where it is written, not where it dies |
 
 A through E are independent of every open decision above: they are about
 the evidence and the mechanism, not about the models. F onward needs the
@@ -896,12 +897,12 @@ nothing but bash and Python.
 ## Appendix A — reproducing every number in this note
 
 ```bash
-cat VERSION                                   # 0.4.1
+cat VERSION                                   # 0.0.1
 find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 126
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 75
+ls tests/test-*.sh | wc -l                    # 76
 python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
 # class-R rules out of the rules map (the legend line does not count: the
@@ -1086,3 +1087,7 @@ git hash-object -t tree /dev/null                      # 4b825dc642cb6eb9a060e54
 | `tests/fixtures/gotchas/generic-failure.json` | the negative control: a round that failed in a generic way must not fire the triad (rung 28) |
 | `tests/test-gotcha-bank.sh` | the suite of the bank: it is not empty, the triad fires on its own evidence, stays quiet on a healthy round, is narrow, and every trigger value is quoted from the incident (rung 28) |
 | `specs/sup-28-o-primeiro-trio-real.md` | dispatchable spec, rung 28 (the first real triad) |
+| `bin/lib-oracfit-mode-promises.sh` | the conference of the promises: it resolves the declared `prompt_template` / `json_schema` by calling the two libs the runtime uses (rung 29) |
+| `bin/lib-oracfit-mode-loader.py` | the reader of the mode YAML; the `promises` subcommand only declares the promised names (rung 29) |
+| `tests/test-mode-promises.sh` | the suite of the promise: a broken promise is refused at creation time, a resolvable one passes, and the check agrees with the runtime resolution (rung 29) |
+| `specs/sup-29-o-tools-de-custom-mode-recusam-promessa.md` | dispatchable spec, rung 29 (the custom-mode tools refuse a broken promise) |

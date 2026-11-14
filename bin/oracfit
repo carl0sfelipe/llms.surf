@@ -244,10 +244,24 @@ resolve_mode_yaml() { # $1=id|path — imprime caminho ou sai 3
   echo "$file"
 }
 
+# Grammar (the loader) then the files the stages named (the conference).
+# The conference calls the same two libs the runtime uses; it does not
+# copy the resolution. Default root is the install, default workdir is
+# whoever is running the command.
+check_mode_promises() {
+  bash "$SCRIPT_DIR/lib-oracfit-mode-promises.sh" check "$1" \
+    --root "${ORACFIT_ROOT:-$ROOT}" \
+    --workdir "${ORACFIT_WORKDIR:-$PWD}"
+}
+
 cmd_mode_validate() {
-  local file
+  local file ok_line
   file=$(resolve_mode_yaml "${1:?usage: oracfit mode validate <id|path.yaml>}")
-  exec python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" validate "$file"
+  # Capture the loader's OK line so a broken promise does not print OK
+  # and then fail. FAIL from the loader stays on stderr.
+  ok_line="$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" validate "$file")" || exit $?
+  check_mode_promises "$file" || exit $?
+  printf '%s\n' "$ok_line"
 }
 
 cmd_mode_show() {
@@ -388,6 +402,8 @@ EOF
   fi
   python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" validate "$dest" >/dev/null \
     || { echo "ERROR: scaffold does not validate: $dest" >&2; exit 3; }
+  local promises_rc
+  check_mode_promises "$dest" || { promises_rc=$?; rm -f "$dest"; exit "$promises_rc"; }
   echo "wrote $dest"
   echo "next: oracfit spec init task.md && oracfit run ${id} task.md <task>"
 }
@@ -438,8 +454,11 @@ cmd_mode_add() {
   # Install a mode someone shared (the YAML file is the public form of a mode). It is validated
   # and linted with the loader the run uses, then copied to the workdir overlay only.
   local src="${1:?usage: oracfit mode add <path.yaml>}"
+  local ok_line
   [ -f "$src" ] || { echo "ERROR: yaml not found: $src" >&2; exit 3; }
-  python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" validate "$src" || exit $?
+  ok_line="$(python3 "$SCRIPT_DIR/lib-oracfit-mode-loader.py" validate "$src")" || exit $?
+  check_mode_promises "$src" || exit $?
+  printf '%s\n' "$ok_line"
   local id
   id="$(grep -E '^id:' "$src" | head -1 | sed 's/^id:[[:space:]]*//' | tr -d '"' | tr -d "'" | tr -d '[:space:]')"
   case "$id" in

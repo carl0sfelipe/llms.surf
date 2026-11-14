@@ -9,7 +9,7 @@ const DATA = {
   meta: {
     name: "LLMs.surf",
     former: "Oracfit",
-    version: "0.4.1",
+    version: "0.0.1",
     github: "https://github.com/carl0sfelipe/llms.surf"
   },
 
@@ -42,8 +42,8 @@ const DATA = {
     modes: 21,
     adapters: 8,
     adaptersStub: 1,
-    suites: 75,
-    version: "0.4.1"
+    suites: 76,
+    version: "0.0.1"
   },
 
   mechanisms: [
