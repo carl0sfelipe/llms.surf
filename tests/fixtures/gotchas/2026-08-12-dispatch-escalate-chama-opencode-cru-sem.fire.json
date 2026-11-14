@@ -1,0 +1,12 @@
+{
+  "citations": {
+    "oracle_exit": "oracle_exit=1",
+    "text_root": "bin/dispatch-escalate.sh"
+  },
+  "signals": {
+    "behavior_flags": [],
+    "oracle_exit": 1,
+    "text_root": "bin"
+  },
+  "source_incident": "incidents/2026-08-12-dispatch-escalate-chama-opencode-cru-sem.md"
+}
