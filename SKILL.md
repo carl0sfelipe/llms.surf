@@ -22,7 +22,7 @@ Em 2026-07-27 havia 35 regras aqui. Quinze viraram passo de fluxo, dez viraram c
 
 Os números são **imutáveis**. Regra removida deixa buraco; número nunca é reciclado — referência antiga em código ou incidente passaria a apontar para outra regra. Destino de cada uma em `fluxos/_comum/mapa-regras.md`.
 
-<!-- ultimo-numero-de-regra: 55 -->
+<!-- ultimo-numero-de-regra: 56 -->
 `bin/incident.sh promote` lê o marcador acima para saber o próximo número. Não edite à mão.
 
 **1. VOCÊ LÊ, DECIDE E DESPACHA — NÃO ESCREVE BULK.**
@@ -91,6 +91,8 @@ Regra sem mecanismo é **dívida**, não entrega. Regra-texto pode inclusive **i
 **54. A ALLOWLIST DE PROVIDER (E5-M6/R4) SÓ GOVERNA O CAMINHO FREE: dispatch com model-id EXPLÍCITO (decisão deliberada do operador) grava allowlist_status=fora-do-escopo, nunca violado. O .efetivo passa a carregar a origem (tier:* vs id explícito) e o ledger-finalize decide por ela — sem isso, todo dispatch pago pelo caminho canônico é caluniado de violação. SEM MECANISMO HOJE (campo origem pendente no run-with-fallback) — dívida declarada no incidente 2026-08-30.** (incidente: `incidents/2026-08-30-allowlist-do-free-path-assertiona-dispat.md`)
 
 **55. FALLBACK DE REGISTRY É VALIDADO NO ENCADEAMENTO, NÃO NA FÉ: ref existe (id ou hint) E endpoint responde — fantasma ou endpoint morto PULA pro próximo da cadeia, cadeia vazia = exit 2 limpo na cara do operador. Fallback estático apodrece em silêncio (audit 2026-08-30: 7 fantasmas, 1 morto, 3 viáveis em 11 refs; o morto transformou rate limit temporário em run assassinado por retry mudo). SEM MECANISMO HOJE (checagem pré-fallback pendente no run-with-fallback.sh) — dívida declarada.** (incidente: `incidents/2026-08-30-fallback-do-registry-aponta-endpoint-sus.md`)
+
+**56. ORÁCULO DE SERVIÇO SOBE O RUNTIME DE PRODUÇÃO: o oráculo de uma sprint de serviço sobe o processo com o MESMO comando do systemd/produção e fala com ele por HTTP; teste unitário verde não fecha sprint de serviço.** (incidente: `incidents/2026-11-14-dogfood-semantype-13-sprints-via-adapter.md`)
 
 ---
 

@@ -3,8 +3,8 @@ id: 2026-11-14-dogfood-semantype-13-sprints-via-adapter
 titulo: dogfood semantype: 13 sprints via adapter cursor, o que funcionou e o que o framework nao viu
 data: 2026-11-14
 recorrivel: sim
-regra: pendente
-status: aberto
+regra: 56
+status: promovido
 interage_com: [24, 31, 37, 39, 42, 49, 53]
 ---
 
@@ -112,3 +112,12 @@ Sim. Três classes recorríveis:
 Promover depois de reverificar os rungs 25/26:
 
     bin/incident.sh promote 2026-11-14-dogfood-semantype-13-sprints-via-adapter "<texto da regra 2>"
+
+## Reverificação (2026-11-14, antes da promoção)
+
+- Rung 25 conferido no adapter cursor: o dispatch `sup-32-frontmatter`
+  (`grok-4.6-xhigh-fast`, 2026-11-14) entrou em `ledger/ledger.jsonl` com
+  `session_id`, sem `DB_PATH` exportado.
+- Promovida a classe 2 (oráculo que não sobe o runtime). A classe 1 (painel
+  na porta de outro workdir, symlink recusado) segue sem mecanismo; a classe 3
+  (`bin/check-owner-suites.sh` no preflight) fica para um rung.
