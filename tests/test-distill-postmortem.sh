@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/test-distill-postmortem.sh — the distiller accepts a human postmortem.
 # Hermetic: a temp workdir, ORACFIT_ROOT pointed at this repo, no network,
-# no model, no GPU. No file of this checkout is written. The eight proofs
+# no model, no GPU. No file of this checkout is written. The twelve proofs
 # are independent of each other.
 
 set -euo pipefail
@@ -34,9 +34,10 @@ rc_of() { set +e; "$@" >"$SCRATCH/last.log" 2>&1; echo $?; set -e; }
 
 # english-ok-begin: fake postmortems must match incidents/ (heading Sintoma, key titulo).
 write_postmortem() {
-  python3 - "$1" "$2" "$3" "$4" "$5" <<'PY'
+  python3 - "$@" <<'PY'
 import sys
 dest, iid, title, symptom, cause = sys.argv[1:6]
+extra = sys.argv[6] if len(sys.argv) > 6 else ""
 text = f"""---
 id: {iid}
 titulo: {title}
@@ -54,7 +55,7 @@ status: rascunho
 
 ## Causa
 
-{cause}
+{cause}{extra}
 """
 open(dest, "w", encoding="utf-8").write(text)
 PY
@@ -323,6 +324,135 @@ if [ "$rc" -eq 0 ] && [ -f "$P8/core/gotchas/drafts/${P8_ID}.json" ]; then
   fi
 else
   not "the bank validator ignores the drafts (distill rc=$rc log=$(head -c 200 "$SCRATCH/last.log"))"
+fi
+
+echo "== the prescription is the incident's correction section"
+P9="$SCRATCH/p9"
+mkdir -p "$P9/incidents" "$P9/drafts"
+P9_ID="fixture-distill-prescription"
+P9_INC="$P9/incidents/${P9_ID}.md"
+P9_RX="CORRECTION_SECTION_MARKER"$'\n'"$(python3 -c 'print("y" * 1500)')"
+# english-ok-begin: heading Correção aplicada is the canonical correction section in incidents/.
+write_postmortem "$P9_INC" "$P9_ID" "fixture prescription from correction" "The round failed." "$CAUSE" "$(printf '\n## Correção aplicada\n\n%s\n' "$P9_RX")"
+# english-ok-end
+rc="$(rc_of python3 "$DISTILL" distill --incident "$P9_INC" --out "$P9/drafts")"
+if [ "$rc" -eq 0 ] && python3 - "$P9/drafts/${P9_ID}.json" "$P9_INC" <<'PY'
+import json, re, sys
+from pathlib import Path
+draft_path, incident = sys.argv[1:3]
+d = json.loads(Path(draft_path).read_text(encoding="utf-8"))
+text = Path(incident).read_text(encoding="utf-8")
+body = text.split("---", 2)[-1]
+match = re.search(r"^## Correção aplicada\s*$", body, re.M)  # english-ok: postmortem heading
+assert match, "missing correction heading"
+start = match.end()
+if start < len(body) and body[start] == "\n":
+    start += 1
+nxt = re.search(r"^## ", body[start:], re.M)
+end = start + nxt.start() if nxt else len(body)
+section = body[start:end].strip()
+assert len(section) > 1200, len(section)
+assert d["prescription"] == section[:1200], (len(d["prescription"]), d["prescription"][:80])
+assert d["prescription"].startswith("CORRECTION_SECTION_MARKER")
+PY
+then
+  ok "the prescription is the incident's correction section"
+else
+  not "the prescription is the incident's correction section (rc=$rc log=$(head -c 200 "$SCRATCH/last.log"))"
+fi
+
+echo "== a postmortem without a correction section has an empty prescription"
+P10="$SCRATCH/p10"
+mkdir -p "$P10/incidents" "$P10/drafts"
+P10_ID="fixture-distill-no-correction"
+P10_INC="$P10/incidents/${P10_ID}.md"
+write_postmortem "$P10_INC" "$P10_ID" "fixture without a correction heading" "The round failed." "$CAUSE"
+rc="$(rc_of python3 "$DISTILL" distill --incident "$P10_INC" --out "$P10/drafts")"
+if [ "$rc" -eq 0 ] && python3 - "$P10/drafts/${P10_ID}.json" <<'PY'
+import json, sys
+from pathlib import Path
+d = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert d["prescription"] == ""
+assert d["status"] == "draft"
+assert d["trigger"]["class"] == ""
+assert d["trigger"]["clauses"] == []
+PY
+then
+  ok "a postmortem without a correction section has an empty prescription"
+else
+  not "a postmortem without a correction section has an empty prescription (rc=$rc log=$(head -c 200 "$SCRATCH/last.log"))"
+fi
+
+echo "== the accepted section names are a closed list"
+P11="$SCRATCH/p11"
+mkdir -p "$P11/incidents" "$P11/drafts"
+P11_ID="fixture-distill-closed-list"
+P11_INC="$P11/incidents/${P11_ID}.md"
+# File order is the reverse of the accepted-name list so that picking the
+# first heading in the file, or the last, cannot pass as picking the first
+# name in the list.
+# english-ok-begin: closed list of correction headings from incidents/.
+write_postmortem "$P11_INC" "$P11_ID" "fixture closed list of correction headings" "The round failed." "$CAUSE" "$(cat <<'EOF'
+
+## Prevenção
+
+PREVENTION_SECTION_MARKER the prevention body.
+
+## Correção aplicada
+
+APPLIED_CORRECTION_MARKER the applied correction body.
+
+## Correção (aplicada)
+
+PAREN_CORRECTION_MARKER the parenthesized correction body.
+EOF
+)"
+# english-ok-end
+rc="$(rc_of python3 "$DISTILL" distill --incident "$P11_INC" --out "$P11/drafts")"
+if [ "$rc" -eq 0 ] && python3 - "$P11/drafts/${P11_ID}.json" "$P11_INC" <<'PY'
+import json, re, sys
+from pathlib import Path
+draft_path, incident = sys.argv[1:3]
+d = json.loads(Path(draft_path).read_text(encoding="utf-8"))
+text = Path(incident).read_text(encoding="utf-8")
+body = text.split("---", 2)[-1]
+match = re.search(r"^## Correção aplicada\s*$", body, re.M)  # english-ok: first name in the closed list
+assert match, "missing applied-correction heading"
+start = match.end()
+if start < len(body) and body[start] == "\n":
+    start += 1
+nxt = re.search(r"^## ", body[start:], re.M)
+end = start + nxt.start() if nxt else len(body)
+section = body[start:end].strip()
+assert d["prescription"] == section[:1200], d["prescription"]
+assert d["prescription"].startswith("APPLIED_CORRECTION_MARKER")
+assert "PREVENTION_SECTION_MARKER" not in d["prescription"]
+assert "PAREN_CORRECTION_MARKER" not in d["prescription"]
+PY
+then
+  ok "the accepted section names are a closed list"
+else
+  not "the accepted section names are a closed list (rc=$rc log=$(head -c 200 "$SCRATCH/last.log"))"
+fi
+
+echo "== the usage report draft still has an empty prescription"
+P12="$SCRATCH/p12"
+mkdir -p "$P12/drafts"
+P12_REPORT="$P12/uso-empty-prescription.md"
+write_report "$P12_REPORT" "/no/such/workdir-distill-prescription" "main@deadbee" "usage-empty-prescription" "blocked" "4"
+rc="$(rc_of python3 "$DISTILL" distill --incident "$P12_REPORT" --out "$P12/drafts")"
+if [ "$rc" -eq 0 ] && python3 - "$P12/drafts/usage-empty-prescription.json" <<'PY'
+import json, sys
+from pathlib import Path
+d = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert d["id"] == "usage-empty-prescription"
+assert d["prescription"] == ""
+assert d["status"] == "draft"
+PY
+then
+  ok "the usage report draft still has an empty prescription"
+else
+  not "the usage report draft still has an empty prescription (rc=$rc log=$(head -c 200 "$SCRATCH/last.log"))"
 fi
 
 echo

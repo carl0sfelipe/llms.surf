@@ -9,11 +9,14 @@ without `task` is a postmortem.
 
 From a usage report the symptom is the round's diff (WIP ref against HEAD,
 or the working tree against the recorded sha). From a postmortem the symptom
-is the `## Sintoma` section, and a fire-fixture skeleton is written next to
-the draft with citations copied from backtick literals in the file. The
-trigger, the prescription and the skeleton's `signals` stay empty: those
-are written by hand. This program does not promote, does not decide, does
-not inject, does not invent a literal, and does not call a model.
+is the symptom section, the prescription is the first accepted correction
+section that exists (verbatim, truncated at the same limit as the symptom),
+and a fire-fixture skeleton is written next to the draft with citations
+copied from backtick literals in the file. The trigger and the skeleton's
+`signals` stay empty: those are written by hand. A postmortem with no
+correction section still yields a draft, with an empty prescription. This
+program does not promote, does not decide, does not inject, does not invent
+a literal, and does not call a model.
 
 Subcommands:
   distill --incident FILE [--wip-ref REF] [--out DIR] [--force]
@@ -43,6 +46,12 @@ BACKTICK_RE = re.compile(r"`([^`\n]+)`")
 # english-ok-begin: usage reports and postmortems keep their original headings, keys and dirty=sim/nao
 CONTEXT_HEADING = "Contexto"
 SINTOMA_HEADING = "Sintoma"
+# Closed list: first name that exists wins, regardless of heading order in the file.
+CORRECTION_HEADINGS = (
+    "Correção aplicada",
+    "Correção (aplicada)",
+    "Prevenção",
+)
 TITULO_KEY = "titulo"
 DIRTY_YES = "sim"
 DIRTY_NO = "nao"
@@ -178,6 +187,20 @@ def truncate(text: str) -> str:
     return text[:SECTION_LIMIT]
 
 
+def prescription_from_postmortem(body: str) -> str:
+    """Literal body of the first accepted correction heading, or empty.
+
+    The first name in CORRECTION_HEADINGS that exists wins, regardless of
+    heading order in the file. Missing every accepted heading is not an
+    error: the draft keeps an empty prescription.
+    """
+    for name in CORRECTION_HEADINGS:
+        section = extract_named_section(body, name)
+        if section is not None:
+            return truncate(section.strip())
+    return ""
+
+
 def is_usage_report(meta: dict[str, str]) -> bool:
     return bool(meta.get("task", "").strip())
 
@@ -258,13 +281,14 @@ def draft_payload(
     incident_path: str,
     symptom: str,
     fire_fixture: str,
+    prescription: str = "",
 ) -> dict[str, Any]:
     return {
         "id": gotcha_id,
         "title": title,
         "source_incident": incident_path,
         "symptom": symptom,
-        "prescription": "",
+        "prescription": prescription,
         "trigger": {"class": "", "clauses": []},
         "canary": {
             "fire_fixture": fire_fixture,
@@ -324,6 +348,7 @@ def distill_postmortem(
 
     source = repo_relative(incident)
     symptom = truncate(section.strip())
+    prescription = prescription_from_postmortem(body)
     out_dir = Path(out)
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -338,6 +363,7 @@ def distill_postmortem(
         source,
         symptom,
         skeleton_path.as_posix(),
+        prescription,
     )
     rc = write_draft(out_dir, gotcha_id, payload, force)
     if rc != 0:
