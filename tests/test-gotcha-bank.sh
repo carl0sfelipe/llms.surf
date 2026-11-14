@@ -327,6 +327,68 @@ else
   not "the triad is advisory"
 fi
 
+echo "== every trigger value is quoted from the incident"
+set +e
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+bank = Path("core/gotchas")
+errors = []
+found = False
+for path in sorted(p for p in bank.glob("*.json") if p.is_file()):
+    triad = json.loads(path.read_text(encoding="utf-8"))
+    if triad.get("status") != "active":
+        continue
+    found = True
+    source = triad.get("source_incident")
+    if not isinstance(source, str) or not Path(source).is_file():
+        errors.append(f"{path}: source_incident missing: {source!r}")
+        continue
+    incident = Path(source).read_text(encoding="utf-8")
+    fire_path = triad.get("canary", {}).get("fire_fixture")
+    fire = json.loads(Path(fire_path).read_text(encoding="utf-8"))
+    citations = fire.get("citations")
+    if not isinstance(citations, dict):
+        citations = {}
+    cited_text = " ".join(str(v) for v in citations.values())
+    clauses = (triad.get("trigger") or {}).get("clauses") or []
+    for clause in clauses:
+        kind = clause.get("kind")
+        if kind in ("text_pattern", "stderr_pattern", "events_pattern"):
+            pattern = clause.get("pattern")
+            if not isinstance(pattern, str) or not pattern:
+                errors.append(f"{path}: {kind} clause has no pattern")
+                continue
+            if pattern not in incident:
+                errors.append(
+                    f"{path}: pattern {pattern!r} is not quoted in {source}"
+                )
+        elif kind == "oracle_exit":
+            value = clause.get("value")
+            if not isinstance(value, int) or str(value) not in cited_text:
+                errors.append(
+                    f"{path}: oracle_exit {value!r} is not quoted by any citation"
+                )
+        elif kind == "behavior_flag":
+            value = clause.get("value")
+            if not isinstance(value, str) or value not in incident:
+                errors.append(
+                    f"{path}: behavior_flag {value!r} is not quoted in {source}"
+                )
+if not found:
+    errors.append("no active triad")
+if errors:
+    raise SystemExit("\n".join(errors))
+PY
+quoted_rc=$?
+set -e
+if [ "$quoted_rc" -eq 0 ]; then
+  ok "every trigger value is quoted from the incident"
+else
+  not "every trigger value is quoted from the incident"
+fi
+
 echo
 echo "test-gotcha-bank: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
