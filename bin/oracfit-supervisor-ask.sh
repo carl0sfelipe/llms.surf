@@ -102,7 +102,7 @@ if [ -n "$ids" ]; then
     --state "$state" \
     --timeout "$timeout" \
     --ids "$ids" \
-    --out "$answers_out"
+    --out "$answers_out" >&2
   then
     die "ask failed"
   fi
@@ -112,7 +112,7 @@ else
     --questions "$exported" \
     --state "$state" \
     --timeout "$timeout" \
-    --out "$answers_out"
+    --out "$answers_out" >&2
   then
     die "ask failed"
   fi
@@ -124,7 +124,7 @@ out_existed=0
 if ! python3 "$POLICY_PY" decide \
   --answers "$answers_out" \
   --policy "$policy" \
-  --out "$out"
+  --out "$out" >&2
 then
   if [ "$out_existed" -eq 0 ]; then
     rm -f "$out"
@@ -132,5 +132,7 @@ then
   die "decide failed"
 fi
 
+# stdout carries only the record path: the runtime reads it as a path. The
+# client's per-question lines and the decide record go to stderr.
 printf '%s\n' "$out"
 exit 0
