@@ -436,6 +436,7 @@ if ! start_stub; then
   not "the answers become an order"
   not "the decision record lands in the inbox"
   not "the runtime asks only the mapped questions"
+  not "a working ask is not reported as failed"
 else
   ASK="$SCRATCH/ask"
   export ORACFIT_SUPERVISOR_ENDPOINT="$(endpoint_url)"
@@ -483,6 +484,13 @@ PY
     ok "the decision record lands in the inbox"
   else
     not "the decision record lands in the inbox (path=$ASK_DECISION exists=$([ -f "$ASK_DECISION" ] && echo yes || echo no))"
+  fi
+
+  n_ask_failed="$(count_jsonl "$ASK_EVENTS" type=supervisor_ask result=failed)"
+  if [ "$n_ask_failed" -eq 0 ]; then
+    ok "a working ask is not reported as failed"
+  else
+    not "a working ask is not reported as failed (supervisor_ask result=failed: $n_ask_failed)"
   fi
 
   if [ -f "$SCRATCH/stub.ids.json" ] && python3 - "$SCRATCH/stub.ids.json" "$Q_NOUL" \
