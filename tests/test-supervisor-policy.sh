@@ -370,9 +370,16 @@ doc = json.load(open(sys.argv[1], encoding="utf-8"))
 cal = doc["calibration"]
 assert cal.get("ring", "") == "", cal
 assert cal.get("line", "") == "", cal
-assert doc.get("rules") == {}, doc.get("rules")
+# Rung 33: the shipped policy is alert-only (D2): every rule is INJECT_HINT
+# with a hint, and only noul questions are mapped.
+rules = doc.get("rules")
+assert isinstance(rules, dict) and rules, rules
+assert all(r.get("action") == "INJECT_HINT" and r.get("hint") for r in rules.values()), rules
+qset = json.load(open(sys.argv[1].replace("policy.json", "questions.json"), encoding="utf-8"))
+types = {q["id"]: q["type"] for q in qset["questions"]}
+assert all(types.get(qid) == "noul" for qid in rules), [q for q in rules if types.get(q) != "noul"]
 assert doc["version"] == 1
-assert doc["thresholds"]["act_above"] == 0.8
+assert doc["thresholds"]["act_above"] == 0.9
 rec = json.load(open(sys.argv[2], encoding="utf-8"))
 assert rec["decision"] == "CONTINUE", rec
 assert rec["reason"] == "not calibrated", rec
