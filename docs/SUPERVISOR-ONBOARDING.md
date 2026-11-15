@@ -39,6 +39,17 @@ port or a URL. The owner sets it:
 export ORACFIT_SUPERVISOR_ENDPOINT="http://127.0.0.1:8080/v1/systemone"
 ```
 
+Or write it once in `${XDG_CONFIG_HOME:-$HOME/.config}/llms-surf/supervisor.env`
+(`KEY=VALUE` lines; only `ORACFIT_SUPERVISOR_ENDPOINT`, `_TIMEOUT` and
+`_POLICY` are read, the file is parsed and never sourced, and a value already
+in the environment wins). Every real adapter's `env.sh` loads it
+(`bin/lib-oracfit-supervisor-env.sh`), so `source adapters/<name>/env.sh` is
+enough.
+
+On a GPU the same endpoint is one command, e.g.
+`llama-server -m Kev-4B-Q8_0.gguf --host 127.0.0.1 --port 9931 -ngl 99 -c 8192`
+(about 6 GB of VRAM; 14 questions answered in about 0.4 s on an RTX 3090).
+
 The endpoint speaks the System-One shape (`docs/decision-supervisor.md`
 §5.1) and answers `POST /v1/systemone`.
 
@@ -74,9 +85,11 @@ owner's number.
 
 ### 3. Map the questions to actions (the judgment)
 
-Even calibrated, the shipped policy has **empty rules**: no question maps
-to an action, so the engine still answers `CONTINUE`. The rules are the
-owner's judgment, one entry per question id of
+The shipped policy maps **14 `noul` questions to `INJECT_HINT`** (alert-only:
+no `RESET`, no `ESCALATE`) with `act_above` 0.9. Only `noul` questions phrased
+so that *yes* is the problem are mapped: for a `choice` or `score` question
+the engine fires on the confidence, whatever the option, so mapping one says
+nothing. The rules are the owner's judgment, one entry per question id of
 `core/supervisor/questions.json`:
 
 ```json

@@ -153,7 +153,7 @@ lives in `docs/decision-supervisor.md`; the short version:
 | Incidents | 127 | `incidents/*.md` |
 | Rules | 55, of which 27 class `R` | `fluxos/_comum/mapa-regras.md` |
 | Modes | 21 | `core/modes/*.yaml` |
-| Test suites | 78 | `tests/` |
+| Test suites | 79 | `tests/` |
 | Models in the registry | 30 | `model-registry.json` |
 | Host | 1× RTX 3090 (24 GB), Ryzen 5 3500X, 32 GB RAM | measured 2026-11-12 |
 

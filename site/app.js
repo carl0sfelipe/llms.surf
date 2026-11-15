@@ -42,7 +42,7 @@ const DATA = {
     modes: 21,
     adapters: 8,
     adaptersStub: 1,
-    suites: 78,
+    suites: 79,
     version: "0.5.0"
   },
 
