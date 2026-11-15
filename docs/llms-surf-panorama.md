@@ -149,7 +149,7 @@ lives in `docs/decision-supervisor.md`; the short version:
 
 | Fact | Value | Where |
 |---|---|---|
-| Version | 0.0.1 | `VERSION` |
+| Version | 0.5.0 | `VERSION` |
 | Incidents | 127 | `incidents/*.md` |
 | Rules | 55, of which 27 class `R` | `fluxos/_comum/mapa-regras.md` |
 | Modes | 21 | `core/modes/*.yaml` |

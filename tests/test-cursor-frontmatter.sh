@@ -178,7 +178,9 @@ else
   not "the resume option stays an option"
 fi
 
-if grep -vE '^[[:space:]]*#' "$RUNNER" | grep -Fq -- '"$BIN" "${ARGS[@]}" -- "$(cat "$SPEC_FILE")"'; then
+# No "grep -q" at the end of a pipe: under pipefail it exits on the first
+# match, the upstream grep can take SIGPIPE, and the pipe fails (flaky in CI).
+if grep -vE '^[[:space:]]*#' "$RUNNER" | grep -F -- '"$BIN" "${ARGS[@]}" -- "$(cat "$SPEC_FILE")"' >/dev/null; then
   ok "the runner source keeps the separator"
 else
   not "the runner source keeps the separator"
