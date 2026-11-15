@@ -1,6 +1,8 @@
 # Decision supervisor — the software factory design
 
-> Status: **design note**. Nothing here is implemented. Every number was
+> Status: **built; asks in shadow** (rung 33). The chain below is code and
+> runs at every failed attempt of `dispatch-mode.sh` / `dispatch-stages.sh`
+> once an endpoint is set; it acts only after a ring calibrates the policy. Every number was
 > measured in this tree on 2026-11-12 (tree `main` = `26c9204`, `VERSION`
 > 0.5.0); the appendix has the command that reproduces each one.
 >
@@ -891,6 +893,7 @@ everything.
 | **30** | the **distiller reads the postmortem**: the distiller turned a *usage report* into a triad draft, but the corpus the owner actually has is 126 human **postmortems** — and the distiller refused them (no `task` in the frontmatter), so the bank could only grow one finished run at a time — `specs/sup-30-o-destilador-aceita-o-postmortem.md` (delivered: the distiller recognises the postmortem by the file itself and writes the draft with the incident's `## Sintoma` as the symptom and the incident's id as the triad's id, plus a **fire-fixture skeleton** next to the draft whose citations are the literal backticked strings of the incident — every one of them a literal substring of it; the trigger, the prescription and the skeleton's signals stay empty, because the hand writes the trigger) | growing the bank becomes a pipeline over the corpus, not a chore per incident |
 | **31** | the **draft carries the prescription the human already wrote**: a good postmortem has three blocks — symptom, cause, correction — and the correction is the part that used to be retyped by hand for every triad — `specs/sup-31-o-rascunho-carrega-a-prescricao.md` (delivered: the draft's prescription is the literal body of the first correction section that exists, from a closed list of names (`Correção aplicada`, `Correção (aplicada)`, `Prevenção`), truncated at the same limit as the symptom; the list order wins over the order of the headings in the file; a postmortem with no correction section yields an empty prescription and no error; the usage-report path is unchanged) | promoting a triad becomes writing only the trigger |
 | **32** | the **spec with frontmatter reaches the Cursor as the prompt**: the `--` before the spec text in `adapters/cursor/runner.sh` was reverted once by mistake and the owner's next run died in 9 s with `unknown option '---'`; rule 16 makes it a suite — `specs/sup-32-a-spec-com-frontmatter-chega-ao-cursor.md` (delivered: `tests/test-cursor-frontmatter.sh`, a fake `cursor-agent` that parses argv like the real one and refuses unknown options before `--`; 6 proofs: frontmatter spec arrives whole, the fake bites without the separator, plain and single-dash specs arrive whole, `--session` stays an option, the runner source keeps the separator) | removing the separator again turns the suite red |
+| **33** | the **supervisor asks on the owner's box**: the endpoint comes from the owner's local file `${XDG_CONFIG_HOME:-$HOME/.config}/llms-surf/supervisor.env`, read by every real adapter's `env.sh` through `bin/lib-oracfit-supervisor-env.sh` (parsed, never sourced; only the `ORACFIT_SUPERVISOR_*` keys; the environment wins), so the repo still pins no URL; the shipped policy maps 14 `noul` questions to `INJECT_HINT` (alert-only, D2) with `act_above` 0.9, and r56 is reworded so that yes means the problem — `tests/test-supervisor-env.sh` (8 proofs). Served on the owner's 3090 by `llama-server` (llama.cpp `5c008e00`) with `ggml-org/Kev-4B-GGUF` Q8_0. Measured: 14 questions in 0.42 s; on prose probes the yes-mass separated clean (≤ 0.52) from violating (0.57–0.91) states, but one added sentence moved r56 from 0.91 to 0.25 — the probabilities are not calibrated, so the policy keeps answering `CONTINUE` until a scored ring calibrates it | the answers of every real failed attempt land in the inbox; calibration has data |
 
 A through E are independent of every open decision above: they are about
 the evidence and the mechanism, not about the models. F onward needs the
@@ -905,7 +908,7 @@ find incidents -maxdepth 1 -name '*.md' ! -name README.md | wc -l   # 127
 ls incidents/uso/*.md | wc -l                 # 1048 (grows with every dispatch)
 grep -h '^result:' incidents/uso/*.md | sort | uniq -c             # 937 / 63 / 48
 ls core/modes/*.yaml | wc -l                  # 21
-ls tests/test-*.sh | wc -l                    # 78
+ls tests/test-*.sh | wc -l                    # 79
 python3 -c "import json;print(len(json.load(open('model-registry.json'))['models']))"   # 31
 
 # class-R rules out of the rules map (the legend line does not count: the

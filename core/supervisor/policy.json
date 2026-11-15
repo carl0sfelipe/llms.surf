@@ -5,7 +5,64 @@
     "line": ""
   },
   "thresholds": {
-    "act_above": 0.8
+    "act_above": 0.9
   },
-  "rules": {}
+  "rules": {
+    "r12-command-without-time-cap": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 12: every command you run needs a time ceiling (timeout N ...). A command without one is how a run hangs at 3am."
+    },
+    "r13-validation-network-commit-together": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 13: split local validation, the network call and the commit into separate steps, and check each one before the next."
+    },
+    "r16-recurring-failure-becomes-a-rule": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 16: this failure already happened before. Do not retry the same approach; change the approach or name the mechanism that would stop it."
+    },
+    "r25-dry-run-before-store-write": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 25: run the same command as a dry-run first and read its output before you write to the data store."
+    },
+    "r26-absence-only-when-proven": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 26: do not claim something is absent from a partial search. Search the whole scope, or say exactly what you searched."
+    },
+    "r42-long-job-outside-dispatch-is-orphan": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 42: a long-running job started outside the dispatcher has no watchdog. Run it in the foreground with a timeout, or do not start it."
+    },
+    "r45-feedback-extractor-reads-produced-fields": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 45: the feedback extractor reads fields you are not producing. Write the fields the spec names, with those exact names."
+    },
+    "r46-oracle-command-line-has-backticks": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 46: the oracle command line must be raw text with no backticks; the shell substitutes them before the check runs."
+    },
+    "r47-control-files-stay-outside-workdir": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 47: never create, touch or delete stop, pause or interrupt files. They belong to the orchestrator, not to the workdir."
+    },
+    "r48-in-place-edit-of-live-bash": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 48: do not edit a bash script a live run still executes. Write a temp file and mv it over, or wait for the run to end."
+    },
+    "r50-oracle-line-count-is-not-the-bar": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 50: line count is not the bar. Do not pad; the oracle greps the content of each section."
+    },
+    "r52-product-repo-is-not-client-workdir": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 52: work only in the target workdir. The product repo is not a workdir and not a spec store."
+    },
+    "r55-fallback-validated-in-the-chain": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 55: a registry fallback must point at an id that exists and an endpoint that answers. Check both before you rely on it."
+    },
+    "r56-service-oracle-starts-the-production-runtime": {
+      "action": "INJECT_HINT",
+      "hint": "Rule 56: a green unit test does not close a service sprint. Start the process with the production command and talk to it over HTTP."
+    }
+  }
 }

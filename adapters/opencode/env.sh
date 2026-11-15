@@ -18,3 +18,8 @@ export CAPABILITIES_FILE="$ADAPTER_DIR/capabilities.env"
 export DISPATCH_RUNNER_FORMAT_JSON=1
 
 mkdir -p "$LOG_DIR" "$PID_DIR"
+
+# Supervisor endpoint from the owner's local file (bin/lib-oracfit-supervisor-env.sh).
+_llms_surf_root="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/../.." && pwd)"
+. "$_llms_surf_root/bin/lib-oracfit-supervisor-env.sh" && oracfit_supervisor_load_env
+unset _llms_surf_root

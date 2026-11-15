@@ -24,3 +24,8 @@ export TOKEN_PLAN_STATE="$REPO_ROOT/.dispatch/qwen-token-plan.json"
 # TODO-VERIFICAR no Passo 0 quando a CLI existir.
 
 mkdir -p "$LOG_DIR" "$PID_DIR"
+
+# Supervisor endpoint from the owner's local file (bin/lib-oracfit-supervisor-env.sh).
+_llms_surf_root="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/../.." && pwd)"
+. "$_llms_surf_root/bin/lib-oracfit-supervisor-env.sh" && oracfit_supervisor_load_env
+unset _llms_surf_root
