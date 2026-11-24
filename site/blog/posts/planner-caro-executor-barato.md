@@ -71,7 +71,7 @@ Primeiro, b1–b4 com teste escondido rodado antes de qualquer nudge (harness v1
 | Condição | Aprovados | Custo |
 | --- | --- | --- |
 | Qwen sozinho | 3/4 | US$ 0,43 |
-| MAX | 4/4 | US$ 5,22 |
+| MAX (Opus + Qwen) | 4/4 | US$ 5,22 |
 | S | 4/4 | US$ 4,41 |
 
 Depois, FREE com o prompt original, três repetições por tarefa. **Essas repetições misturam três versões do harness: h2, h3 e h3.1.**

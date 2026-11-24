@@ -91,7 +91,7 @@
 <hr>
 <h2>Manutenção</h2>
 <p>Primeiro, b1–b4 com teste escondido rodado antes de qualquer nudge (harness v1, n=1):</p>
-<div class="table-wrap"><table><thead><tr><th scope="col">Condição</th><th scope="col">Aprovados</th><th scope="col">Custo</th></tr></thead><tbody><tr><td>Qwen sozinho</td><td>3/4</td><td>US$ 0,43</td></tr><tr><td>MAX</td><td>4/4</td><td>US$ 5,22</td></tr><tr><td>S</td><td>4/4</td><td>US$ 4,41</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th scope="col">Condição</th><th scope="col">Aprovados</th><th scope="col">Custo</th></tr></thead><tbody><tr><td>Qwen sozinho</td><td>3/4</td><td>US$ 0,43</td></tr><tr><td>MAX (Opus + Qwen)</td><td>4/4</td><td>US$ 5,22</td></tr><tr><td>S</td><td>4/4</td><td>US$ 4,41</td></tr></tbody></table></div>
 <p>Depois, FREE com o prompt original, três repetições por tarefa. <b>Essas repetições misturam três versões do harness: h2, h3 e h3.1.</b></p>
 <div class="table-wrap"><table><thead><tr><th scope="col">Tarefa</th><th scope="col">Aprovados</th><th scope="col">Código do Qwen em cada repetição</th></tr></thead><tbody><tr><td>b1</td><td>3/3</td><td>41%, 10%, 0%</td></tr><tr><td>b2</td><td>1/3</td><td>0%, 0%, 0%</td></tr><tr><td>b3</td><td>0/3 (3/3 com o teste relaxado)</td><td>46%, 29%, 0%</td></tr><tr><td>b4</td><td>3/3</td><td>0%, 0%, 0%</td></tr></tbody></table></div>
 <p><b>Total: 7/12, ou 10/12 com o b3 relaxado.</b> Os dois números valem juntos. O relaxamento foi decidido <b>depois</b> de ver os resultados: o teste cobra <code>7/2 = 3.5</code>, mas o app original devolve 3 e também falha nele.</p>
