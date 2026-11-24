@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planner caro, executor barato: o Qwen passou sozinho e falhou com ajuda (n=1) — llms.surf</title>
+<meta name="description" content="Opus 5.5 planejando, DeepSeek e Qwen executando, tudo no dsh. Com o Qwen, as duas condições mistas falharam no gate e o Qwen sozinho passou. n=1 por célula, e falta o controle que responderia se misturar economiza.">
+<meta name="color-scheme" content="only dark">
+<meta name="supported-color-schemes" content="dark">
+<meta name="theme-color" content="#0b0b0b">
+<link rel="canonical" href="https://llms.surf/blog/planner-caro-executor-barato">
+<link rel="icon" type="image/svg+xml" href="../../logo.svg">
+<link rel="icon" type="image/png" href="../../logo.png">
+<link rel="alternate" type="text/plain" href="../../llms.txt" title="llms.txt — agent surface">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="LLMs.surf">
+<meta property="og:title" content="Planner caro, executor barato: o Qwen passou sozinho e falhou com ajuda (n=1)">
+<meta property="og:description" content="Opus 5.5 planejando, DeepSeek e Qwen executando, tudo no dsh. Com o Qwen, as duas condições mistas falharam no gate e o Qwen sozinho passou. n=1 por célula, e falta o controle que responderia se misturar economiza.">
+<meta property="og:url" content="https://llms.surf/blog/planner-caro-executor-barato">
+<meta property="og:image" content="../../og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Planner caro, executor barato: o Qwen passou sozinho e falhou com ajuda (n=1)">
+<meta name="twitter:description" content="Opus 5.5 planejando, DeepSeek e Qwen executando, tudo no dsh. Com o Qwen, as duas condições mistas falharam no gate e o Qwen sozinho passou. n=1 por célula, e falta o controle que responderia se misturar economiza.">
+
+<script src="../../journey.js" data-key="llms.surf.journey"></script>
+<style>html,body{background:#0b0b0b!important;background-color:#0b0b0b!important;color:#e8e8e8!important;color-scheme:only dark;min-height:100%;min-height:100dvh;forced-color-adjust:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>
+<link rel="stylesheet" href="../../styles.css?v=202611010300">
+<script>(function(){function p(){var h=document.documentElement,b=document.body;h.style.setProperty("color-scheme","only dark");h.style.setProperty("background-color","#0b0b0b","important");h.style.setProperty("color","#e8e8e8","important");if(!b)return;b.style.setProperty("color-scheme","only dark");b.style.setProperty("background-color","#0b0b0b","important");b.style.setProperty("color","#e8e8e8","important");}if(document.body)p();else document.addEventListener("DOMContentLoaded",p);})();</script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-400.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/latin-700.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-400.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-600.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.1/latin-700.css" media="print" onload="this.media='all'">
+
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="ls-mark" viewBox="26 64 158 58">
+      <path d="M32 116 C48 116 58 113 70 102 C82 91 92 76 106 72.5 C118 69.5 128 76 129 85 C129.6 90.5 127 95 123 96.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <path d="M124.5 112.5 C112 117 99.5 110 99.5 99.5 C99.5 89.5 107.5 83 115.5 84.2 C120.5 85 123.5 88 124.6 91.5" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="135.5" cy="110.5" r="4.6" fill="#3FB950"/>
+      <path d="M145.5 103.5 L153.5 112 L175.5 88.5" fill="none" stroke="#3FB950" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="../../index.html" aria-label="llms.surf — home">
+      <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+      <span class="logo-word">llms.surf</span>
+    </a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="../../index.html#loop">oracle loop</a>
+      <a href="../../blog/">blog</a>
+      <a href="../../incidents.html">incidents/</a>
+      <a href="../../readme.html">README</a>
+    </nav>
+    <div class="journey" data-journey-ui>
+      <span class="journey-kicker">who is reading</span>
+      <div class="journey-seg" role="group" aria-label="Choose human or agent journey">
+        <button type="button" class="journey-btn" data-as="human" aria-pressed="false">human</button>
+        <button type="button" class="journey-btn" data-as="agent" aria-pressed="false">agent</button>
+      </div>
+      <a class="journey-llms" href="../../llms.txt">llms.txt</a>
+    </div>
+    <a class="btn btn-sm" href="../../index.html#quickstart">paddle out</a>
+  </div>
+</header>
+<main class="doc">
+  <p class="doc-crumb"><a href="../../index.html">llms.surf</a> / <a href="../">blog</a> / planner-caro-executor-barato</p>
+  <h1>Planner caro, executor barato: o Qwen passou sozinho e falhou com ajuda (n=1)</h1>
+  <p class="doc-sub blog-meta">2026-11-24 · Carlos · harness · qwen · deepseek · benchmark · dsh</p>
+<p>No app Rails do zero, o Qwen 3.8 27B passou no gate sozinho: US$ 0,81, 89 minutos. Com o Opus 5.5 planejando e o mesmo Qwen executando, as duas condições que testei <b>falharam</b> no gate, por US$ 12,41 e US$ 6,62.</p>
+<p>Isso contraria a tese que o llms.surf vende, a de que um modelo caro pensa e um barato sua. É uma execução por célula, e o gate (testes, RuboCop, Brakeman) não mede qualidade, então não derruba a tese. Também não a sustenta.</p>
+<p><b>Antes de tudo:</b> este experimento rodou no <code>dsh</code> (DeepSeek Harness), <b>não no dispatcher do llms.surf</b>. Nada aqui valida o llms.surf.</p>
+<p>Em <a href="/blog/resposta-ao-akita-harness-qwen/">setembro, respondendo a Akita</a>, escrevi que eu <b>não</b> tinha rodado Opus planejando e Qwen executando. Agora rodei, em outro harness. A pergunta de lá, sobre o mix no meu dispatcher, continua aberta. Esta também:</p>
+<blockquote class="quote"><p class="q-text">Misturar modelos economiza? <b>Não sei.</b> Falta o controle: Opus sozinho no mesmo harness das repetições mais recentes.</p></blockquote>
+<hr>
+<h2>O que rodou</h2>
+<ul><li><b>Planner:</b> Claude Opus 5.5. <b>Executores:</b> DeepSeek V4.1 Flash e Qwen 3.8 27B. O Qwen rodou via API, como substituto de um modelo local.</li><li><b>Revisor de cada run:</b> Claude Fable 5.2. <b>O custo dele não está nas tabelas.</b></li><li><b>Custos:</b> equivalentes de API.</li><li><b>Tarefas:</b> o benchmark Rails v5 do repo <code>akitaonrails/llm-coding-benchmark</code>, mais quatro tarefas de manutenção nossas: b1 (migração), b2 (corrigir CI), b3 (remover <code>eval</code>) e b4 (bug de boot). Nossa trilha não foi commitada lá nem virou PR. Nada disso foi aceito ou endossado por Akita.</li></ul>
+<div class="table-wrap"><table><thead><tr><th scope="col">Condição</th><th scope="col">O que é</th></tr></thead><tbody><tr><td>I</td><td>só o executor</td></tr><tr><td>S</td><td>só o Opus</td></tr><tr><td>MAX</td><td>Opus com meta de delegar 70%</td></tr><tr><td>MEDIUM</td><td>Opus com meta de delegar 45%</td></tr><tr><td>FREE</td><td>Opus delega por risco, sem meta</td></tr></tbody></table></div>
+<hr>
+<h2>App do zero (harness v1, n=1 por célula)</h2>
+<div class="table-wrap"><table><thead><tr><th scope="col">Executor</th><th scope="col">Condição</th><th scope="col">Gate</th><th scope="col">Nudges</th><th scope="col">Custo</th><th scope="col">Código do executor (recalculado)</th></tr></thead><tbody><tr><td>—</td><td>S</td><td>PASS</td><td>2</td><td>US$ 14,95</td><td>—</td></tr><tr><td>DeepSeek</td><td>MAX</td><td>PASS</td><td>0</td><td>US$ 7,60</td><td>76% (registrado: 92%)</td></tr><tr><td>DeepSeek</td><td>MEDIUM</td><td>PASS</td><td>1</td><td>US$ 12,54</td><td>19% (registrado: 24%)</td></tr><tr><td>DeepSeek</td><td>I</td><td>PASS</td><td>0</td><td>US$ 0,59</td><td>—</td></tr><tr><td>Qwen</td><td>MAX</td><td><b>FAIL</b></td><td>2</td><td>US$ 12,41</td><td>20% (registrado: 47%)</td></tr><tr><td>Qwen</td><td>MEDIUM</td><td><b>FAIL</b></td><td>2</td><td>US$ 6,62</td><td>0%</td></tr><tr><td>Qwen</td><td>I</td><td>PASS</td><td>0</td><td>US$ 0,81 (89 min)</td><td>—</td></tr></tbody></table></div>
+<p>Como ler, e como não ler:</p>
+<ul><li><b>PASS é só o gate</b> (testes, RuboCop, Brakeman). Não é nota de qualidade.</li><li><b>Nenhum desses runs fez chat real com provedor.</b> Não havia chave do OpenRouter, e parte deles usou um provedor falso.</li><li><b>n=1.</b> A mesma célula já variou entre PASS e FAIL, então uma repetição não sustenta ranking. Não concluo que um modelo é melhor que outro.</li><li><b>A métrica de autoria errou.</b> A pasta <code>coverage/</code> inflava a fatia do executor. Por isso a tabela traz o valor recalculado e o registrado.</li></ul>
+<hr>
+<h2>Manutenção</h2>
+<p>Primeiro, b1–b4 com teste escondido rodado antes de qualquer nudge (harness v1, n=1):</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Condição</th><th scope="col">Aprovados</th><th scope="col">Custo</th></tr></thead><tbody><tr><td>Qwen sozinho</td><td>3/4</td><td>US$ 0,43</td></tr><tr><td>MAX</td><td>4/4</td><td>US$ 5,22</td></tr><tr><td>S</td><td>4/4</td><td>US$ 4,41</td></tr></tbody></table></div>
+<p>Depois, FREE com o prompt original, três repetições por tarefa. <b>Essas repetições misturam três versões do harness: h2, h3 e h3.1.</b></p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Tarefa</th><th scope="col">Aprovados</th><th scope="col">Código do Qwen em cada repetição</th></tr></thead><tbody><tr><td>b1</td><td>3/3</td><td>41%, 10%, 0%</td></tr><tr><td>b2</td><td>1/3</td><td>0%, 0%, 0%</td></tr><tr><td>b3</td><td>0/3 (3/3 com o teste relaxado)</td><td>46%, 29%, 0%</td></tr><tr><td>b4</td><td>3/3</td><td>0%, 0%, 0%</td></tr></tbody></table></div>
+<p><b>Total: 7/12, ou 10/12 com o b3 relaxado.</b> Os dois números valem juntos. O relaxamento foi decidido <b>depois</b> de ver os resultados: o teste cobra <code>7/2 = 3.5</code>, mas o app original devolve 3 e também falha nele.</p>
+<p>O custo médio foi de cerca de US$ 2,50 por conjunto de quatro tarefas. <b>Não compare com os US$ 4,41 do S:</b> mudaram o harness e o prompt.</p>
+<p>Ficou de fora um quinto run do b2, por contaminação do harness; um run extra o substituiu. Também testei uma variação do prompt (iteração 2) e abandonei. Ela não está nesta tabela.</p>
+<p>A tarefa principal no FREE e a b5 <b>não rodaram</b>.</p>
+<hr>
+<h2>O que observei nestes runs</h2>
+<p><b>O Opus quase não delegou quando podia escolher.</b> No FREE, 0% em 8 dos 12 runs. Ele costuma classificar o trabalho como crítico.</p>
+<p><b>Teste visível verde não é prova.</b> No b2, trocar <code>lpush</code> por <code>rpush</code> passa no gate e inverte as conversas já gravadas. O Opus fez isso em 2 de 3, sem delegar. O Qwen sozinho também fez.</p>
+<p><b>&quot;Terminei&quot; não é prova.</b> Um planner declarou o trabalho limpo com o gate falhando.</p>
+<p><b>Teste escondido também tem bug.</b> O b3 é o exemplo: o próprio app original não passa nele.</p>
+<p><b>Isolamento precisa ser mecânico.</b> Agentes sem chave saíram procurando credenciais fora do projeto. O sandbox seguinte ainda deixava acessível o socket do Docker. Busquei comandos Docker, <code>colima</code> e <code>docker.sock</code> nos logs dos 7 runs sob h3/h3.1 (um deles um smoke test) e não achei uso. O acesso já foi fechado no h3.2, mas essa correção ainda não teve revisão do Fable nem run completo.</p>
+<hr>
+<h2>O método: dsh, com o Fable como advisor</h2>
+<p>O <code>dsh</code> é o CLI de agente que executou tudo em modo headless: entra prompt, sai NDJSON. São três papéis, em três sessões separadas:</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Papel</th><th scope="col">Modelo</th><th scope="col">Como roda</th></tr></thead><tbody><tr><td>Planner</td><td>Opus 5.5</td><td><code>dsh headless</code> com escrita no projeto do run</td></tr><tr><td>Executor</td><td>DeepSeek ou Qwen</td><td>outro <code>dsh headless</code>, chamado pelo planner por um servidor MCP nosso, que registra cada delegação, tokens e custo</td></tr><tr><td>Advisor</td><td>Fable 5.2</td><td><code>dsh headless</code> <b>somente leitura</b>, chamado de fora do run</td></tr></tbody></table></div>
+<p>Um orquestrador (Claude Code, com Opus 5.5) lança os runs, monta as perguntas, confere as respostas e decide. Quem roda gate e teste escondido é o harness do benchmark, e não um modelo.</p>
+<p>Cada pedido ao Fable leva números medidos, arquivos a ler e pontos numerados com a nossa proposta, e pede <code>AGREE/DISAGREE</code> por ponto. Toda alegação dele é conferida nos arquivos. Ponto rejeitado volta com evidência, por até 5 rodadas. Sem consenso, decido eu. A numeração chegou à rodada 60.</p>
+<p><b>Onde ajudou:</b> achou o run em que um executor leu e tentou copiar o teste escondido (confirmamos e reclassificamos) e levou a melhorias no plano, como a proteção contra manipulação da métrica de autoria.</p>
+<p><b>Onde errou:</b> validou um run contaminado, exigiu correção indevida, tentou rodar comandos quando pedimos só texto, deu &quot;AGREE&quot; sem motivo, confundiu gate com teste escondido e inventou bloqueios por estar em somente leitura.</p>
+<p>Minha conclusão: <b>bom para achar problema, ruim como juiz final.</b></p>
+<p>Limites do método:</p>
+<ul><li>Não medi se o advisor melhora o resultado: só houve um revisor e nenhum grupo sem revisor.</li><li>O Fable revisou <b>entre</b> runs. A condição em que o Opus o consultaria durante o run (FREE+ADV) foi só planejada e não existe.</li><li>Orquestrador e planner são o mesmo modelo, e Opus e Fable são da mesma empresa. Consenso entre eles não é validação independente.</li><li>Somente leitura impede escrever, <b>não</b> impede ler. O revisor ainda precisa de ordem para não abrir credenciais e, idealmente, de sandbox.</li></ul>
+<hr>
+<h2>O que isto não mostra</h2>
+<ul><li>Que misturar economiza, ou que não economiza.</li><li>Que o Qwen supera o Opus, ou qualquer ranking.</li><li>Que o llms.surf funciona melhor ou pior. Ele não rodou aqui.</li><li>Como seria numa GPU local. Foi API.</li></ul>
+<p>O que falta é o run chato: Opus sozinho, no mesmo harness das repetições FREE.</p>
+<p>— Carlos</p>
+
+  <div class="doc-links">
+    <a class="btn btn-ghost" href="../../index.html">← front page</a>
+    <a class="btn btn-ghost" href="../../blog/">blog</a>
+    <a class="btn btn-ghost" href="../../readme.html">README</a>
+    <a class="btn btn-ghost" href="../../incidents.html">incidents/</a>
+  </div>
+</main>
+<footer class="footer">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a class="logo" href="../../index.html" aria-label="llms.surf — home">
+        <svg class="logo-mark" aria-hidden="true"><use href="#ls-mark"></use></svg>
+        <span class="logo-word">llms.surf</span>
+      </a>
+      <p class="foot-surf">Built in Saquarema, Brazil.</p>
+    </div>
+    <nav class="foot-links" aria-label="Project links">
+      <a href="../../llms.txt">llms.txt</a>
+      <a href="../../blog/">blog</a>
+      <a href="../../readme.html">README</a>
+      <a href="../../incidents.html">incidents/</a>
+      <a href="../../v4-plan.html">docs/v4-plan.md</a>
+      <a href="https://github.com/carl0sfelipe/llms.surf">github</a>
+    </nav>
+  </div>
+</footer>
+<script src="../../app.js" defer></script>
+</body>
+</html>
