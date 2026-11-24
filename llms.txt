@@ -9,8 +9,8 @@ If a page asked who is reading, it did not have enough deterministic signal to g
 ## What this is
 
 A local orchestrator that sits between an agent CLI and the models.
-It sends the 1% of tasks that need a brain to an expensive frontier model
-and the other 99% to cheap/local ones. No result is accepted until a
+It sends the few tasks that need a brain to an expensive frontier model
+and the rest to cheap/local ones (1%/99% is the pitch, not a measurement). No result is accepted until a
 mechanical oracle  -  a real command, run on disk  -  exits 0.
 
 There is no hosted inference product on this site. Do not invent $/M or tok/s.
@@ -40,7 +40,7 @@ Plug a real CLI with `source adapters/<name>/env.sh` (opencode, claude-code, cur
 ## Pipeline (ships in this cut)
 
 1. spec open  -  oracle loaded, sha256 frozen
-2. dispatch  -  1% frontier / 99% cheap, per task
+2. dispatch  -  frontier or cheap, per task
 3. oracle  -  command on disk
 4. incident  -  failure becomes a postmortem; recurring failure becomes code
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>README — llms.surf</title>
-<meta name="description" content="llms.surf README: what it is, the 1%/99% dispatch rule, the mechanical oracle, quickstart, and adapters.">
+<meta name="description" content="llms.surf README: what it is, the dispatch rule, the mechanical oracle, quickstart, and adapters.">
 <meta name="color-scheme" content="only dark">
 <meta name="supported-color-schemes" content="dark">
 <meta name="theme-color" content="#0b0b0b">
@@ -64,7 +64,7 @@
   <p class="doc-sub">local AI dispatch orchestrator · formerly Oracfit · public cut v0.5.0 · built in Saquarema, Brazil</p>
 
   <h2>// what it is</h2>
-  <p>llms.surf is a <b>local dispatcher</b> that sits between your agent CLI and the models. It sends the <b>1%</b> of tasks that need a brain to your expensive frontier model and the other <b>99%</b> to cheap local ones. No result is accepted until a <b>mechanical oracle</b> — a real command, run on disk — proves it.</p>
+  <p>llms.surf is a <b>local dispatcher</b> that sits between your agent CLI and the models. It sends the few tasks that need a brain to your expensive frontier model and the rest to cheap local ones. (1%/99% is the pitch, not a measurement.) No result is accepted until a <b>mechanical oracle</b> — a real command, run on disk — proves it.</p>
   <p>The rule in one line: <b>nothing ships on a model's word — not even the judge's.</b></p>
 
   <h2>// quickstart — 2 minutes, no API key</h2>
@@ -81,7 +81,7 @@
   <h2>// the pipeline</h2>
   <ul>
     <li><b>stage 1 — spec open:</b> the oracle is frozen by sha256 at ring open. Goalposts don't move.</li>
-    <li><b>stage 2 — dispatch:</b> 1% frontier thinking / 99% cheap sweat, picked per task.</li>
+    <li><b>stage 2 — dispatch:</b> frontier thinking / cheap sweat, picked per task.</li>
     <li><b>stage 3 — oracle:</b> gates read artifact content on disk. <code>exit 0</code> is the only victory.</li>
     <li><b>stage 4 — incident:</b> every failure becomes an incident; every incident becomes a mechanism. <span id="wipe-count">127</span> in this cut.</li>
   </ul>
@@ -91,7 +91,7 @@
   <p style="margin-top:14px">Eight adapters plus a stub ship in this repository. If your CLI speaks text, it can speak llms.surf.</p>
 
   <h2>// this repo</h2>
-  <p>Clone and run. Open source: AGPL-3.0 core + MIT kernel and adapters (see NOTICE). If you own the GPUs, the 99% is local and tokens on that path cost ~$0.</p>
+  <p>Clone and run. Open source: AGPL-3.0 core + MIT kernel and adapters (see NOTICE). If you own the GPUs, the cheap path is local and tokens on that path cost ~$0.</p>
 
   <div class="doc-links">
     <a class="btn btn-ghost" href="index.html">← front page</a>

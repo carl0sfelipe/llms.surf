@@ -65,7 +65,7 @@ const DATA = {
     { t: 600,  kind: "dim",      text: "spec opened · oracle loaded · sha256 frozen at ring open" },
     { t: 1400, kind: "fail",     text: 'oracle pre-check → grep -q "from lib_y import" src/ → exit 1 FAIL · wipeout' },
     { t: 2400, kind: "dim",      text: "failure → structured feedback: missing imports listed" },
-    { t: 3100, kind: "dispatch", text: "dispatch → cheap model sweats · 1% frontier plan attached" },
+    { t: 3100, kind: "dispatch", text: "dispatch → cheap model sweats · frontier plan attached" },
     { t: 4200, kind: "watch",    text: "watchdog tick 1 … artifact growing" },
     { t: 5000, kind: "watch",    text: "watchdog tick 2 … artifact growing" },
     { t: 5800, kind: "dim",      text: "artifact complete · sha256 locked on disk" },
