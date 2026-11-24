@@ -1,4 +1,4 @@
-# Public Cut — llms.surf v3.5.0
+# Public Cut — llms.surf v0.5.0
 
 This repository is the public product **llms.surf** (formerly Oracfit) —
 local dispatch with a mechanical oracle. Marketing surface: `site/`.
@@ -11,7 +11,7 @@ local dispatch with a mechanical oracle. Marketing surface: `site/`.
 - Adapters: opencode, Claude Code, Cursor, Hermes, qwen-code, llama.cpp, zcode, prime-agent, stub
 - `bin/`, `check-saude`, test suites
 - `site/` — public marketing pages (honest DATA, gated by `tests/test-site-honesty.sh`)
-- `incidents/` — the 106 postmortems that shipped in this cut (`uso/` is private and must not ship)
+- `incidents/` — the 127 postmortems that shipped in this cut (`uso/` is private and must not ship)
 
 ## O que fica no monorepo de desenvolvimento
 

@@ -90,4 +90,53 @@ if grep -qiE 'hosted inference is not live|hosted swell' "$LLMS"; then
   fail "llms.txt advertises hosted swell — there is no product yet"
 fi
 
+# app.js overwrites the HTML at runtime, so a stale fallback is what a reader
+# without JS (or a crawler) sees. The landing said 3.5.0 while app.js said 0.5.0.
+# Every version and count written into the pages must equal the tree too.
+# site/blog/ is excluded: a post is a dated record.
+python3 - "$ROOT" "$version_disk" "$incidents_disk" "$models_disk" "$modes_disk" \
+  "$adapters_disk" "$stub_disk" "$suites_disk" <<'PY' || fail "hand-written version or count != tree"
+import pathlib, re, sys
+
+root = pathlib.Path(sys.argv[1])
+keys = ["version", "incidents", "models", "modes", "adapters", "adaptersStub", "suites"]
+tree = dict(zip(keys, sys.argv[2:]))
+bad = []
+
+def line_of(text, pos):
+    return text.count("\n", 0, pos) + 1
+
+def compare(path, text, pos, what, got, want):
+    if got != want:
+        bad.append(f"{path.relative_to(root)}:{line_of(text, pos)}: {what} is {got}, tree has {want}")
+
+# x.y.z that is not part of a longer dotted number and not an npm pin (pkg@x.y.z)
+SEMVER = re.compile(r"(?<![\d.@])\d+\.\d+\.\d+(?![\d.]*\d)")
+pages = sorted((root / "site").glob("*.html"))
+cut = root / "docs" / "PUBLIC-CUT.md"
+for path in pages + [root / "site" / "llms.txt", cut]:
+    text = path.read_text(encoding="utf-8")
+    for m in SEMVER.finditer(text):
+        compare(path, text, m.start(), "version", m.group(), tree["version"])
+    for m in re.finditer(r'data-stat="(\w+)"[^>]*>([^<]*)<', text):
+        if m.group(1) not in tree:
+            bad.append(f"{path.relative_to(root)}:{line_of(text, m.start())}: unknown data-stat {m.group(1)}")
+            continue
+        compare(path, text, m.start(), m.group(1), m.group(2).strip(), tree[m.group(1)])
+    for m in re.finditer(r'id="(?:wipe|foot)-count"[^>]*>([^<]*)<', text):
+        compare(path, text, m.start(), "incidents", m.group(1).strip(), tree["incidents"])
+    for m in re.finditer(r"\b(\d+) (?:incidents in this|postmortems)", text):
+        compare(path, text, m.start(), "incidents", m.group(1), tree["incidents"])
+
+# The landing must link the release it claims to be.
+index = (root / "site" / "index.html").read_text(encoding="utf-8")
+if f"/releases/tag/v{tree['version']}" not in index:
+    bad.append(f"site/index.html: no link to the v{tree['version']} release")
+
+for b in bad:
+    print("  " + b, file=sys.stderr)
+sys.exit(1 if bad else 0)
+PY
+echo "ok html/llms.txt/PUBLIC-CUT literals"
+
 echo "test-site-honesty: ok"
