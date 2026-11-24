@@ -130,7 +130,7 @@ for path in pages + [root / "site" / "llms.txt", cut]:
 
 # The landing must link the release it claims to be.
 index = (root / "site" / "index.html").read_text(encoding="utf-8")
-if f"/releases/tag/v{tree['version']}" not in index:
+if f"/releases/tag/v{tree['version']}\"" not in index:
     bad.append(f"site/index.html: no link to the v{tree['version']} release")
 
 for b in bad:
